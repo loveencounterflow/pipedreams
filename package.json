@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/loveencounterflow/pipedreams2",
   "dependencies": {
+    "coffee-script": "^1.8.0",
     "coffeenode-bitsnpieces": "0.0.23",
     "coffeenode-trm": "^0.1.18",
     "combined-stream": "0.0.5",
