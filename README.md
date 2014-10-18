@@ -27,7 +27,9 @@ to get asynchronous stream transformers right with version one, it's time for a 
 
 `P2.remit` is the successor to `P1.remit`; the interface has changed slightly, mainly to avoid silent
 failures when migrating. For the time being, the implementation is the primary documentation;
-i'm leaving the text below
+all the greyed-out text below that is marked with a triple band to the left is not necessarily up to date.
+
+# 🚫 Proceed with care; outdated docs below 🚫
 
 > > > # PipeDreams
 > > >
