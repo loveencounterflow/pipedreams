@@ -1,6 +1,7 @@
 
 
 - [Breaking News](#breaking-news)
+	- [Important](#important)
 	- [Changes](#changes)
 	- [🚫 Proceed with care; outdated docs below 🚫](#🚫-proceed-with-care;-outdated-docs-below-🚫)
 
@@ -22,6 +23,13 @@ implementation structure, since i started writing it when i was rather new to st
 as a notebook of sorts on how to do streams in NodeJS, but now that i feel it to be too much of a hassle
 to get asynchronous stream transformers right with version one, it's time for a rewrite.
 
+## Important
+
+**When migrating and/or mixing P2 methods with stream methods from other libraries, watch out for
+incompatibilities. Some parts of `through2` are known not to work well with some parts of `through` (and,
+therefore, some parts of `event-stream`). Since P2 is based on `through2` and P1 is based on `event-stream`,
+even mixing P2 and P1 may fail in interesting ways.**
+
 ## Changes
 
 * (2014-10-18) `P2.remit` is the successor to `P1.remit` and the first function to be implemented in P2.
@@ -35,7 +43,7 @@ to get asynchronous stream transformers right with version one, it's time for a 
   * instead, you have to call either `send.done()` (to issue zero items), `send.done data` (to issue
     exactly one data item) or `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
     number of data items;
-  * it sh
+
 
 ## 🚫 Proceed with care; outdated docs below 🚫
 
