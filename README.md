@@ -27,7 +27,7 @@ to get asynchronous stream transformers right with version one, it's time for a 
 
 ## Changes
 
-* `P2.remit` is the successor to `P1.remit` and the first function to be implemented in P2 Its interface has
+* (2014-10-18) `P2.remit` is the successor to `P1.remit` and the first function to be implemented in P2 Its interface has
   changed slightly, mainly to avoid silent failures when migrating. The major thing is that where you could
   previously call `send` as often as you wanted and never had to indicate whether your method would eventually
   issue more calls to `send`, you now
