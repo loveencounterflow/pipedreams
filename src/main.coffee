@@ -14,6 +14,9 @@ help                      = TRM.get_logger 'help',      badge
 urge                      = TRM.get_logger 'urge',      badge
 echo                      = TRM.echo.bind TRM
 #...........................................................................................................
+### https://github.com/rvagg/through2 ###
+through2                  = require 'through2'
+#...........................................................................................................
 # # BAP                       = require 'coffeenode-bitsnpieces'
 # # TYPES                     = require 'coffeenode-types'
 # # TEXT                      = require 'coffeenode-text'
