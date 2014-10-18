@@ -1,14 +1,11 @@
 
 
-- [PipeDreams](#pipedreams)
-	- [Highlights](#highlights)
-		- [`P.remit`](#premit)
-			- [The Problem](#the-problem)
-			- [The Solution](#the-solution)
-	- [Motivation](#motivation)
-	- [Overview](#overview)
+- [Breaking News](#breaking-news)
+	- [Changes](#changes)
+		- [🚫 Proceed with care; outdated docs below 🚫](#🚫-proceed-with-care;-outdated-docs-below-🚫)
 
 > **Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
+
 
 # Breaking News
 
@@ -32,10 +29,10 @@ to get asynchronous stream transformers right with version one, it's time for a 
   previously call `send` as often as you wanted and never had to indicate whether your method would eventually
   issue more calls to `send`, you now
 
-      * can't call `send` any more (except to trigger an informative error message);
-      * instead, you have to call either `send.done()` (to issue zero items), `send.done data` (to issue
-        exactly one data item) or `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
-        number of data items.
+  * can't call `send` any more (except to trigger an informative error message);
+  * instead, you have to call either `send.done()` (to issue zero items), `send.done data` (to issue
+    exactly one data item) or `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
+    number of data items.
 
 ### 🚫 Proceed with care; outdated docs below 🚫
 
