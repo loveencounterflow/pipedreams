@@ -1,0 +1,38 @@
+{
+  "name": "pipedreams",
+  "version": "0.2.0",
+  "description": "Common operations for piped NodeJS streams. INCEPTIVE PACKAGE IN ALPHA (use Pipedreams v0.1.x instead)",
+  "main": "lib/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loveencounterflow/pipedreams2.git"
+  },
+  "keywords": [
+    "pipes",
+    "streams",
+    "through",
+    "through2",
+    "text",
+    "csv"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/loveencounterflow/pipedreams2/issues"
+  },
+  "homepage": "https://github.com/loveencounterflow/pipedreams2",
+  "dependencies": {
+    "coffeenode-bitsnpieces": "0.0.23",
+    "coffeenode-trm": "^0.1.18",
+    "combined-stream": "0.0.5",
+    "copypaste": "^0.3.2",
+    "floodgate": "^0.1.2",
+    "level-live-stream": "^1.4.9",
+    "progress": "^1.1.7",
+    "string": "^1.9.1",
+    "throttle": "^1.0.3"
+  }
+}
