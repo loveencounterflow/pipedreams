@@ -29,7 +29,7 @@ to get asynchronous stream transformers right with version one, it's time for a 
 failures when migrating. For the time being, the implementation is the primary documentation;
 all the greyed-out text below that is marked with a triple band to the left is not necessarily up to date.
 
-# 🚫 Proceed with care; outdated docs below 🚫
+### 🚫 Proceed with care; outdated docs below 🚫
 
 > > > # PipeDreams
 > > >
