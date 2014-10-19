@@ -60,7 +60,10 @@ through2                  = require 'through2'
       method null, null, send.end
   #.........................................................................................................
   ### TAINT no way to use byte / text streaming? necessary? ###
-  return through2.obj on_data, on_end
+  stream_options = { objectMode: true, allowHalfOpen: false, highWaterMark: 10, }
+  stream_options = { objectMode: true, highWaterMark: 10, }
+  stream_options = {}
+  return through2.obj stream_options, on_data, on_end
 
 
 #===========================================================================================================
