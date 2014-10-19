@@ -10,6 +10,8 @@
 
 # Breaking News
 
+[![experimental](http://badges.github.io/stability-badges/dist/experimental.svg)](http://github.com/badges/stability-badges)
+
 This is the incubator for PipeDreams v2 (P2 for short), which will introduce breaking changes to some APIs.
 I will slowly build up functionalities as i see use for them as i'm using PipeDreams v1 (P1 hereafter) in a
 rather largeish project where it would be very cumbersome to migrate everything at once.
@@ -40,9 +42,11 @@ even mixing P2 and P1 may fail in interesting ways.**
   issue more calls to `send`, you now
 
   * cannot call `send` any more (except to trigger an informative error message);
-  * instead, you have to call either `send.done()` (to issue zero items), `send.done data` (to issue
-    exactly one data item) or `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
-    number of data items;
+  * instead, you have to call either
+    * `send.done()` (to issue zero items),
+    * `send.done data` (to issue exactly one data item) or
+    * `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
+      number of data items.
 
 
 ## 🚫 Proceed with care; outdated docs below 🚫
