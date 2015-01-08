@@ -224,7 +224,16 @@ ES                        = require 'event-stream'
       ### Lastly, let's emit all remaining events in the buffer; should there be any elements left, we issue
       an error: ###
       send_buffered_events send
-      warn buffer if buffer_size > 0 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      if buffer_size > 0 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        warn 'first_idx:        ', first_idx
+        warn 'buffer_size:      ', buffer_size
+        warn 'event_count:      ', event_count
+        warn 'max_buffer_size:  ', max_buffer_size
+        warn 'min_legal_idx:    ', min_legal_idx
+        warn 'previous_idx:     ', previous_idx
+        warn 'sent_count:       ', sent_count
+        warn 'smallest_idx:     ', smallest_idx
+        warn buffer
       send.error new Error "detected missing events" if buffer_size > 0
       handler [ event_count, max_buffer_size, ] if handler?
       end()
