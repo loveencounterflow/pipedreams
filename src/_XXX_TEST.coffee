@@ -27,6 +27,35 @@ module.exports = run = ( x ) ->
   failures      = {}
 
   #---------------------------------------------------------------------------------------------------------
+  error_handler = ( error ) =>
+    # throw error if error?
+    ### NB `entry[ 'name' ]` should normally match `entry[ 'caller' ][ 'name' ]` ###
+    # caller      = error[ 'caller'  ] ? ( supply_caller_to_error error )[ 'caller' ]
+    caller      = error[ 'caller'  ]
+    entry       =
+      'name':     name
+      'message':  error[ 'message' ]
+      'caller':   caller
+    fail_count += 1 unless caller?
+    target      = failures[ name ]?= []
+    target.push [ entry, ]
+
+  #---------------------------------------------------------------------------------------------------------
+  supply_caller_to_error = ( delta, error = null ) =>
+    # debug '©h0ybR', BNP.get_caller_info_stack 0
+    # debug '©h0ybR', BNP.get_caller_info_stack error
+    delta += +1 unless error?
+    debug '©h0ybR', BNP.get_caller_info delta, error, yes
+    warn 'aborting'
+    process.exit()
+    # fail_count       += 1
+    # warn error.stack
+    # for delta in [ 0 ... 5 ]
+    #   debug '©Cxdmb', delta, ( TEST.get_caller_description delta )#[ 'source' ]
+    # error[ 'caller' ] = TEST.get_caller_description 2
+    # return error
+
+  #---------------------------------------------------------------------------------------------------------
   T.eq = ( P... ) ->
     ### Tests whether all arguments are pairwise and deeply equal. Uses CoffeeNode Bits'n'Pieces' `equal`
     for testing as (1) Node's `assert` distinguishes—unnecessarily—between shallow and deep equality, and,
@@ -36,10 +65,8 @@ module.exports = run = ( x ) ->
     if BNP.equals P...
       pass_count       += 1
     else
-      fail_count       += 1
-      error             = new Error "not equal: #{rpr P}"
-      error[ 'caller' ] = TEST.get_caller_description 1
-      throw error
+      error = new Error "not equal: #{rpr P}"
+      throw supply_caller_to_error 1, error
 
   #---------------------------------------------------------------------------------------------------------
   T.rsvp = ( callback ) ->
@@ -52,8 +79,15 @@ module.exports = run = ( x ) ->
   #---------------------------------------------------------------------------------------------------------
   T.ok = ( result ) ->
     ### Tests whether `result` is strictly `true` (not only true-ish). ###
-    unless result is true
-      throw new Error "expected true, got #{rpr result}"
+    check_count += 1
+    if result is true
+      pass_count       += 1
+    else
+      fail_count       += 1
+      error             = new Error "not OK: #{rpr result}"
+      error[ 'caller' ] = TEST.get_caller_description 1
+      debug '©zYIQA', error
+      throw error
 
   #---------------------------------------------------------------------------------------------------------
   T.fail = ( message ) ->
@@ -71,20 +105,12 @@ module.exports = run = ( x ) ->
         try
           test T
         catch error
-          ### NB `entry[ 'name' ]` should normally match `entry[ 'caller' ][ 'name' ]` ###
-          caller      = error[ 'caller'  ]
-          entry       =
-            'name':     name
-            'message':  error[ 'message' ]
-            'caller':   caller
-          fail_count += 1 unless caller?
-          target      = failures[ name ]?= []
-          target.push [ entry, ]
+          supply_caller_to_error 0, error unless error[ 'caller' ]?
+          error_handler error
       #.....................................................................................................
       when 2
         ### TAINT need ASYNC or similar to manage callbacks in concert with synhronous code ###
-        test T, ( error ) =>
-          throw error if error?
+        test T, error_handler
       #.....................................................................................................
       else
         throw new Error "expected test with 1 or 2 arguments, got one with #{arity}"
