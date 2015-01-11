@@ -1,7 +1,6 @@
 
 
 - [Breaking News](#breaking-news)
-	- [Important](#important)
 	- [Changes](#changes)
 	- ['Dense' Sorting](#'dense'-sorting)
 	- [🚫 Proceed with care; outdated docs below 🚫](#🚫-proceed-with-care;-outdated-docs-below-🚫)
@@ -14,8 +13,8 @@
 [![experimental](https://img.shields.io/badge/stability-experimental-red.svg)](https://img.shields.io/badge/stability-experimental-red.svg)
 [![experimental](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)
 
-This is the incubator for PipeDreams v2 (P2 for short), which will introduce breaking changes to some APIs.
-I will slowly build up functionalities as i see use for them as i'm using PipeDreams v1 (P1 hereafter) in a
+This is the incubator for PipeDreams v2 (D2 for short), which will introduce breaking changes to some APIs.
+I will slowly build up functionalities as i see use for them as i'm using PipeDreams v1 (D1 hereafter) in a
 rather largeish project where it would be very cumbersome to migrate everything at once.
 
 The major reason for PipeDreams v2 is [detailed in this gist](https://gist.github.com/loveencounterflow/65fd8ec711cf78950aa0)
@@ -27,16 +26,17 @@ implementation structure, since i started writing it when i was rather new to st
 as a notebook of sorts on how to do streams in NodeJS, but now that i feel it to be too much of a hassle
 to get asynchronous stream transformers right with version one, it's time for a rewrite.
 
-## Important
+<!-- ## Important
 
-**When migrating and/or mixing P2 methods with stream methods from other libraries, watch out for
+**When migrating and/or mixing D2 methods with stream methods from other libraries, watch out for
 incompatibilities. Some parts of `through2` are known not to work well with some parts of `through` (and,
-therefore, some parts of `event-stream`). Since P2 is based on `through2` and P1 is based on `event-stream`,
-even mixing P2 and P1 may fail in interesting ways.**
-
+therefore, some parts of `event-stream`). Since D2 is based on `through2` and D1 is based on `event-stream`,
+even mixing D2 and D1 may fail in interesting ways.**
+ -->
+<!--
 ## Changes
 
-* (2014-10-18) `P2.remit` is the successor to `P1.remit` and the first function to be implemented in P2.
+* (2014-10-18) `D2.remit` is the successor to `D1.remit` and the first function to be implemented in D2.
 
   Its interface has
   changed slightly, mainly to avoid silent failures when migrating. The major thing is that where you could
@@ -48,7 +48,7 @@ even mixing P2 and P1 may fail in interesting ways.**
     * `send.done()` (to issue zero items),
     * `send.done data` (to issue exactly one data item) or
     * `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
-      number of data items.
+      number of data items. -->
 
 ## 'Dense' Sorting
 
