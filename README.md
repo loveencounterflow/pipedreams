@@ -12,7 +12,7 @@
 
 ![stability-experimental-red](https://img.shields.io/badge/stability-experimental-red.svg)
 ![npm-0.2.5-yellowgreen](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)
-![motivation-字面明快排字機-yellowgreen](https://img.shields.io/badge/motivation-字面明快排字機-yellowgreen.svg)
+![motivation-字面明快排字機-yellow](https://img.shields.io/badge/motivation-字面明快排字機-yellow.svg)
 
 This is the incubator for PipeDreams v2 (D2 for short), which will introduce breaking changes to some APIs.
 I will slowly build up functionalities as i see use for them as i'm using PipeDreams v1 (D1 hereafter) in a
