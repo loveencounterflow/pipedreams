@@ -12,6 +12,7 @@
 # Breaking News
 
 [![experimental](http://badges.github.io/stability-badges/dist/experimental.svg)](http://github.com/badges/stability-badges)
+[![experimental](https://img.shields.io/npm/v/npm.svg)](https://img.shields.io/npm/v/npm.svg)
 
 This is the incubator for PipeDreams v2 (P2 for short), which will introduce breaking changes to some APIs.
 I will slowly build up functionalities as i see use for them as i'm using PipeDreams v1 (P1 hereafter) in a
