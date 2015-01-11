@@ -98,9 +98,9 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     [ 2,  'c', ]
     [ 3,  'd', ]
     [ 4,  'e', ]
-    # [ 5,  'f', ]
-    # [ 6,  'g', ]
-    # [ 7,  'h', ]
+    [ 5,  'f', ]
+    [ 6,  'g', ]
+    [ 7,  'h', ]
     # [ 8,  'i', ]
     # [ 9,  'j', ]
     # [ 10, 'k', ]
@@ -133,7 +133,8 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   inputs          = [
     '012345'
     '102354'
-    '01243'
+    '1032'
+    '10243'
     ]
   #.........................................................................................................
   for input in inputs
@@ -150,15 +151,6 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   done()
 
 
-# #-----------------------------------------------------------------------------------------------------------
-# @[ "densort 1" ] = ( T, done ) ->
-#   key       = 0
-#   first_idx = 0
-#   #.........................................................................................................
-#   report_handler = ( [ element_count, max_buffer_size, ] ) ->
-#     info "densort report:", [ element_count, max_buffer_size, ]
-#   #.........................................................................................................
-#   output  = []
 #   input   = [
 #     [ 0,  'A', ]
 #     [ 1,  'B', ]
@@ -174,16 +166,6 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
 #     [ 11, 'L', ]
 #     [ 12, 'M', ]
 #     ]
-#   #.........................................................................................................
-#   ds = new_densort key, first_idx, report_handler
-#   for input_element in input
-#     ds input_element, ( _, output_element ) ->
-#       if output_element is null
-#       help output
-#       done()
-#       output.push output_element
-#   #.........................................................................................................
-#   return null
 
 
 
