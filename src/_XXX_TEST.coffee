@@ -16,6 +16,16 @@ urge                      = TRM.get_logger 'urge',      badge
 echo                      = TRM.echo.bind TRM
 #...........................................................................................................
 BNP                       = require 'coffeenode-bitsnpieces'
+ASYNC                     = require 'async'
+
+
+#-----------------------------------------------------------------------------------------------------------
+ME = @
+
+#-----------------------------------------------------------------------------------------------------------
+@get_caller_description = ( delta = 1 ) ->
+  locator = ( BNP.get_caller_locators delta + 1 )[ 0 ]
+  return BNP.caller_description_from_locator locator
 
 #-----------------------------------------------------------------------------------------------------------
 module.exports = run = ( x ) ->
@@ -26,10 +36,13 @@ module.exports = run = ( x ) ->
   fail_count    = 0
   failures      = {}
 
+  #=========================================================================================================
+  # ERROR HANDLING
   #---------------------------------------------------------------------------------------------------------
   error_handler = ( error ) =>
     # throw error if error?
-    ### NB `entry[ 'name' ]` should normally match `entry[ 'caller' ][ 'name' ]` ###
+    ### NB `entry[ 'name' ]` should normally match `entry[ 'caller' ][ 'function-name' ]`
+    and `entry[ 'caller' ][ 'method-name' ]` ###
     # caller      = error[ 'caller'  ] ? ( supply_caller_to_error error )[ 'caller' ]
     caller      = error[ 'caller'  ]
     entry       =
@@ -42,19 +55,20 @@ module.exports = run = ( x ) ->
 
   #---------------------------------------------------------------------------------------------------------
   supply_caller_to_error = ( delta, error = null ) =>
-    # debug '©h0ybR', BNP.get_caller_info_stack 0
-    # debug '©h0ybR', BNP.get_caller_info_stack error
-    delta += +1 unless error?
-    debug '©h0ybR', BNP.get_caller_info delta, error, yes
-    warn 'aborting'
-    process.exit()
-    # fail_count       += 1
-    # warn error.stack
-    # for delta in [ 0 ... 5 ]
-    #   debug '©Cxdmb', delta, ( TEST.get_caller_description delta )#[ 'source' ]
-    # error[ 'caller' ] = TEST.get_caller_description 2
-    # return error
+    delta            += +1 unless error?
+    error[ 'caller' ] = BNP.get_caller_info delta, error, yes
+    fail_count       += 1
+    return error
 
+  #---------------------------------------------------------------------------------------------------------
+  process.on 'uncaughtException', ( error ) ->
+    ### TAINT code duplication ###
+    supply_caller_to_error 0, error unless error[ 'caller' ]?
+    debug '©ZBBpY', error
+    error_handler error
+
+  #=========================================================================================================
+  # TEST METHODS
   #---------------------------------------------------------------------------------------------------------
   T.eq = ( P... ) ->
     ### Tests whether all arguments are pairwise and deeply equal. Uses CoffeeNode Bits'n'Pieces' `equal`
@@ -70,7 +84,6 @@ module.exports = run = ( x ) ->
 
   #---------------------------------------------------------------------------------------------------------
   T.rsvp = ( callback ) ->
-    debug '©phhjN', BNP.get_caller_locators delta
     return ( error, P... ) =>
       ### TAINT need better error handling ###
       throw error if error?
@@ -85,50 +98,55 @@ module.exports = run = ( x ) ->
     else
       fail_count       += 1
       error             = new Error "not OK: #{rpr result}"
-      error[ 'caller' ] = TEST.get_caller_description 1
+      error[ 'caller' ] = ME.get_caller_description 1
       debug '©zYIQA', error
       throw error
 
   #---------------------------------------------------------------------------------------------------------
   T.fail = ( message ) ->
-    debug '©9HhEC', BNP.get_caller_locators delta
     throw new Error message
 
+  #=========================================================================================================
+  # TEST EXECUTION
   #---------------------------------------------------------------------------------------------------------
-  for name, test of x
-    test = test.bind x
-    test_count += 1
-    #.......................................................................................................
-    switch arity = test.length
-      #.....................................................................................................
-      when 1
-        try
-          test T
-        catch error
-          supply_caller_to_error 0, error unless error[ 'caller' ]?
-          error_handler error
-      #.....................................................................................................
-      when 2
-        ### TAINT need ASYNC or similar to manage callbacks in concert with synhronous code ###
-        test T, error_handler
-      #.....................................................................................................
-      else
-        throw new Error "expected test with 1 or 2 arguments, got one with #{arity}"
+  run = ->
+    for name, test of x
+      test = test.bind x
+      test_count += 1
+      #.......................................................................................................
+      switch arity = test.length
+        #.....................................................................................................
+        when 1
+          try
+            test T
+          catch error
+            ### TAINT code duplication ###
+            supply_caller_to_error 0, error unless error[ 'caller' ]?
+            error_handler error
+        #.....................................................................................................
+        when 2
+          ### TAINT need ASYNC or similar to manage callbacks in concert with synhronous code ###
+          try
+            test T, error_handler
+          catch error
+            ### TAINT code duplication ###
+            supply_caller_to_error 0, error unless error[ 'caller' ]?
+            error_handler error
+        #.....................................................................................................
+        else
+          throw new Error "expected test with 1 or 2 arguments, got one with #{arity}"
 
   #---------------------------------------------------------------------------------------------------------
-  info 'test_count:   ',   test_count
-  info 'check_count:  ',   check_count
-  info 'pass_count:   ',   pass_count
-  info 'fail_count:   ',   fail_count
-  info 'failures:     ',   failures
+  report = ->
+    info 'test_count:   ',   test_count
+    info 'check_count:  ',   check_count
+    info 'pass_count:   ',   pass_count
+    info 'fail_count:   ',   fail_count
+    info 'failures:     ',   failures
 
-#-----------------------------------------------------------------------------------------------------------
-@get_caller_description = ( delta = 1 ) ->
-  locator = ( BNP.get_caller_locators delta + 1 )[ 0 ]
-  return BNP.caller_description_from_locator locator
-
-#-----------------------------------------------------------------------------------------------------------
-TEST = @
-
+  #---------------------------------------------------------------------------------------------------------
+  ### TANT `report` must only run on callback from `run` because async ###
+  run()
+  report()
 
 
