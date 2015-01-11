@@ -78,8 +78,8 @@ suspecting that *some* items have swapped places; in other words, the `INDEX()` 
 be very similar to a monotonically growing series.
 
 > In fact, network connections—e.g. those using WebSockets—may indeed be order-preserving, but it's
-> easy to imagine a transport protocol (like UDP) that isn't, or a query result that is assembled from
-> asynchronous calls to a database where each call originated from one piece of data in the stream.
+> easy to imagine a transport protocol (like UDP) that isn't, or a result set that is assembled from
+> asynchronous calls to a database with each call originating from one piece of data in the stream.
 
 This is where `densort` comes in: assuming records are offered in a 'dense' fashion, with some field of
 the recording containing an integer index `i`, forming a finite series with a definite lower bound `i0`
