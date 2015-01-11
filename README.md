@@ -77,7 +77,7 @@ at the consumer is *somewhat* correlated to their original order; at the same ti
 suspecting that *some* items have swapped places; in other words, the `INDEX()` field in each record will
 be very similar to a monotonically growing series.
 
-> In fact, network connections—e.g. those using WebSockets—may indeed be order-preserving, but it's
+> \*) In fact, network connections—e.g. those using WebSockets—may indeed be order-preserving, but it's
 > easy to imagine a transport protocol (like UDP) that isn't, or a result set that is assembled from
 > asynchronous calls to a database with each call originating from one piece of data in the stream.
 > There may also be cases where a proof of sequentiality is not obvious, and it would be nice to have
