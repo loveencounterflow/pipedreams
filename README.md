@@ -71,15 +71,15 @@ memory before i can go on with processing.
 Fortunately, there is an important class of cases that provide 'dense' sorting criterion coupled with
 moderate disorder among the elements: Consider a stream that originates from a database query similar to
 `SELECT INDEX(), word FROM words ORDER BY word ASC` (where `INDEX()` is a function to add a zero-based row
-index to each record in the result set); we want to send each record to a consumer over a [network
-connection][1], one record at a time. We can then be reasonably sure that that the order of items arriving
+index to each record in the result set); we want to send each record to a consumer over a network
+connection*, one record at a time. We can then be reasonably sure that that the order of items arriving
 at the consumer is *somewhat* correlated to their original order; at the same time, we may be justified in
 suspecting that *some* items have swapped places; in other words, the `INDEX()` field in each record will
 be very similar to a monotonically growing series.
 
-  [1] In fact, some network connections—e.g. one using WebSockets—is indeed order-preserving, but it's
-  easy to imagine a transport protocol (like UDP) that isn't, or a query result that is assembled from
-  asynchronous calls to a database where each call originated from one piece of data in the stream.
+> In fact, some network connections—e.g. one using WebSockets—is indeed order-preserving, but it's
+> easy to imagine a transport protocol (like UDP) that isn't, or a query result that is assembled from
+> asynchronous calls to a database where each call originated from one piece of data in the stream.
 
 This is where `densort` comes in: assuming records are offered in a 'dense' fashion, with some field of
 the recording containing an integer index `i`, forming a finite series with a definite lower bound `i0`
