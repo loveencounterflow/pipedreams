@@ -53,10 +53,6 @@ even mixing P2 and P1 may fail in interesting ways.**
 
 `new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->`
 
-Given up to three arguments—a `key`, a `first_idx`, and a `report_handler`—return a function that
-will accept a series of indexed elements and a callback function which it will call with all the elements
-ordered according to their ascending indices.
-
 The motivation for this function is the observation that in order to sort a stream of elements, it is in
 the general case necessary to buffer *all* elements before they can be sorted and sent on. This is because
 in the general case it is unknown prior to stream completion whether or not yet another element that will
@@ -74,8 +70,8 @@ moderate disorder among the elements: Consider a stream that originates from a d
 index to each record in the result set); we want to send each record to a consumer over a network
 connection\*, one record at a time. We can then be reasonably sure that that the order of items arriving
 at the consumer is *somewhat* correlated to their original order; at the same time, we may be justified in
-suspecting that *some* items have swapped places; in other words, the `INDEX()` field in each record will
-be very similar to a monotonically growing series.
+suspecting that *some* items might have swapped places; in other words, the `INDEX()` field in each record
+will be very similar to a monotonically growing series.
 
 > \*) In fact, network connections—e.g. those using WebSockets—may indeed be order-preserving, but it's
 > easy to imagine a transport protocol (like UDP) that isn't, or a result set that is assembled from
@@ -87,7 +83,7 @@ This is where `densort` comes in: assuming records are offered in a 'dense' fash
 the recording containing an integer index `i`, forming a finite series with a definite lower bound `i0`
 and a certain number of elements `n` such that the index of the last element is `i1 = n + i0` and each
 index `i` in the range `i0 <= i <= i1` is associated with exactly one record.
-
+<!--
 Given a stream of `data` items with an index available as `data[ key ]`, re-emit data items in order
 such that indexes are ordered, and no items are left out. This is is called 'dense sort' as it presupposes
 that no single index is left out of the sequence, such that whenever an item with index `n` is seen, it
@@ -116,7 +112,7 @@ and `m <= n` is the maximal number of elements that had to be buffered at any on
 items that have to be buffered with 'sparse', agnostic sorting); `m` will be zero if all items happened
 to arrive in their logical order (the optimal case).
 
-
+ -->
 ## 🚫 Proceed with care; outdated docs below 🚫
 
 For the time being, the implementation is the primary documentation;
