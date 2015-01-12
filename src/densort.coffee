@@ -24,7 +24,7 @@ TYPES                     = require 'coffeenode-types'
 
 
 #-----------------------------------------------------------------------------------------------------------
-module.exports = new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->
+@new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->
   ### Given up to three arguments—a `key`, a `first_idx`, and a `report_handler`—return a function
   `densort = ( element, handler ) ->` that in turn accepts a series of indexed elements and a callback
   function which it will be called once for each element and in the order of the element indices.
@@ -53,8 +53,8 @@ module.exports = new_densort = ( key = 1, first_idx = 0, report_handler = null )
   element_count   = 0
   sent_count      = 0
   #.........................................................................................................
-  buffer_element = ( idx, element ) =>
-    throw new Error "duplicate index #{rpr idx}" if buffer[ idx ]?
+  buffer_element = ( idx, element, handler ) =>
+    return handler new Error "duplicate index #{rpr idx}" if buffer[ idx ]?
     smallest_idx  = Math.min smallest_idx, idx
     # debug '<---', smallest_idx
     buffer[ idx ] = element
@@ -87,14 +87,8 @@ module.exports = new_densort = ( key = 1, first_idx = 0, report_handler = null )
     if element?
       element_count += +1
       idx            = if key_is_function then key element else element[ key ]
-      if idx < min_legal_idx # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        warn 'buffer_size:      ', buffer_size
-        warn 'max_buffer_size:  ', max_buffer_size
-        warn 'min_legal_idx:    ', min_legal_idx
-        warn 'previous_idx:     ', previous_idx
-        warn 'smallest_idx:     ', smallest_idx
-        warn buffer
-      throw new Error "duplicate index #{rpr idx}" if idx < min_legal_idx
+      return handler new Error "index too small: #{rpr idx}" if idx < first_idx
+      return handler new Error "duplicate index: #{rpr idx}" if idx < min_legal_idx
       #.....................................................................................................
       if buffer_size is 0 and idx is previous_idx + 1
         previous_idx    = idx
@@ -104,22 +98,12 @@ module.exports = new_densort = ( key = 1, first_idx = 0, report_handler = null )
         handler null, element
       #.....................................................................................................
       else
-        buffer_element idx, element
+        buffer_element idx, element, handler
         send_buffered_elements handler
     #.......................................................................................................
     else
       send_buffered_elements handler
-      if buffer_size > 0 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        # warn 'first_idx:        ', first_idx
-        # warn 'element_count:    ', element_count
-        # warn 'sent_count:       ', sent_count
-        warn 'buffer_size:      ', buffer_size
-        warn 'max_buffer_size:  ', max_buffer_size
-        warn 'min_legal_idx:    ', min_legal_idx
-        warn 'previous_idx:     ', previous_idx
-        warn 'smallest_idx:     ', smallest_idx
-        warn buffer
-      throw new Error "detected missing elements" if buffer_size > 0
+      return handler new Error "detected missing elements" if buffer_size > 0
       report_handler [ element_count, max_buffer_size, ] if report_handler?
       handler null, null
 

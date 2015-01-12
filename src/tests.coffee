@@ -19,32 +19,42 @@ echo                      = TRM.echo.bind TRM
 #...........................................................................................................
 BNP                       = require 'coffeenode-bitsnpieces'
 LODASH                    = require 'lodash'
-# TYPES                     = require 'coffeenode-types'
+TYPES                     = require 'coffeenode-types'
 # # TEXT                      = require 'coffeenode-text'
 #...........................................................................................................
 # ### https://github.com/dominictarr/event-stream ###
 # ES                        = require 'event-stream'
 test                      = require 'guy-test'
 # A                         = T.asynchronous
-new_densort               = require './densort'
+DS                        = require './densort'
+
+#-----------------------------------------------------------------------------------------------------------
+get_index = ( element, key ) -> if ( TYPES.isa_function key ) then key element else element[ key ]
 
 #-----------------------------------------------------------------------------------------------------------
 collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   output        = []
   target        = LODASH.sortBy ( LODASH.cloneDeep input ), key
   element_count = input.length
-  ds            = new_densort key, first_idx, ( stats ) ->
+  ds            = DS.new_densort key, first_idx, ( stats ) ->
     # info "densort report:", stats
     T.eq stats, [ element_count, max_buffer_size, ] if max_buffer_size?
   #.........................................................................................................
   for collection in [ input, [ null, ], ]
     for input_element in collection
-      ds input_element, ( _, output_element ) ->
+      ds input_element, ( error, output_element ) ->
+        throw error if error?
         if output_element?
           output.push output_element
         else
           T.eq output, target
-          return output
+  #.........................................................................................................
+  last_idx    = element_count + first_idx - 1
+  target_idxs = (                       idx                 for idx in [ first_idx .. last_idx ] by +1 )
+  output_idxs = ( ( get_index ( output[ idx ] ? [] ), key ) for idx in [ first_idx .. last_idx ] by +1 )
+  T.eq output_idxs, target_idxs
+  #.........................................................................................................
+  return output
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "densort 0" ] = ( T, done ) ->
@@ -152,7 +162,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   key             = 0
   first_idx       = 0
   max_buffer_size = 13
-  input   = [
+  input           = [
     [ 1,  'B', ]
     [ 2,  'C', ]
     [ 3,  'D', ]
@@ -176,7 +186,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   key             = 0
   first_idx       = 0
   max_buffer_size = 7
-  input   = [
+  input           = [
     [ 2,  'C', ]
     [ 3,  'D', ]
     [ 4,  'E', ]
@@ -195,6 +205,27 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   output = collect_and_check T, key, first_idx, input, max_buffer_size
   done()
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "densort 7" ] = ( T, done ) ->
+  key             = 0
+  first_idx       = 1
+  max_buffer_size = null
+  input           = [
+    [ 0, 'A', ], [ 1, 'B', ], [ 2, 'C', ], [ 3, 'D', ], [ 4, 'E', ], ]
+  #.........................................................................................................
+  T.throws 'index too small: 0', -> collect_and_check T, key, first_idx, input, max_buffer_size
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "densort 7" ] = ( T, done ) ->
+  key             = 0
+  first_idx       = 0
+  max_buffer_size = null
+  input           = [
+    [ 0, 'A', ], [ 1, 'B', ], [ 2, 'C', ], [ 4, 'E', ], ]
+  #.........................................................................................................
+  T.throws 'detected missing elements', -> collect_and_check T, key, first_idx, input, max_buffer_size
+  done()
 
 
 

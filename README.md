@@ -83,7 +83,7 @@ will be very similar to a monotonically growing series.
 
 This is where `densort` comes in: assuming records are offered in a 'dense' fashion, with some field of
 the recording containing an integer index `i`, forming a finite series with a definite lower bound `i0`
-and a certain number of elements `n` such that the index of the last element is `i1 = n + i0` and each
+and a certain number of elements `n` such that the index of the last element is `i1 = n + i0 - 1` and each
 index `i` in the range `i0 <= i <= i1` is associated with exactly one record.
 <!--
 Given a stream of `data` items with an index available as `data[ key ]`, re-emit data items in order
