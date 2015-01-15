@@ -53,6 +53,14 @@ TYPES                     = require 'coffeenode-types'
   element_count   = 0
   sent_count      = 0
   #.........................................................................................................
+  if report_handler is true
+    report_handler = ( [ event_count, max_buffer_size, ] ) ->
+      percentage = (     max_buffer_size / event_count * 100  ).toFixed 2
+      efficiency = ( 1 - max_buffer_size / event_count        ).toFixed 2
+      info """\nPipeDreams DenSort:
+        of #{event_count} elements, up to #{max_buffer_size} (#{percentage}%) had to be buffered;
+        efficiency: #{efficiency}"""
+  #.........................................................................................................
   buffer_element = ( idx, element, handler ) =>
     return handler new Error "duplicate index #{rpr idx}" if buffer[ idx ]?
     smallest_idx  = Math.min smallest_idx, idx

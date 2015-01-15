@@ -19,6 +19,7 @@ through2                  = require 'through2'
 #...........................................................................................................
 TYPES                     = require 'coffeenode-types'
 DS                        = require './densort'
+@new_densort              = DS.new_densort.bind DS
 #...........................................................................................................
 ### https://github.com/dominictarr/event-stream ###
 ES                        = require 'event-stream'
@@ -43,11 +44,13 @@ ES                        = require 'event-stream'
 # REMIT
 #-----------------------------------------------------------------------------------------------------------
 @remit = ( method ) ->
+  # debug '©kZoQz', method
   send      = null
   cache     = null
   on_end    = null
   #.........................................................................................................
   get_send = ( self ) ->
+    CND.DIR self
     R         = (  data ) -> self.emit 'data',  data # if data?
     R.error   = ( error ) -> self.emit 'error', error
     R.end     =           -> self.emit 'end'
@@ -130,7 +133,7 @@ ES                        = require 'event-stream'
 # SORT AND SHUFFLE
 #-----------------------------------------------------------------------------------------------------------
 @$densort = ( key = 1, first_idx = 0, report_handler = null ) ->
-  ds        = DS.new_densort key, first_idx, report_handler
+  ds        = @new_densort key, first_idx, report_handler
   has_ended = no
   #.........................................................................................................
   send_data = ( send, data ) =>
