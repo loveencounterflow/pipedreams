@@ -24,15 +24,15 @@ TYPES                     = require 'coffeenode-types'
 
 
 #-----------------------------------------------------------------------------------------------------------
-@new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->
-  ### Given up to three arguments—a `key`, a `first_idx`, and a `report_handler`—return a function
+@new_densort = ( getter = 1, first_idx = 0, report_handler = null ) ->
+  ### Given up to three arguments—a `getter`, a `first_idx`, and a `report_handler`—return a function
   `densort = ( element, handler ) ->` that in turn accepts a series of indexed elements and a callback
   function which it will be called once for each element and in the order of the element indices.
 
   The `densort` function should be called one for each element; each element should be an object or
-  primitive value. In case `key` is not callable, then indices will be retrieved as `element[ key ]`
-  (`key` defaulting to `1`, because i often send 'event' lists similar to `[ type, idx, payload... ]` down
-  the stream); in case `key` is a function, indices will be retrieved as `key element`. When the series
+  primitive value. In case `getter` is not callable, then indices will be retrieved as `element[ getter ]`
+  (`getter` defaulting to `1`, because i often send 'event' lists similar to `[ type, idx, payload... ]` down
+  the stream); in case `getter` is a function, indices will be retrieved as `getter element`. When the series
   of elements has ended, `densort` should be called once more with a `null` value to signal this.
 
   The `handler` argument to `densort` should be a NodeJS-style callback function, i.e. it should accept
@@ -43,15 +43,15 @@ TYPES                     = require 'coffeenode-types'
 
   ###
   #.........................................................................................................
-  key_is_function = TYPES.isa_function key
-  buffer          = []
-  buffer_size     = 0             # Amount of buffered items
-  previous_idx    = first_idx - 1 # Index of most recently sent item
-  smallest_idx    = Infinity      # Index of first item in buffer
-  min_legal_idx   = 0             # 'Backlog' of the range of indexes that have already been sent out
-  max_buffer_size = 0
-  element_count   = 0
-  sent_count      = 0
+  getter_is_function  = TYPES.isa_function getter
+  buffer              = []
+  buffer_size         = 0             # Amount of buffered items
+  previous_idx        = first_idx - 1 # Index of most recently sent item
+  smallest_idx        = Infinity      # Index of first item in buffer
+  min_legal_idx       = 0             # 'Backlog' of the range of indexes that have already been sent out
+  max_buffer_size     = 0
+  element_count       = 0
+  sent_count          = 0
   #.........................................................................................................
   if report_handler is true
     report_handler = ( [ event_count, max_buffer_size, ] ) ->
@@ -94,7 +94,7 @@ TYPES                     = require 'coffeenode-types'
     #.......................................................................................................
     if element?
       element_count += +1
-      idx            = if key_is_function then key element else element[ key ]
+      idx            = if getter_is_function then getter element else element[ getter ]
       return handler new Error "index too small: #{rpr idx}" if idx < first_idx
       return handler new Error "duplicate index: #{rpr idx}" if idx < min_legal_idx
       #.....................................................................................................

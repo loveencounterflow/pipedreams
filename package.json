@@ -31,6 +31,7 @@
     "guy-test": "^0.1.1",
     "level-live-stream": "^1.4.9",
     "progress": "^1.1.7",
+    "sort-stream": "^1.0.1",
     "string": "^1.9.1",
     "throttle": "^1.0.3",
     "through2": "^1.1.1"

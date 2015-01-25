@@ -17,12 +17,14 @@ echo                      = CND.echo.bind CND
 ### https://github.com/rvagg/through2 ###
 through2                  = require 'through2'
 #...........................................................................................................
-TYPES                     = require 'coffeenode-types'
 DS                        = require './densort'
 @new_densort              = DS.new_densort.bind DS
 #...........................................................................................................
 ### https://github.com/dominictarr/event-stream ###
-ES                        = require 'event-stream'
+@ES                       = require 'event-stream'
+#...........................................................................................................
+### https://github.com/dominictarr/sort-stream ###
+@$sort                    = require 'sort-stream'
 
 
 #===========================================================================================================
@@ -31,29 +33,31 @@ ES                        = require 'event-stream'
 # @create_readstream            = HELPERS.create_readstream             .bind HELPERS
 # @create_readstream_from_text  = HELPERS.create_readstream_from_text   .bind HELPERS
 # @pimp_readstream              = HELPERS.pimp_readstream               .bind HELPERS
-# @merge                        = ES.merge                              .bind ES
-@$split                       = ES.split                              .bind ES
-# @$chain                       = ES.pipeline                           .bind ES
-# @through                      = ES.through                            .bind ES
-# @duplex                       = ES.duplex                             .bind ES
-# @as_readable                  = ES.readable                           .bind ES
-# @read_list                    = ES.readArray                          .bind ES
+# @merge                        = @ES.merge                              .bind @ES
+@$split                       = @ES.split                              .bind @ES
+# @$chain                       = @ES.pipeline                           .bind @ES
+# @through                      = @ES.through                            .bind @ES
+# @duplex                       = @ES.duplex                             .bind @ES
+# @as_readable                  = @ES.readable                           .bind @ES
+# @read_list                    = @ES.readArray                          .bind @ES
 
 
 #===========================================================================================================
 # REMIT
 #-----------------------------------------------------------------------------------------------------------
 @remit = ( method ) ->
-  # debug '©kZoQz', method
   send      = null
   cache     = null
   on_end    = null
   #.........................................................................................................
   get_send = ( self ) ->
-    CND.DIR self
-    R         = (  data ) -> self.emit 'data',  data # if data?
-    R.error   = ( error ) -> self.emit 'error', error
-    R.end     =           -> self.emit 'end'
+    R             = (  data ) -> self.emit 'data',  data # if data?
+    R.error       = ( error ) -> self.emit 'error', error
+    R.end         =           -> self.emit 'end'
+    R.pause       =           -> self.pause()
+    R.resume      =           -> self.resume()
+    R.read        =           -> self.read()
+    R[ '%self' ]  = self
     return R
   #.........................................................................................................
   switch arity = method.length
@@ -90,15 +94,17 @@ ES                        = require 'event-stream'
     else
       throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
   #.........................................................................................................
-  return ES.through on_data, on_end
+  return @ES.through on_data, on_end
 
+#-----------------------------------------------------------------------------------------------------------
+$ = @remit.bind @
 
 #===========================================================================================================
 # OMITTING VALUES
 #-----------------------------------------------------------------------------------------------------------
 @$skip_first = ( n = 1 ) ->
   count = 0
-  return @remit ( data, send ) ->
+  return $ ( data, send ) ->
     count += +1
     send data if count > n
 
@@ -111,22 +117,6 @@ ES                        = require 'event-stream'
   R.setMaxListeners 0
   return R
 
-
-#===========================================================================================================
-# COUNTING
-#-----------------------------------------------------------------------------------------------------------
-@$count = ( label, handler = null ) ->
-  count = 0
-  return @remit ( data, send, end ) =>
-    count += 1 if data?
-    unless end?
-      send.done data
-    else
-      if handler?
-        handler null, count
-      else
-        info "encountered #{count} #{label}"
-      end()
 
 
 #===========================================================================================================
@@ -142,7 +132,7 @@ ES                        = require 'event-stream'
     send.end() unless has_ended
     has_ended = yes
   #.........................................................................................................
-  return @remit ( input_data, send, end ) =>
+  return $ ( input_data, send, end ) =>
     #.......................................................................................................
     if input_data?
       ds input_data, ( error, output_data ) =>
@@ -161,25 +151,73 @@ ES                        = require 'event-stream'
 
 
 #===========================================================================================================
-# AGGREGATION
+# AGGREGATION & DISSEMINATION
 #-----------------------------------------------------------------------------------------------------------
-@$collect = ->
-  collector = []
-  return @remit ( event, send, end ) =>
+### TAINT all these functions should have an optional callback (that does not take an error and
+should not be named 'handler'); with no callback, the aggregated data will be sent downstream; with a
+callback, the orighinal data will be sent downstream, and the aggregate is the sole argument for the callback on
+end-of-stream. ###
+@$count = ( handler = null ) ->
+  count = 0
+  return $ ( data, send, end ) =>
+    count += 1 if data?
+    send data if handler?
+    if end?
+      if handler?
+        handler count
+      else
+        send count
+      end()
+
+#-----------------------------------------------------------------------------------------------------------
+@$collect = ( collector = null ) ->
+  collector ?= []
+  return $ ( event, send, end ) =>
     if event?
       collector.push event
     if end?
       send collector
       end()
 
+#-----------------------------------------------------------------------------------------------------------
+@$spread = ( settings ) ->
+  indexed   = settings?[ 'indexed'  ] ? no
+  end       = settings?[ 'end'      ] ? no
+  return $ ( event, send ) =>
+    unless type = ( CND.type_of event ) is 'list'
+      return send.error new Error "expected a list, got a #{rpr type}"
+    for value, idx in event
+      send if indexed then [ idx, value, ] else value
+    send null if end
+
+
+#===========================================================================================================
+# FILTERING
+#-----------------------------------------------------------------------------------------------------------
+@$filter = ( select ) ->
+  return $ ( event, send ) =>
+    send event if select event
+
+
 #===========================================================================================================
 # REPORTING
 #-----------------------------------------------------------------------------------------------------------
 @$show = ( badge = null ) ->
   my_show = CND.get_logger 'info', badge ? '*'
-  return @remit ( record, send ) =>
+  return $ ( record, send ) =>
     my_show rpr record
     send record
+
+
+#===========================================================================================================
+# EXPERIMENTAL: STREAM LINKING
+#-----------------------------------------------------------------------------------------------------------
+@$continue = ( stream ) ->
+  return $ ( data, send, end ) =>
+    stream.write data
+    if end?
+      stream.end()
+      end()
 
 
 
