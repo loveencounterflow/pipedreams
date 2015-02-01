@@ -2,6 +2,7 @@
 
 - [Breaking News](#breaking-news)
 	- [Changes](#changes)
+	- ['Retroactive' Sub-Streams](#'retroactive'-sub-streams)
 	- ['Dense' Sorting](#'dense'-sorting)
 	- [🚫 Proceed with care; outdated docs below 🚫](#🚫-proceed-with-care;-outdated-docs-below-🚫)
 
@@ -50,6 +51,84 @@ even mixing D2 and D1 may fail in interesting ways.**
     * `send.done data` (to issue exactly one data item) or
     * `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
       number of data items. -->
+
+
+## 'Retroactive' Sub-Streams
+
+
+The PipeDreams v2 `$sub` method allows to formulate pipes which 'talk back', as it were, to upstream
+transformers. This can be handy when a given transformer performs single steps of an iterative optimization
+process; with `$sub`, it becomes possible to re-submit a less-than-perfect value from a downstream
+tranformer. Let's have a look at a simple example; we start with a stream of numbers, and our goal is to
+'reduce' each number to a value closer to `1` than a given quality margin `epsilon` allows. We implement
+that by an 'optimizer' transform which takes the square root of each number and passes it on. The result
+will always be closer to 1 (if input was > 0), but not necessarily good enough. We verify for that in
+the next step: if the recevied number differs from 1 by more than allowed by `epsilon`, it is re-written
+into the source stream to be 'optimized' again; otherwise, it is send on as usual:
+
+```coffee
+sub_demo = ->
+  input   = D2.create_throughstream()
+  epsilon = 0.1
+  #.........................................................................................................
+  input
+    # .pipe this # imagine any number of piping steps here
+    # .pipe that
+    #.......................................................................................................
+    # Let's start the substream:
+    .pipe D2.$sub ( source, sink ) ->
+      source
+        #...................................................................................................
+        # Optimizer: take the square root of each number:
+        .pipe $ ( n, send ) ->
+          send Math.sqrt n
+        #...................................................................................................
+        # Quality Control: if distance to target value 1 to great, re-insert into the sub-stream source;
+        # if OK, then pass on downstream
+        .pipe $ ( n, send ) ->
+          whisper n
+          if ( Math.abs n - 1 ) > epsilon then  source.write n # value sent 'up'
+          else                                  send n         # value sent 'down'
+        #...................................................................................................
+        # Don't forget to pipe to the sink:
+        .pipe sink
+    #.......................................................................................................
+    # The substream is finished here, let's show the results:
+    .pipe D2.$show()
+  #.........................................................................................................
+  for n in [ 3, 4, 1e6, 0.1, ]
+    input.write n
+```
+
+Output:
+
+```
+(1.7320508075688772)
+(1.3160740129524924)
+(1.147202690439877)
+(1.0710754830729146)
+*  ▶  1.0710754830729146
+(2)
+(1.4142135623730951)
+(1.189207115002721)
+(1.0905077326652577)
+*  ▶  1.0905077326652577
+(1000)
+(31.622776601683793)
+(5.623413251903491)
+(2.3713737056616555)
+(1.539926526059492)
+(1.2409377607517196)
+(1.1139738599948024)
+(1.055449600878603)
+*  ▶  1.055449600878603
+(0.31622776601683794)
+(0.5623413251903491)
+(0.7498942093324559)
+(0.8659643233600653)
+(0.930572040929699)
+*  ▶  0.930572040929699
+```
 
 ## 'Dense' Sorting
 

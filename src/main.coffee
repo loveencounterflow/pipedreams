@@ -118,6 +118,25 @@ $ = @remit.bind @
   return R
 
 
+#===========================================================================================================
+# SUB-STREAMS
+#-----------------------------------------------------------------------------------------------------------
+D2.$sub = ( sub_transformer ) ->
+  _send   = null
+  #.........................................................................................................
+  source  = D2.create_throughstream()
+  sink    = D2.create_throughstream()
+  sub_transformer source, sink
+  #.........................................................................................................
+  sink.on 'data', ( data )  => _send data
+  sink.on 'end',            => _send.end()
+  #.........................................................................................................
+  return $ ( data, send ) =>
+    _send = send
+    source.write data
+
+
+
 
 #===========================================================================================================
 # SORT AND SHUFFLE
@@ -189,6 +208,35 @@ end-of-stream. ###
     for value, idx in event
       send if indexed then [ idx, value, ] else value
     send null if end
+
+
+#===========================================================================================================
+# STREAM START & END DETECTION
+#-----------------------------------------------------------------------------------------------------------
+@$signal_end = ( signal = @eos ) ->
+  ### Given an optional `signal` (which defaults to `null`), return a stream transformer that emits
+  `signal` as last value in the stream. Observe that whatever value you choose for `signal`, that value
+  should be gracefully handled by any transformers that follow in the pipe. ###
+  on_data = null
+  on_end  = ->
+    @emit 'data', signal
+    @emit 'end'
+  return @ES.through on_data, on_end
+
+#-----------------------------------------------------------------------------------------------------------
+@$on_end = ( method ) ->
+  return $ ( data, send, end ) ->
+    send data if data?
+    if end?
+      method send, end
+
+#-----------------------------------------------------------------------------------------------------------
+@$on_start = ( method ) ->
+  is_first = yes
+  return $ ( data, send ) ->
+    method send if is_first
+    is_first = no
+    send data
 
 
 #===========================================================================================================
