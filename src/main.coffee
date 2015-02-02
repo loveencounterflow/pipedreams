@@ -47,7 +47,6 @@ DS                        = require './densort'
 #-----------------------------------------------------------------------------------------------------------
 @remit = ( method ) ->
   send      = null
-  cache     = null
   on_end    = null
   #.........................................................................................................
   get_send = ( self ) ->
@@ -59,42 +58,77 @@ DS                        = require './densort'
     R.read        =           -> self.read()
     R[ '%self' ]  = self
     return R
+  #.....................................................................................................
+  on_data = ( data ) ->
+    send = get_send @ unless send?
+    method data, send
   #.........................................................................................................
   switch arity = method.length
-    #.......................................................................................................
     when 2
-      #.....................................................................................................
-      on_data = ( data ) ->
-        # debug '©3w9', send
-        send = get_send @ unless send?
-        method data, send
+      null
     #.......................................................................................................
     when 3
-      cache = []
-      #.....................................................................................................
-      on_data = ( data ) ->
-        # debug '©3w9', send, data
-        if cache.length is 0
-          cache[ 0 ] = data
-          return
-        send = get_send @ unless send?
-        [ cache[ 0 ], data, ] = [ data, cache[ 0 ], ]
-        method data, send, null
-      #.....................................................................................................
       on_end = ->
         send  = get_send @ unless send?
         end   = => @emit 'end'
-        if cache.length is 0
-          data = null
-        else
-          data = cache[ 0 ]
-          cache.length = 0
-        method data, send, end
+        method undefined, send, end
     #.......................................................................................................
     else
       throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
   #.........................................................................................................
   return @ES.through on_data, on_end
+
+# #-----------------------------------------------------------------------------------------------------------
+# @remit = ( method ) ->
+#   send      = null
+#   cache     = null
+#   on_end    = null
+#   #.........................................................................................................
+#   get_send = ( self ) ->
+#     R             = (  data ) -> self.emit 'data',  data # if data?
+#     R.error       = ( error ) -> self.emit 'error', error
+#     R.end         =           -> self.emit 'end'
+#     R.pause       =           -> self.pause()
+#     R.resume      =           -> self.resume()
+#     R.read        =           -> self.read()
+#     R[ '%self' ]  = self
+#     return R
+#   #.........................................................................................................
+#   switch arity = method.length
+#     #.......................................................................................................
+#     when 2
+#       #.....................................................................................................
+#       on_data = ( data ) ->
+#         # debug '©3w9', send
+#         send = get_send @ unless send?
+#         method data, send
+#     #.......................................................................................................
+#     when 3
+#       cache = []
+#       #.....................................................................................................
+#       on_data = ( data ) ->
+#         # debug '©3w9', send, data
+#         if cache.length is 0
+#           cache[ 0 ] = data
+#           return
+#         send = get_send @ unless send?
+#         [ cache[ 0 ], data, ] = [ data, cache[ 0 ], ]
+#         method data, send, null
+#       #.....................................................................................................
+#       on_end = ->
+#         send  = get_send @ unless send?
+#         end   = => @emit 'end'
+#         if cache.length is 0
+#           data = null
+#         else
+#           data = cache[ 0 ]
+#           cache.length = 0
+#         method data, send, end
+#     #.......................................................................................................
+#     else
+#       throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
+#   #.........................................................................................................
+#   return @ES.through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 $ = @remit.bind @
@@ -121,21 +155,31 @@ $ = @remit.bind @
 #===========================================================================================================
 # SUB-STREAMS
 #-----------------------------------------------------------------------------------------------------------
-D2.$sub = ( sub_transformer ) ->
+@$sub = ( sub_transformer ) ->
+  #.........................................................................................................
   _send   = null
+  _end    = null
+  cache   = undefined
   #.........................................................................................................
-  source  = D2.create_throughstream()
-  sink    = D2.create_throughstream()
-  sub_transformer source, sink
+  source        = @create_throughstream()
+  sink          = @create_throughstream()
+  source.ended  = false
+  sub_transformer source, sink, -> source.end()
   #.........................................................................................................
-  sink.on 'data', ( data )  => _send data
-  sink.on 'end',            => _send.end()
+  sink.on   'data', ( data )  => _send data
+  sink.on   'end',            => _send.end()
   #.........................................................................................................
-  return $ ( data, send ) =>
-    _send = send
-    source.write data
-
-
+  return $ ( data, send, end ) =>
+    if data?
+      _send = send
+      if cache is undefined
+        cache = data
+      else
+        source.write cache
+        cache = data
+    if end?
+      source.ended = true
+      source.write cache unless cache is undefined
 
 
 #===========================================================================================================

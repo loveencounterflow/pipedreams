@@ -100,7 +100,7 @@ sub_demo = ->
     input.write n
 ```
 
-Output:
+And here is the output of the above:
 
 ```
 (1.7320508075688772)
@@ -129,6 +129,19 @@ Output:
 (0.930572040929699)
 *  ▶  0.930572040929699
 ```
+
+**Important Caveat** Because sub-streams are intended to be used in cases where re-sending of values to
+upstream consumers is needed, the `source` stream will *not* receive an end event, as that would preclude
+re-sending of data for the last element in the stream (you can't write to a stream that has ended). Instead,
+a special attribute, `source.ended`, is set to `true` when the last data item comes down the stream.
+Based on the knowledge of what you're doing and at what point in time you are through with sending more
+data, you can check for that condition and say, for example, `if source.ended then source.end()`.
+
+Be aware that some stream transformers (e.g. transformers that sort the entire stream) rely on the `end`
+event in the stream to be issued; such transformers must not be in the stream above the point where you
+explicitly call `source.end()`.
+
+
 
 ## 'Dense' Sorting
 
