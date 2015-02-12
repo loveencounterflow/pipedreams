@@ -25,6 +25,8 @@ DS                        = require './densort'
 #...........................................................................................................
 ### https://github.com/dominictarr/sort-stream ###
 @$sort                    = require 'sort-stream'
+#...........................................................................................................
+PIPEDREAMS                = @
 
 
 #===========================================================================================================
@@ -163,8 +165,9 @@ $ = @remit.bind @
   #.........................................................................................................
   source        = @create_throughstream()
   sink          = @create_throughstream()
+  state         = {}
   source.ended  = false
-  sub_transformer source, sink, -> source.end()
+  sub_transformer source, sink, state
   #.........................................................................................................
   sink.on   'data', ( data )  => _send data
   sink.on   'end',            => _send.end()
@@ -310,6 +313,186 @@ end-of-stream. ###
     if end?
       stream.end()
       end()
+
+
+
+#===========================================================================================================
+# HYPHENATION
+#-----------------------------------------------------------------------------------------------------------
+@new_hyphenator = ( hyphenation = null, min_length = 4 ) ->
+  ### https://github.com/bramstein/hypher ###
+  Hypher        = require 'hypher'
+  hyphenation  ?= require 'hyphenation.en-us'
+  HYPHER        = new Hypher hyphenation
+  return HYPHER.hyphenateText.bind HYPHER
+
+#-----------------------------------------------------------------------------------------------------------
+@$hyphenate = ( hyphenation = null, min_length = 4 ) ->
+  hyphenate = @new_hyphenator hyphenation, min_length
+  return $ ( text, send ) => send hyphenate text, min_length
+
+
+#===========================================================================================================
+# EXPERIMENTAL: STREAM LINKING
+#-----------------------------------------------------------------------------------------------------------
+@HTML = {}
+
+#-----------------------------------------------------------------------------------------------------------
+@HTML._new_parser = ( settings, stream ) ->
+  ### NB.: Will not send empty text nodes; will not join ('normalize') adjacent text nodes. ###
+  lone_tags = """area base br col command embed hr img input keygen link meta param
+    source track wbr""".split /\s+/
+  #.........................................................................................................
+  handlers =
+    #.......................................................................................................
+    onopentag:  ( name, attributes )  ->
+      if name in lone_tags
+        if name is 'wbr'
+          throw new Error "illegal <wbr> tag with attributes" if ( Object.keys attributes ).length > 0
+          ### as per https://developer.mozilla.org/en/docs/Web/HTML/Element/wbr ###
+          stream.write [ 'text', '\u200b' ]
+        else
+          stream.write [ 'lone-tag', name, attributes, ]
+      else
+        stream.write [ 'open-tag', name, attributes, ]
+    #.......................................................................................................
+    onclosetag: ( name ) ->
+      unless name in lone_tags
+        stream.write [ 'close-tag', name, ]
+    #.......................................................................................................
+    ontext: ( text ) ->
+      stream.write [ 'text', text, ]
+    #.......................................................................................................
+    onend: ->
+      stream.write [ 'end', ]; stream.end()
+    #.......................................................................................................
+    onerror: ( error ) ->
+      throw error
+  #.........................................................................................................
+  Htmlparser = ( require 'htmlparser2' ).Parser
+  return new Htmlparser handlers, settings
+
+#-----------------------------------------------------------------------------------------------------------
+@HTML.$parse = ->
+  settings    = decodeEntities: yes
+  stream      = PIPEDREAMS.create_throughstream()
+  html_parser = @_new_parser settings, stream
+  _send       = null
+  #.........................................................................................................
+  stream.on 'data', ( data ) -> _send data
+  stream.on 'end',           -> _send.end()
+  #.........................................................................................................
+  return $ ( source, send, end ) =>
+    _send = send
+    if source?
+      html_parser.write source
+    if end?
+      html_parser.end()
+
+#-----------------------------------------------------------------------------------------------------------
+@HTML.$collect_closing_tags = ->
+  ### Keeps trace of all opened tags and adds a list to each event that speels out the names of tags to be
+  closed at that point; that list anticipates all the `close-tag` events that are due to arrive later in the
+  stream. ###
+  pending_tag_buffer = []
+  #.........................................................................................................
+  return $ ( event, send ) ->
+    # debug '©LTGTp', event
+    [ type, tail..., ] = event
+    if type is 'open-tag'
+      pending_tag_buffer.unshift tail[ 0 ][ 0 ]
+    else if type is 'close-tag'
+      pending_tag_buffer.shift()
+    unless type is 'end'
+      event.push pending_tag_buffer[ .. ]
+    send event
+
+#-----------------------------------------------------------------------------------------------------------
+@HTML.$collect_texts = ->
+  text_buffer = []
+  _send       = null
+  #.........................................................................................................
+  send_buffer = ->
+    if text_buffer.length > 0
+      _send [ 'text', text_buffer.join '', ]
+      text_buffer.length = 0
+  #.........................................................................................................
+  return $ ( event, send ) ->
+    _send               = send
+    [ type, tail..., ]  = event
+    if type is 'text'
+      text_buffer.push tail[ 0 ]
+    else
+      send_buffer()
+      send event
+
+#-----------------------------------------------------------------------------------------------------------
+@HTML.$collect_empty_tags = ->
+  ### Detects situations where an openening tag is directly followed by a closing tag, such as in `foo
+  <span class='x'></span> bar`, and turns such occurrances into single `empty-tag` events to simplifiy
+  further processing. ###
+  last_event = null
+  #.........................................................................................................
+  return $ ( event, send ) ->
+    [ type, tail..., ] = event
+    if type is 'open-tag'
+      send last_event if last_event?
+      last_event = event
+      return
+    if type is 'close-tag' and last_event?
+      send [ 'empty-tag', last_event[ 1 .. ]..., ]
+      last_event = null
+      return
+    if last_event?
+      send last_event
+      last_event = null
+    send event
+
+
+
+#===========================================================================================================
+# THROUGHPUT LIMITING
+#-----------------------------------------------------------------------------------------------------------
+@$throttle_bytes = ( bytes_per_second ) ->
+  Throttle = require 'throttle'
+  return new Throttle bytes_per_second
+
+#-----------------------------------------------------------------------------------------------------------
+@$throttle_items = ( items_per_second ) ->
+  buffer    = []
+  count     = 0
+  idx       = 0
+  _send     = null
+  timer     = null
+  has_ended = no
+  #.........................................................................................................
+  emit    = ->
+    if ( data = buffer[ idx ] ) isnt undefined
+      buffer[ idx ] = undefined
+      idx   += +1
+      count += -1
+      _send data
+    #.......................................................................................................
+    if has_ended and count < 1
+      clearInterval timer
+      buffer = _send = timer = null # necessary?
+      _send.end()
+    #.......................................................................................................
+    return null
+  #.........................................................................................................
+  start   = ->
+    timer = setInterval emit, 1 / items_per_second * 1000
+  #---------------------------------------------------------------------------------------------------------
+  return $ ( data, send, end ) =>
+    if data?
+      unless _send?
+        _send = send
+        start()
+      buffer.push data
+      count += +1
+    #.......................................................................................................
+    if end?
+      has_ended = yes
 
 
 
