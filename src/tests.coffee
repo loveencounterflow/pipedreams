@@ -1,26 +1,20 @@
 
 
 ############################################################################################################
-TRM                       = require 'coffeenode-trm'
-rpr                       = TRM.rpr.bind TRM
+CND                       = require 'cnd'
+rpr                       = CND.rpr.bind CND
 badge                     = 'PIPEDREAMS2/tests'
-log                       = TRM.get_logger 'plain',     badge
-info                      = TRM.get_logger 'info',      badge
-whisper                   = TRM.get_logger 'whisper',   badge
-alert                     = TRM.get_logger 'alert',     badge
-debug                     = TRM.get_logger 'debug',     badge
-warn                      = TRM.get_logger 'warn',      badge
-help                      = TRM.get_logger 'help',      badge
-urge                      = TRM.get_logger 'urge',      badge
-echo                      = TRM.echo.bind TRM
+log                       = CND.get_logger 'plain',     badge
+info                      = CND.get_logger 'info',      badge
+whisper                   = CND.get_logger 'whisper',   badge
+alert                     = CND.get_logger 'alert',     badge
+debug                     = CND.get_logger 'debug',     badge
+warn                      = CND.get_logger 'warn',      badge
+help                      = CND.get_logger 'help',      badge
+urge                      = CND.get_logger 'urge',      badge
+echo                      = CND.echo.bind CND
 #...........................................................................................................
-# ### https://github.com/rvagg/through2 ###
-# through2                  = require 'through2'
-#...........................................................................................................
-BNP                       = require 'coffeenode-bitsnpieces'
 LODASH                    = require 'lodash'
-TYPES                     = require 'coffeenode-types'
-# # TEXT                      = require 'coffeenode-text'
 #...........................................................................................................
 # ### https://github.com/dominictarr/event-stream ###
 # ES                        = require 'event-stream'
@@ -29,7 +23,7 @@ test                      = require 'guy-test'
 DS                        = require './densort'
 
 #-----------------------------------------------------------------------------------------------------------
-get_index = ( element, key ) -> if ( TYPES.isa_function key ) then key element else element[ key ]
+get_index = ( element, key ) -> if ( CND.isa_function key ) then key element else element[ key ]
 
 #-----------------------------------------------------------------------------------------------------------
 collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
@@ -128,7 +122,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
       messages.push message
       warn input_txt
       T.fail message
-    break unless BNP.ez_permute input
+    break unless CND.ez_permute input
   #.........................................................................................................
   # help '\n' + messages.join '\n'
   done()
