@@ -14,12 +14,6 @@ warn                      = CND.get_logger 'warn',      badge
 help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
-#...........................................................................................................
-# ### https://github.com/rvagg/through2 ###
-# through2                  = require 'through2'
-# #...........................................................................................................
-# BNP                       = require 'coffeenode-bitsnpieces'
-CND                       = require 'coffeenode-types'
 
 
 
