@@ -58,7 +58,8 @@ PIPEDREAMS                = @
     R.pause       =           -> self.pause()
     R.resume      =           -> self.resume()
     R.read        =           -> self.read()
-    R[ '%self' ]  = self
+    # R[ '%self' ]  = self
+    R.stream      = self
     return R
   #.....................................................................................................
   on_data = ( data ) ->
@@ -305,7 +306,7 @@ end-of-stream. ###
 
 
 #===========================================================================================================
-# EXPERIMENTAL: STREAM LINKING
+# EXPERIMENTAL: STREAM LINKING, CONCATENATING
 #-----------------------------------------------------------------------------------------------------------
 @$continue = ( stream ) ->
   return $ ( data, send, end ) =>
@@ -314,6 +315,11 @@ end-of-stream. ###
       stream.end()
       end()
 
+# #-----------------------------------------------------------------------------------------------------------
+# @$concatenate = ( transforms ) =>
+#   R = i = @create_throughstream()
+#   i = i.pipe transform for transform in transforms
+#   return R
 
 
 #===========================================================================================================
