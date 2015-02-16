@@ -27,6 +27,7 @@ DS                        = require './densort'
 @$sort                    = require 'sort-stream'
 #...........................................................................................................
 PIPEDREAMS                = @
+LODASH                    = require 'lodash'
 
 
 #===========================================================================================================
@@ -315,11 +316,17 @@ end-of-stream. ###
       stream.end()
       end()
 
-# #-----------------------------------------------------------------------------------------------------------
-# @$concatenate = ( transforms ) =>
-#   R = i = @create_throughstream()
-#   i = i.pipe transform for transform in transforms
-#   return R
+
+#-----------------------------------------------------------------------------------------------------------
+@$link = ( transforms... ) ->
+  return @create_throughstream() if transforms.length is 0
+  source  = sink = @create_throughstream()
+  sink    = sink.pipe transform for transform in LODASH.flatten transforms
+  _send   = null
+  sink.on 'data', ( data ) => _send data
+  return $ ( data, send ) =>
+    _send = send
+    source.write data
 
 
 #===========================================================================================================

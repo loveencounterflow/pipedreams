@@ -32,6 +32,7 @@
     "hyphenation.en-us": "^0.2.1",
     "hypher": "^0.2.3",
     "level-live-stream": "^1.4.9",
+    "lodash": "^3.2.0",
     "progress": "^1.1.7",
     "sort-stream": "^1.0.1",
     "string": "^1.9.1",
