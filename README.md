@@ -1,44 +1,51 @@
 
 
 - [PipeDreams](#pipedreams)
-	- [API](#api)
-		- [$aggregate = ( aggregator, on_end = null ) ->](#$aggregate-=--aggregator-on_end-=-null--->)
-		- [$collect(), $count()](#$collect-$count)
+- [API](#api)
+	- [Stream- and Transform Construction](#stream--and-transform-construction)
+		- [remit()](#remit)
+		- [create_throughstream()](#create_throughstream)
+		- ['Retroactive' Sub-Streams: $sub()](#'retroactive'-sub-streams-$sub)
 		- [$link()](#$link)
 		- [$continue()](#$continue)
-		- [$densort()](#$densort)
-		- [$filter()](#$filter)
+	- [Aggregation](#aggregation)
+		- [$aggregate = ( aggregator, on_end = null ) ->](#$aggregate-=--aggregator-on_end-=-null--->)
+		- [$collect(), $count()](#$collect-$count)
+	- [Strings](#strings)
 		- [$hyphenate()](#$hyphenate)
-		- [$on_end()](#$on_end)
-		- [$on_start()](#$on_start)
-		- [$show()](#$show)
-		- [$signal_end()](#$signal_end)
-		- [$skip_first()](#$skip_first)
-		- [$sort()](#$sort)
 		- [$split()](#$split)
-		- [$spread()](#$spread)
-		- [$sub()](#$sub)
-		- [$throttle_bytes()](#$throttle_bytes)
-		- [$throttle_items()](#$throttle_items)
-		- [create_throughstream()](#create_throughstream)
+		- [new_hyphenator()](#new_hyphenator)
+	- [HTML parsing](#html-parsing)
 		- [HTML](#html)
 		- [HTML.$collect_closing_tags()](#html$collect_closing_tags)
 		- [HTML.$collect_empty_tags()](#html$collect_empty_tags)
 		- [HTML.$collect_texts()](#html$collect_texts)
 		- [HTML.$parse()](#html$parse)
 		- [HTML._new_parser()](#html_new_parser)
-		- [new_densort()](#new_densort)
-		- [new_hyphenator()](#new_hyphenator)
-		- [remit()](#remit)
-- [Breaking News](#breaking-news)
-	- [Changes](#changes)
-	- ['Retroactive' Sub-Streams](#'retroactive'-sub-streams)
+	- [Sorting](#sorting)
 	- ['Dense' Sorting](#'dense'-sorting)
+		- [new_densort()](#new_densort)
+		- [$densort()](#$densort)
+		- [$sort()](#$sort)
+	- [Other](#other)
+		- [$filter()](#$filter)
+		- [$on_end()](#$on_end)
+		- [$on_start()](#$on_start)
+		- [$show()](#$show)
+		- [$signal_end()](#$signal_end)
+		- [$skip_first()](#$skip_first)
+		- [$spread()](#$spread)
+		- [$throttle_bytes()](#$throttle_bytes)
+		- [$throttle_items()](#$throttle_items)
 
 > **Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
 
 
 # PipeDreams
+
+![stability-experimental-red](https://img.shields.io/badge/stability-experimental-red.svg)
+![npm-0.2.5-yellowgreen](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)
+![motivation-字面明快排字機-yellow](https://img.shields.io/badge/motivation-字面明快排字機-yellow.svg)
 
 Common operations for piped NodeJS streams.
 
@@ -46,156 +53,19 @@ Common operations for piped NodeJS streams.
 
 **Caveat** Below examples are all written in CoffeeScript.
 
+<!-- ################################################################################################### -->
+# API
 
-## API
+<!-- =================================================================================================== -->
+## Stream- and Transform Construction
 
-### $aggregate = ( aggregator, on_end = null ) ->
-
-A generic aggregator. This is how it is used in the PipeDreams source itself:
-
-```coffee
-@$count = ( on_end = null ) ->
-  count = 0
-  return @$aggregate ( -> count += +1 ), on_end
-```
-
-```coffee
-@$collect = ( on_end = null ) ->
-  collector = []
-  aggregator = ( data ) ->
-    collector.push data
-    return collector
-  return @$aggregate aggregator, on_end
-```
-
-To use `$aggregate`, you have to pass in an `aggregator` function and an option `on_end` handler. The
-aggregator will be called once for each piece of data that comes down the stream and should return the
-current state of the aggregation (i.e. the intermediate result).
-
-Aggregators display one of two behavioral patterns depending on whether `on_end` has been given. In case
-`on_end` has been given, each piece of data that arrives in the aggregator will be passed through the pipe
-and `on_end` will be called once with the last intermediate result. If `on_end` has not been given, the
-individual data events will *not* be passed on; instead, when the stream has ended, the aggregation
-result will be sent downstream.
-
-### $collect(), $count()
-
-Two standard aggregators; `$collect()` collects all data items into a list, and `$count()` counts how many
-data items have been encountered in a stream.
-
-### $link()
-
-`$link` accepts any number of stream transforms, either as single arguments or as list arguments; it returns
-a stream transform that represents the pipeline of the individual transforms. When called with no arguments
-or an empty list, it simply returns `$create_throughstream()` (i.e. a neutral stream transform). `$link`
-allows to parametrize pipelines; as a side effect, it allows to omit the ever-repeating `.pipe` from
-source code. For example, instead of writing
-
-```coffee
-input
-  .pipe @_$break_lines()
-  .pipe @_$disperse_texts()
-  .pipe assemble_buffer()
-  .pipe build_line()
-  .pipe test test_line
-  .pipe D.$collect ( collector ) -> urge collector
-  .pipe D.$count ( count ) -> urge count
-  .pipe D.$show()
-```
-
-you can now write
-
-```coffee
-input.pipe D.$link [
-  @_$break_lines()
-  @_$disperse_texts()
-  assemble_buffer()
-  build_line()
-  test test_line
-  D.$collect ( collector ) -> urge collector
-  D.$count ( count ) -> urge count
-  D.$show()
-  ]
-```
-
-
-### $continue()
-
-
-### $densort()
-### $filter()
-### $hyphenate()
-### $on_end()
-### $on_start()
-### $show()
-### $signal_end()
-### $skip_first()
-### $sort()
-### $split()
-### $spread()
-### $sub()
-### $throttle_bytes()
-### $throttle_items()
-### create_throughstream()
-### HTML
-### HTML.$collect_closing_tags()
-### HTML.$collect_empty_tags()
-### HTML.$collect_texts()
-### HTML.$parse()
-### HTML._new_parser()
-### new_densort()
-### new_hyphenator()
 ### remit()
+### create_throughstream()
 
 
-# Breaking News
+### 'Retroactive' Sub-Streams: $sub()
 
-![stability-experimental-red](https://img.shields.io/badge/stability-experimental-red.svg)
-![npm-0.2.5-yellowgreen](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)
-![motivation-字面明快排字機-yellow](https://img.shields.io/badge/motivation-字面明快排字機-yellow.svg)
-
-This is the incubator for PipeDreams v2 (D2 for short), which will introduce breaking changes to some APIs.
-I will slowly build up functionalities as i see use for them as i'm using PipeDreams v1 (D1 hereafter) in a
-rather largeish project where it would be very cumbersome to migrate everything at once.
-
-The major reason for PipeDreams v2 is [detailed in this gist](https://gist.github.com/loveencounterflow/65fd8ec711cf78950aa0)
-and an accompanying [issue for the `through` package](https://github.com/dominictarr/through/issues/27).
-
-I've since switched to [`through2`](https://github.com/rvagg/through2) to provide the underlying stream
-handling; `through2` appears to work fine for my use case. In any event, PipeDreams v1 has a pretty uneven
-implementation structure, since i started writing it when i was rather new to streams. It served me well
-as a notebook of sorts on how to do streams in NodeJS, but now that i feel it to be too much of a hassle
-to get asynchronous stream transformers right with version one, it's time for a rewrite.
-
-<!-- ## Important
-
-**When migrating and/or mixing D2 methods with stream methods from other libraries, watch out for
-incompatibilities. Some parts of `through2` are known not to work well with some parts of `through` (and,
-therefore, some parts of `event-stream`). Since D2 is based on `through2` and D1 is based on `event-stream`,
-even mixing D2 and D1 may fail in interesting ways.**
- -->
-<!--
-## Changes
-
-* (2014-10-18) `D2.remit` is the successor to `D1.remit` and the first function to be implemented in D2.
-
-  Its interface has
-  changed slightly, mainly to avoid silent failures when migrating. The major thing is that where you could
-  previously call `send` as often as you wanted and never had to indicate whether your method would eventually
-  issue more calls to `send`, you now
-
-  * cannot call `send` any more (except to trigger an informative error message);
-  * instead, you have to call either
-    * `send.done()` (to issue zero items),
-    * `send.done data` (to issue exactly one data item) or
-    * `send.one a; send.one b; ... send.one z; send.done()` to issue an arbitrary
-      number of data items. -->
-
-
-## 'Retroactive' Sub-Streams
-
-
-The PipeDreams v2 `$sub` method allows to formulate pipes which 'talk back', as it were, to upstream
+The PipeDreams `$sub` method allows to formulate pipes which 'talk back', as it were, to upstream
 transformers. This can be handy when a given transformer performs single steps of an iterative optimization
 process; with `$sub`, it becomes possible to re-submit a less-than-perfect value from a downstream
 tranformer. Let's have a look at a simple example; we start with a stream of numbers, and our goal is to
@@ -281,8 +151,106 @@ event in the stream to be issued; such transformers must not be in the stream ab
 explicitly call `source.end()`.
 
 
+### $link()
+
+`$link` accepts any number of stream transforms, either as single arguments or as list arguments; it returns
+a stream transform that represents the pipeline of the individual transforms. When called with no arguments
+or an empty list, it simply returns `$create_throughstream()` (i.e. a neutral stream transform). `$link`
+allows to parametrize pipelines; as a side effect, it allows to omit the ever-repeating `.pipe` from
+source code. For example, instead of writing
+
+```coffee
+input
+  .pipe @_$break_lines()
+  .pipe @_$disperse_texts()
+  .pipe assemble_buffer()
+  .pipe build_line()
+  .pipe test test_line
+  .pipe D.$collect ( collector ) -> urge collector
+  .pipe D.$count ( count ) -> urge count
+  .pipe D.$show()
+```
+
+you can now write
+
+```coffee
+input.pipe D.$link [
+  @_$break_lines()
+  @_$disperse_texts()
+  assemble_buffer()
+  build_line()
+  test test_line
+  D.$collect ( collector ) -> urge collector
+  D.$count ( count ) -> urge count
+  D.$show()
+  ]
+```
+
+
+### $continue()
+
+
+<!-- =================================================================================================== -->
+## Aggregation
+
+### $aggregate = ( aggregator, on_end = null ) ->
+
+A generic aggregator. This is how it is used in the PipeDreams source itself:
+
+```coffee
+@$count = ( on_end = null ) ->
+  count = 0
+  return @$aggregate ( -> count += +1 ), on_end
+```
+
+```coffee
+@$collect = ( on_end = null ) ->
+  collector = []
+  aggregator = ( data ) ->
+    collector.push data
+    return collector
+  return @$aggregate aggregator, on_end
+```
+
+To use `$aggregate`, you have to pass in an `aggregator` function and an option `on_end` handler. The
+aggregator will be called once for each piece of data that comes down the stream and should return the
+current state of the aggregation (i.e. the intermediate result).
+
+Aggregators display one of two behavioral patterns depending on whether `on_end` has been given. In case
+`on_end` has been given, each piece of data that arrives in the aggregator will be passed through the pipe
+and `on_end` will be called once with the last intermediate result. If `on_end` has not been given, the
+individual data events will *not* be passed on; instead, when the stream has ended, the aggregation
+result will be sent downstream.
+
+### $collect(), $count()
+
+Two standard aggregators; `$collect()` collects all data items into a list, and `$count()` counts how many
+data items have been encountered in a stream.
+
+<!-- =================================================================================================== -->
+## Strings
+
+### $hyphenate()
+### $split()
+### new_hyphenator()
+
+<!-- =================================================================================================== -->
+## HTML parsing
+
+### HTML
+### HTML.$collect_closing_tags()
+### HTML.$collect_empty_tags()
+### HTML.$collect_texts()
+### HTML.$parse()
+### HTML._new_parser()
+
+<!-- =================================================================================================== -->
+## Sorting
 
 ## 'Dense' Sorting
+
+### new_densort()
+### $densort()
 
 `new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->`
 
@@ -346,3 +314,24 @@ items that have to be buffered with 'sparse', agnostic sorting); `m` will be zer
 to arrive in their logical order (the optimal case).
 
  -->
+
+
+### $sort()
+
+
+<!-- =================================================================================================== -->
+## Other
+
+### $filter()
+### $on_end()
+### $on_start()
+### $show()
+### $signal_end()
+### $skip_first()
+### $spread()
+### $throttle_bytes()
+### $throttle_items()
+
+
+
+
