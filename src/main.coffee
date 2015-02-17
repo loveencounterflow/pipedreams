@@ -17,15 +17,13 @@ echo                      = CND.echo.bind CND
 ### https://github.com/rvagg/through2 ###
 through2                  = require 'through2'
 #...........................................................................................................
-DS                        = require './densort'
-@new_densort              = DS.new_densort.bind DS
-#...........................................................................................................
 ### https://github.com/dominictarr/event-stream ###
-@ES                       = require 'event-stream'
+ES                        = require 'event-stream'
 #...........................................................................................................
 ### https://github.com/dominictarr/sort-stream ###
 @$sort                    = require 'sort-stream'
 #...........................................................................................................
+@new_densort              = ( DS = require './densort' ).new_densort.bind DS
 PIPEDREAMS                = @
 LODASH                    = require 'lodash'
 
@@ -36,13 +34,13 @@ LODASH                    = require 'lodash'
 # @create_readstream            = HELPERS.create_readstream             .bind HELPERS
 # @create_readstream_from_text  = HELPERS.create_readstream_from_text   .bind HELPERS
 # @pimp_readstream              = HELPERS.pimp_readstream               .bind HELPERS
-# @merge                        = @ES.merge                              .bind @ES
-@$split                       = @ES.split                              .bind @ES
-# @$chain                       = @ES.pipeline                           .bind @ES
-# @through                      = @ES.through                            .bind @ES
-# @duplex                       = @ES.duplex                             .bind @ES
-# @as_readable                  = @ES.readable                           .bind @ES
-# @read_list                    = @ES.readArray                          .bind @ES
+# @merge                        = ES.merge                              .bind ES
+@$split                       = ES.split                              .bind ES
+# @$chain                       = ES.pipeline                           .bind ES
+# @through                      = ES.through                            .bind ES
+# @duplex                       = ES.duplex                             .bind ES
+# @as_readable                  = ES.readable                           .bind ES
+# @read_list                    = ES.readArray                          .bind ES
 
 
 #===========================================================================================================
@@ -80,7 +78,7 @@ LODASH                    = require 'lodash'
     else
       throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
   #.........................................................................................................
-  return @ES.through on_data, on_end
+  return ES.through on_data, on_end
 
 # #-----------------------------------------------------------------------------------------------------------
 # @remit = ( method ) ->
@@ -132,7 +130,7 @@ LODASH                    = require 'lodash'
 #     else
 #       throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
 #   #.........................................................................................................
-#   return @ES.through on_data, on_end
+#   return ES.through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 $ = @remit.bind @
@@ -221,40 +219,38 @@ $ = @remit.bind @
 #===========================================================================================================
 # AGGREGATION & DISSEMINATION
 #-----------------------------------------------------------------------------------------------------------
-### TAINT all these functions should have an optional callback (that does not take an error and
-should not be named 'handler'); with no callback, the aggregated data will be sent downstream; with a
-callback, the orighinal data will be sent downstream, and the aggregate is the sole argument for the callback on
-end-of-stream. ###
-@$count = ( handler = null ) ->
-  count = 0
+@$aggregate = ( aggregator, on_end = null ) ->
+  Z = null
   return $ ( data, send, end ) =>
-    count += 1 if data?
-    send data if handler?
+    if data?
+      Z = aggregator data
+      send data if on_end?
     if end?
-      if handler?
-        handler count
-      else
-        send count
+      if on_end? then on_end Z
+      else            send   Z
       end()
 
 #-----------------------------------------------------------------------------------------------------------
-@$collect = ( collector = null ) ->
-  collector ?= []
-  return $ ( event, send, end ) =>
-    if event?
-      collector.push event
-    if end?
-      send collector
-      end()
+@$count = ( on_end = null ) ->
+  count = 0
+  return @$aggregate ( -> count += +1 ), on_end
+
+#-----------------------------------------------------------------------------------------------------------
+@$collect = ( on_end = null ) ->
+  collector = []
+  aggregator = ( data ) ->
+    collector.push data
+    return collector
+  return @$aggregate aggregator, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @$spread = ( settings ) ->
   indexed   = settings?[ 'indexed'  ] ? no
   end       = settings?[ 'end'      ] ? no
-  return $ ( event, send ) =>
-    unless type = ( CND.type_of event ) is 'list'
+  return $ ( data, send ) =>
+    unless type = ( CND.type_of data ) is 'list'
       return send.error new Error "expected a list, got a #{rpr type}"
-    for value, idx in event
+    for value, idx in data
       send if indexed then [ idx, value, ] else value
     send null if end
 
@@ -270,7 +266,7 @@ end-of-stream. ###
   on_end  = ->
     @emit 'data', signal
     @emit 'end'
-  return @ES.through on_data, on_end
+  return ES.through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_end = ( method ) ->
@@ -506,7 +502,6 @@ end-of-stream. ###
     #.......................................................................................................
     if end?
       has_ended = yes
-
 
 
 
