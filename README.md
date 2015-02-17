@@ -1,5 +1,7 @@
 
 
+- [PipeDreams](#pipedreams)
+	- [API](#api)
 		- [$aggregate = ( aggregator, on_end = null ) ->](#$aggregate-=--aggregator-on_end-=-null--->)
 		- [$collect(), $count()](#$collect-$count)
 		- [$link()](#$link)
@@ -35,6 +37,17 @@
 
 > **Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
 
+
+# PipeDreams
+
+Common operations for piped NodeJS streams.
+
+`npm install --save pipedreams2`
+
+**Caveat** Below examples are all written in CoffeeScript.
+
+
+## API
 
 ### $aggregate = ( aggregator, on_end = null ) ->
 
