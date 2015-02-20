@@ -2,7 +2,7 @@
 
 - [PipeDreams](#pipedreams)
 - [API](#api)
-	- [Stream- and Transform Construction](#stream--and-transform-construction)
+	- [Stream and Transform Construction](#stream-and-transform-construction)
 		- [remit()](#remit)
 		- [create_throughstream()](#create_throughstream)
 		- ['Retroactive' Sub-Streams: $sub()](#'retroactive'-sub-streams-$sub)
@@ -57,7 +57,7 @@ Common operations for piped NodeJS streams.
 # API
 
 <!-- =================================================================================================== -->
-## Stream- and Transform Construction
+## Stream and Transform Construction
 
 ### remit()
 ### create_throughstream()

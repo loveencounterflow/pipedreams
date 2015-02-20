@@ -34,6 +34,7 @@
     "htmlparser2": "^3.8.2",
     "hyphenation.en-us": "^0.2.1",
     "hypher": "^0.2.3",
+    "linebreak": "^0.2.0",
     "lodash": "^3.2.0",
     "sort-stream": "^1.0.1",
     "throttle": "^1.0.3",
