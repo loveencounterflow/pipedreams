@@ -14,7 +14,7 @@
 	- [Strings](#strings)
 		- [$hyphenate()](#$hyphenate)
 		- [$split()](#$split)
-		- [new_hyphenator()](#new_hyphenator)
+		- [`D.new_hyphenate = ( hyphenation = null, min_length = 2 ) ->`](#dnew_hyphenate-=--hyphenation-=-null-min_length-=-2--->)
 	- [HTML parsing](#html-parsing)
 		- [HTML](#html)
 		- [HTML.$collect_closing_tags()](#html$collect_closing_tags)
@@ -232,7 +232,7 @@ data items have been encountered in a stream.
 
 ### $hyphenate()
 ### $split()
-### new_hyphenator()
+### `D.new_hyphenate = ( hyphenation = null, min_length = 2 ) ->`
 
 <!-- =================================================================================================== -->
 ## HTML parsing

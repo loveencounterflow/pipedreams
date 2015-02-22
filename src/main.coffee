@@ -329,7 +329,7 @@ $ = @remit.bind @
 #===========================================================================================================
 # HYPHENATION
 #-----------------------------------------------------------------------------------------------------------
-@new_hyphenate = ( hyphenation = null, min_length = 4 ) ->
+@new_hyphenate = ( hyphenation = null, min_length = 2 ) ->
   ### https://github.com/bramstein/hypher ###
   Hypher        = require 'hypher'
   hyphenation  ?= require 'hyphenation.en-us'
