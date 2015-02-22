@@ -4,7 +4,7 @@
   "description": "Common operations for piped NodeJS streams. INCEPTIVE PACKAGE IN ALPHA (use Pipedreams v0.1.x instead)",
   "main": "lib/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./build && node lib/tests.js"
   },
   "repository": {
     "type": "git",

@@ -329,7 +329,7 @@ $ = @remit.bind @
 #===========================================================================================================
 # HYPHENATION
 #-----------------------------------------------------------------------------------------------------------
-@new_hyphenator = ( hyphenation = null, min_length = 4 ) ->
+@new_hyphenate = ( hyphenation = null, min_length = 4 ) ->
   ### https://github.com/bramstein/hypher ###
   Hypher        = require 'hypher'
   hyphenation  ?= require 'hyphenation.en-us'
@@ -338,7 +338,7 @@ $ = @remit.bind @
 
 #-----------------------------------------------------------------------------------------------------------
 @$hyphenate = ( hyphenation = null, min_length = 4 ) ->
-  hyphenate = @new_hyphenator hyphenation, min_length
+  hyphenate = @new_hyphenate hyphenation, min_length
   return $ ( text, send ) => send hyphenate text, min_length
 
 
@@ -400,7 +400,7 @@ $ = @remit.bind @
         stream.write [ 'close-tag', name, ]
     #.......................................................................................................
     ontext: ( text ) ->
-      stream.write [ 'text', text, ]
+      stream.write [ 'text', CND.escape_html text, ]
     #.......................................................................................................
     onend: ->
       stream.write [ 'end', ]; stream.end()
@@ -465,27 +465,45 @@ $ = @remit.bind @
       send_buffer()
       send event
 
+
 #-----------------------------------------------------------------------------------------------------------
-@HTML.$collect_empty_tags = ->
-  ### Detects situations where an openening tag is directly followed by a closing tag, such as in `foo
-  <span class='x'></span> bar`, and turns such occurrances into single `empty-tag` events to simplifiy
-  further processing. ###
-  last_event = null
+@HTML.$disperse_texts = ( hyphenation ) ->
+  if hyphenation is false
+    hyphenate   = ( text ) => text
+  else if CND.isa_function hyphenation
+    hyphenate   = hyphenation
+  else
+    hyphenation = if hyphenation is true then null else hyphenation
+    hyphenate   = PIPEDREAMS.new_hyphenate hyphenation
   #.........................................................................................................
-  return $ ( event, send ) ->
-    [ type, tail..., ] = event
-    if type is 'open-tag'
-      send last_event if last_event?
-      last_event = event
-      return
-    if type is 'close-tag' and last_event?
-      send [ 'empty-tag', last_event[ 1 .. ]..., ]
-      last_event = null
-      return
-    if last_event?
-      send last_event
-      last_event = null
-    send event
+  return $ ( event, send ) =>
+    [ type, tail..., ]  = event
+    if type is 'text'
+      send [ 'text', text_part, ] for text_part in PIPEDREAMS.break_lines hyphenate tail[ 0 ]
+    else
+      send event
+
+# #-----------------------------------------------------------------------------------------------------------
+# @HTML.$collect_empty_tags = ->
+#   ### Detects situations where an openening tag is directly followed by a closing tag, such as in `foo
+#   <span class='x'></span> bar`, and turns such occurrances into single `empty-tag` events to simplifiy
+#   further processing. ###
+#   last_event = null
+#   #.........................................................................................................
+#   return $ ( event, send ) ->
+#     [ type, tail..., ] = event
+#     if type is 'open-tag'
+#       send last_event if last_event?
+#       last_event = event
+#       return
+#     if type is 'close-tag' and last_event?
+#       send [ 'empty-tag', last_event[ 1 .. ]..., ]
+#       last_event = null
+#       return
+#     if last_event?
+#       send last_event
+#       last_event = null
+#     send event
 
 
 #===========================================================================================================
