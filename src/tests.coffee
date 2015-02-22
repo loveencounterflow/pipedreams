@@ -14,7 +14,7 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-LODASH                    = require 'lodash'
+LODASH                    = CND.LODASH
 #...........................................................................................................
 # ### https://github.com/dominictarr/event-stream ###
 # ES                        = require 'event-stream'
