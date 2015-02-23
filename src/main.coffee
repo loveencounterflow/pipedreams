@@ -26,6 +26,7 @@ ES                        = require 'event-stream'
 @new_densort              = ( DS = require './densort' ).new_densort.bind DS
 PIPEDREAMS                = @
 LODASH                    = CND.LODASH
+@HOTMETAL                 = require 'hotmetal'
 
 
 
@@ -81,60 +82,9 @@ LODASH                    = CND.LODASH
   #.........................................................................................................
   return ES.through on_data, on_end
 
-# #-----------------------------------------------------------------------------------------------------------
-# @remit = ( method ) ->
-#   send      = null
-#   cache     = null
-#   on_end    = null
-#   #.........................................................................................................
-#   get_send = ( self ) ->
-#     R             = (  data ) -> self.emit 'data',  data # if data?
-#     R.error       = ( error ) -> self.emit 'error', error
-#     R.end         =           -> self.emit 'end'
-#     R.pause       =           -> self.pause()
-#     R.resume      =           -> self.resume()
-#     R.read        =           -> self.read()
-#     R[ '%self' ]  = self
-#     return R
-#   #.........................................................................................................
-#   switch arity = method.length
-#     #.......................................................................................................
-#     when 2
-#       #.....................................................................................................
-#       on_data = ( data ) ->
-#         # debug '©3w9', send
-#         send = get_send @ unless send?
-#         method data, send
-#     #.......................................................................................................
-#     when 3
-#       cache = []
-#       #.....................................................................................................
-#       on_data = ( data ) ->
-#         # debug '©3w9', send, data
-#         if cache.length is 0
-#           cache[ 0 ] = data
-#           return
-#         send = get_send @ unless send?
-#         [ cache[ 0 ], data, ] = [ data, cache[ 0 ], ]
-#         method data, send, null
-#       #.....................................................................................................
-#       on_end = ->
-#         send  = get_send @ unless send?
-#         end   = => @emit 'end'
-#         if cache.length is 0
-#           data = null
-#         else
-#           data = cache[ 0 ]
-#           cache.length = 0
-#         method data, send, end
-#     #.......................................................................................................
-#     else
-#       throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
-#   #.........................................................................................................
-#   return ES.through on_data, on_end
-
 #-----------------------------------------------------------------------------------------------------------
 $ = @remit.bind @
+
 
 #===========================================================================================================
 # OMITTING VALUES
@@ -421,78 +371,37 @@ $ = @remit.bind @
 #-----------------------------------------------------------------------------------------------------------
 @HTML = {}
 
-# #-----------------------------------------------------------------------------------------------------------
-# @HTML._new_parser = ( settings, stream ) ->
-#   ### NB.: Will not send empty text nodes; will not join ('normalize') adjacent text nodes. ###
-#   lone_tags = """area base br col command embed hr img input keygen link meta param
-#     source track wbr""".split /\s+/
-#   #.........................................................................................................
-#   handlers =
-#     #.......................................................................................................
-#     onopentag:  ( name, attributes )  ->
-#       if name in lone_tags
-#         if name is 'wbr'
-#           throw new Error "illegal <wbr> tag with attributes" if ( Object.keys attributes ).length > 0
-#           ### as per https://developer.mozilla.org/en/docs/Web/HTML/Element/wbr ###
-#           stream.write [ 'text', '\u200b' ]
-#         else
-#           stream.write [ 'lone-tag', name, attributes, ]
-#       else
-#         stream.write [ 'open-tag', name, attributes, ]
-#     #.......................................................................................................
-#     onclosetag: ( name ) ->
-#       unless name in lone_tags
-#         stream.write [ 'close-tag', name, ]
-#     #.......................................................................................................
-#     ontext: ( text ) ->
-#       stream.write [ 'text', CND.escape_html text, ]
-#     #.......................................................................................................
-#     onend: ->
-#       stream.write [ 'end', ]
-#       stream.end()
-#     #.......................................................................................................
-#     onerror: ( error ) ->
-#       throw error
-#   #.........................................................................................................
-#   Htmlparser = ( require 'htmlparser2' ).Parser
-#   return new Htmlparser handlers, settings
-
-# #-----------------------------------------------------------------------------------------------------------
-# @HTML.$parse = ->
-#   settings    = decodeEntities: yes
-#   stream      = PIPEDREAMS.create_throughstream()
-#   html_parser = @_new_parser settings, stream
-#   _send       = null
-#   #.........................................................................................................
-#   stream.on 'data', ( data ) -> _send data
-#   stream.on 'end',           -> _send.end()
-#   #.........................................................................................................
-#   return $ ( source, send, end ) =>
-#     _send = send
-#     if source?
-#       html_parser.write source
-#     if end?
-#       html_parser.end()
-
 #---------------------------------------------------------------------------------------------------------
-@HTML.parse = ( html, handler ) ->
-  ### NB.: Will not send empty text nodes; will not join ('normalize') adjacent text nodes. ###
+@HTML.parse = ( html, disperse = yes, hyphenation = yes ) ->
+  H         = PIPEDREAMS.HOTMETAL
   lone_tags = """area base br col command embed hr img input keygen link meta param
     source track wbr""".split /\s+/
   #.........................................................................................................
+  if disperse
+    break_lines = PIPEDREAMS.break_lines.bind PIPEDREAMS
+    if hyphenation is false
+      hyphenate   = ( text ) => text
+    else if CND.isa_function hyphenation
+      hyphenate   = hyphenation
+    else
+      hyphenation = if hyphenation is true then null else hyphenation
+      hyphenate   = PIPEDREAMS.new_hyphenate hyphenation
+  #.........................................................................................................
+  else
+    break_lines = ( text ) -> [ text, ]
+    hyphenate   = ( text ) => text
+  #.........................................................................................................
   handlers =
     #.......................................................................................................
-    doctype:  ( name, pid, sid ) =>
-      handler null, [ 'doctype',   name, pid, sid, ]
-    #.......................................................................................................
-    endTag:   ( name ) =>
-      handler null, [ 'close-tag', name, ]
+    doctype:  ( name, pid, sid ) => H.add R, 'doctype',   name, pid, sid
+    endTag:   ( name )           => H.add R, 'close-tag', name
+    comment:  ( text )           => H.add R, 'comment',   CND.escape_html text
     #.......................................................................................................
     text:     ( text ) =>
-      handler null, [ 'text',      CND.escape_html text, ] # if text.length > 0
-    #.......................................................................................................
-    comment:  ( text ) =>
-      handler null, [ 'comment',   CND.escape_html text, ] # if text.length > 0
+      text  = CND.escape_html text
+      text  = hyphenate text
+      for text_part in break_lines text
+        H.add R, 'text', text_part
     #.......................................................................................................
     startTag: ( name, a ) =>
       attributes = {}
@@ -502,100 +411,41 @@ $ = @remit.bind @
         if name is 'wbr'
           throw new Error "illegal <wbr> tag with attributes" if ( Object.keys attributes ).length > 0
           ### as per https://developer.mozilla.org/en/docs/Web/HTML/Element/wbr ###
-          handler null, [ 'text', '\u200b' ]
+          H.add R, 'text', '\u200b'
         else
-          handler null, [ 'lone-tag', name, attributes, ]
+          H.add R, 'lone-tag', name, attributes
       #.....................................................................................................
       else
-        handler null, [ 'open-tag', name, attributes, ]
+        H.add R, 'open-tag', name, attributes
   #.........................................................................................................
-  parser = new ( require 'parse5' ).SimpleApiParser handlers
+  parser    = new ( require 'parse5' ).SimpleApiParser handlers
+  R         = H._new_hotml()
   parser.parse html
+  #.........................................................................................................
+  return R
 
 #---------------------------------------------------------------------------------------------------------
-@HTML.$parse = ->
+@HTML.$parse = ( disperse = yes, hyphenation = yes ) ->
   return $ ( html, send ) =>
-    @parse html, ( error, event ) =>
-      send.error error if error?
-      send event
-
-
-# #-----------------------------------------------------------------------------------------------------------
-# @HTML.$collect_closing_tags = ->
-#   ### Keeps trace of all opened tags and adds a list to each event that speels out the names of tags to be
-#   closed at that point; that list anticipates all the `close-tag` events that are due to arrive later in the
-#   stream. ###
-#   pending_tag_buffer = []
-#   #.........................................................................................................
-#   return $ ( event, send ) ->
-#     # debug '©LTGTp', event
-#     [ type, tail..., ] = event
-#     if type is 'open-tag'
-#       pending_tag_buffer.unshift tail[ 0 ][ 0 ]
-#     else if type is 'close-tag'
-#       pending_tag_buffer.shift()
-#     unless type is 'end'
-#       event.push pending_tag_buffer[ .. ]
-#     send event
-
-# #-----------------------------------------------------------------------------------------------------------
-# @HTML.$collect_texts = ->
-#   text_buffer = []
-#   _send       = null
-#   #.........................................................................................................
-#   send_buffer = ->
-#     if text_buffer.length > 0
-#       _send [ 'text', text_buffer.join '', ]
-#       text_buffer.length = 0
-#   #.........................................................................................................
-#   return $ ( event, send ) ->
-#     _send               = send
-#     [ type, tail..., ]  = event
-#     if type is 'text'
-#       text_buffer.push tail[ 0 ]
-#     else
-#       send_buffer()
-#       send event
-
+    send @parse html, disperse, hyphenation
 
 #-----------------------------------------------------------------------------------------------------------
-@HTML.$disperse_texts = ( hyphenation ) ->
-  if hyphenation is false
-    hyphenate   = ( text ) => text
-  else if CND.isa_function hyphenation
-    hyphenate   = hyphenation
-  else
-    hyphenation = if hyphenation is true then null else hyphenation
-    hyphenate   = PIPEDREAMS.new_hyphenate hyphenation
-  #.........................................................................................................
-  return $ ( event, send ) =>
-    [ type, tail..., ]  = event
-    if type is 'text'
-      send [ 'text', text_part, ] for text_part in PIPEDREAMS.break_lines hyphenate tail[ 0 ]
-    else
-      send event
+@HTML.$slice_toplevel_tags = ->
+  return $ ( me, send ) =>
+    PIPEDREAMS.HOTMETAL.slice_toplevel_tags me, ( error, slice ) =>
+      return send.error error if error?
+      send slice
+
+#-----------------------------------------------------------------------------------------------------------
+@HTML.$unwrap = ( silent = no) ->
+  return $ ( me, send ) =>
+    send PIPEDREAMS.HOTMETAL.unwrap me, silent
 
 # #-----------------------------------------------------------------------------------------------------------
-# @HTML.$collect_empty_tags = ->
-#   ### Detects situations where an openening tag is directly followed by a closing tag, such as in `foo
-#   <span class='x'></span> bar`, and turns such occurrances into single `empty-tag` events to simplifiy
-#   further processing. ###
-#   last_event = null
-#   #.........................................................................................................
-#   return $ ( event, send ) ->
-#     [ type, tail..., ] = event
-#     if type is 'open-tag'
-#       send last_event if last_event?
-#       last_event = event
-#       return
-#     if type is 'close-tag' and last_event?
-#       send [ 'empty-tag', last_event[ 1 .. ]..., ]
-#       last_event = null
-#       return
-#     if last_event?
-#       send last_event
-#       last_event = null
-#     send event
+# @HTML.$break_lines = ( test_line ) ->
+#   return $ ( html, send ) =>
+#     @break_lines html, test_line, null, ( error, lines ) =>
+#       send lines
 
 
 #===========================================================================================================
