@@ -279,46 +279,18 @@ $ = @remit.bind @
 #===========================================================================================================
 # HYPHENATION
 #-----------------------------------------------------------------------------------------------------------
-@new_hyphenate = ( hyphenation = null, min_length = 2 ) ->
-  ### https://github.com/bramstein/hypher ###
-  Hypher        = require 'hypher'
-  hyphenation  ?= require 'hyphenation.en-us'
-  HYPHER        = new Hypher hyphenation
-  return HYPHER.hyphenateText.bind HYPHER
-
-#-----------------------------------------------------------------------------------------------------------
 @$hyphenate = ( hyphenation = null, min_length = 4 ) ->
-  hyphenate = @new_hyphenate hyphenation, min_length
+  hyphenate = @HOTMETAL.new_hyphenate hyphenation, min_length
   return $ ( text, send ) => send hyphenate text, min_length
 
 
 #===========================================================================================================
 # UNICODE LINE BREAKING
 #-----------------------------------------------------------------------------------------------------------
-@break_lines = ( text, settings ) ->
-  text            = text.replace /\n/g, ' '
-  last_position   = null
-  incremental     = settings?[ 'incremental'  ] ? yes
-  extended        = settings?[ 'extended'     ] ? no
-  #.........................................................................................................
-  line_breaker    = new ( require 'linebreak' ) text
-  R               = []
-  #.......................................................................................................
-  while breakpoint = line_breaker.nextBreak()
-    { position, required, } = breakpoint
-    #.....................................................................................................
-    if incremental and last_position? then  part = text[ last_position ... breakpoint.position ]
-    else                                    part = text[               ... breakpoint.position ]
-    last_position = position
-    R.push if extended then [ part, required, position, ] else part
-  #.......................................................................................................
-  return R
-
-#-----------------------------------------------------------------------------------------------------------
 @$break_lines = ( settings ) ->
   #.........................................................................................................
   return $ ( text, send ) =>
-    send @break_lines text, settings
+    send @HOTMETAL.break_lines text, settings
 
 
 #===========================================================================================================
@@ -327,16 +299,12 @@ $ = @remit.bind @
 @TYPO = {}
 
 #-----------------------------------------------------------------------------------------------------------
-@TYPO.quotes = ( text ) -> ( require 'typogr' ).smartypants text
-@TYPO.dashes = ( text ) -> ( require 'typogr' ).smartypants text
-
-#-----------------------------------------------------------------------------------------------------------
 @TYPO.$quotes = ->
-  return $ ( text, send ) => send @quotes text
+  return $ ( text, send ) => send PIPEDREAMS.HOTMETAL.TYPO.quotes text
 
 #-----------------------------------------------------------------------------------------------------------
 @TYPO.$dashes = ->
-  return $ ( text, send ) => send @dashes text
+  return $ ( text, send ) => send PIPEDREAMS.HOTMETAL.TYPO.dashes text
 
 
 #===========================================================================================================
@@ -345,25 +313,11 @@ $ = @remit.bind @
 @MD = {}
 
 #-----------------------------------------------------------------------------------------------------------
-@MD.new_parser = ( settings ) ->
-  throw new Error "settings not yet supported" if settings?
-  settings =
-    html: true,
-    linkify: true,
-    typographer: true
-  MarkdownIt  = require 'markdown-it'
-  return new MarkdownIt settings
-
-#-----------------------------------------------------------------------------------------------------------
-@MD.as_html = ( md, parser = null ) ->
-  return ( parser ? @new_parser() ).render md
-
-#-----------------------------------------------------------------------------------------------------------
 @MD.$as_html = ->
   parser = @new_parser()
   #.........................................................................................................
   return $ ( md, send ) =>
-    send @as_html md, parser
+    send PIPEDREAMS.HOTMETAL.MD.as_html md, parser
 
 
 #===========================================================================================================
@@ -372,62 +326,9 @@ $ = @remit.bind @
 @HTML = {}
 
 #---------------------------------------------------------------------------------------------------------
-@HTML.parse = ( html, disperse = yes, hyphenation = yes ) ->
-  H         = PIPEDREAMS.HOTMETAL
-  lone_tags = """area base br col command embed hr img input keygen link meta param
-    source track wbr""".split /\s+/
-  #.........................................................................................................
-  if disperse
-    break_lines = PIPEDREAMS.break_lines.bind PIPEDREAMS
-    if hyphenation is false
-      hyphenate   = ( text ) => text
-    else if CND.isa_function hyphenation
-      hyphenate   = hyphenation
-    else
-      hyphenation = if hyphenation is true then null else hyphenation
-      hyphenate   = PIPEDREAMS.new_hyphenate hyphenation
-  #.........................................................................................................
-  else
-    break_lines = ( text ) -> [ text, ]
-    hyphenate   = ( text ) => text
-  #.........................................................................................................
-  handlers =
-    #.......................................................................................................
-    doctype:  ( name, pid, sid ) => H.add R, 'doctype',   name, pid, sid
-    endTag:   ( name )           => H.add R, 'close-tag', name
-    comment:  ( text )           => H.add R, 'comment',   CND.escape_html text
-    #.......................................................................................................
-    text:     ( text ) =>
-      text  = CND.escape_html text
-      text  = hyphenate text
-      for text_part in break_lines text
-        H.add R, 'text', text_part
-    #.......................................................................................................
-    startTag: ( name, a ) =>
-      attributes = {}
-      ( attributes[ k ] = v for { name: k, value: v, } in a ) if a?
-      #.....................................................................................................
-      if name in lone_tags
-        if name is 'wbr'
-          throw new Error "illegal <wbr> tag with attributes" if ( Object.keys attributes ).length > 0
-          ### as per https://developer.mozilla.org/en/docs/Web/HTML/Element/wbr ###
-          H.add R, 'text', '\u200b'
-        else
-          H.add R, 'lone-tag', name, attributes
-      #.....................................................................................................
-      else
-        H.add R, 'open-tag', name, attributes
-  #.........................................................................................................
-  parser    = new ( require 'parse5' ).SimpleApiParser handlers
-  R         = H._new_hotml()
-  parser.parse html
-  #.........................................................................................................
-  return R
-
-#---------------------------------------------------------------------------------------------------------
 @HTML.$parse = ( disperse = yes, hyphenation = yes ) ->
   return $ ( html, send ) =>
-    send @parse html, disperse, hyphenation
+    send PIPEDREAMS.HOTMETAL.HTML.parse html, disperse, hyphenation
 
 #-----------------------------------------------------------------------------------------------------------
 @HTML.$slice_toplevel_tags = ->
@@ -441,11 +342,6 @@ $ = @remit.bind @
   return $ ( me, send ) =>
     send PIPEDREAMS.HOTMETAL.unwrap me, silent
 
-# #-----------------------------------------------------------------------------------------------------------
-# @HTML.$break_lines = ( test_line ) ->
-#   return $ ( html, send ) =>
-#     @break_lines html, test_line, null, ( error, lines ) =>
-#       send lines
 
 
 #===========================================================================================================
