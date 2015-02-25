@@ -314,7 +314,7 @@ $ = @remit.bind @
 
 #-----------------------------------------------------------------------------------------------------------
 @MD.$as_html = ->
-  parser = @new_parser()
+  parser = PIPEDREAMS.HOTMETAL.MD.new_parser()
   #.........................................................................................................
   return $ ( md, send ) =>
     send PIPEDREAMS.HOTMETAL.MD.as_html md, parser
