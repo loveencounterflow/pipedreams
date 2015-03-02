@@ -1,6 +1,6 @@
 {
   "name": "pipedreams2",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "description": "Common operations for piped NodeJS streams. INCEPTIVE PACKAGE IN ALPHA (use Pipedreams v0.1.x instead)",
   "main": "lib/main.js",
   "scripts": {
