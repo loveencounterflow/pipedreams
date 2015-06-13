@@ -62,6 +62,39 @@ Common operations for piped NodeJS streams.
 ### remit()
 ### create_throughstream()
 
+`D2.create_throughstream` is an exact copy of [`event-streams`' `through()` method] (which in turn is implemented
+with [`through`](https://github.com/dominictarr/through)); however, the `write()` method of the
+returned stream will work in an asynchronous fashion when passed some data *and* a callback.
+
+Here's an example for using an asynchronous `write` in concert with ES6
+generators / `yield`, taking advantage of the simplified handling offered by
+[`coffeenode-suspend`](https://github.com/loveencounterflow/coffeenode-suspend):
+
+```coffee
+suspend = require 'coffeenode-suspend'
+step    = suspend.step
+
+f = ->
+  step ( resume ) =>
+    input = D.create_throughstream()
+    input
+      .pipe HOLLERITH.$write db
+      .pipe D.$on_end =>
+        urge "test data written"
+        handler()
+    for idx in [ 0 .. 100 ]
+      probe = "entry-#{idx}"
+      yield input.write probe, resume
+    input.end()
+```
+
+The general advantage of asynchronous writes is that the JavaScript event loop
+gets an opportunity to process steps further down the line; in this example, you
+could imagine millions of records being sent into the pipeline. Without
+asynchronicity, that data would have to be buffered somewhere before `end` is
+called on the `input` stream. With asynchronicity, the processing steps are
+called after each single item.
+
 
 ### 'Retroactive' Sub-Streams: $sub()
 

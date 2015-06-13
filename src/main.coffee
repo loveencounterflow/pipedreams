@@ -14,11 +14,14 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-### https://github.com/rvagg/through2 ###
-through2                  = require 'through2'
+# ### https://github.com/rvagg/through2 ###
+# through2                  = require 'through2'
+#...........................................................................................................
+# ### https://github.com/dominictarr/pause-stream ###
+# through_aka_pausestream   = require 'through'
 #...........................................................................................................
 ### https://github.com/dominictarr/event-stream ###
-ES                        = require 'event-stream'
+ES                        = @_ES = require 'event-stream'
 #...........................................................................................................
 ### https://github.com/dominictarr/sort-stream ###
 @$sort                    = require 'sort-stream'
@@ -41,11 +44,27 @@ LODASH                    = CND.LODASH
 # @pimp_readstream              = HELPERS.pimp_readstream               .bind HELPERS
 # @merge                        = ES.merge                              .bind ES
 @$split                       = ES.split                              .bind ES
+@$map                         = ES.map                                .bind ES
 # @$chain                       = ES.pipeline                           .bind ES
 # @through                      = ES.through                            .bind ES
 # @duplex                       = ES.duplex                             .bind ES
 # @as_readable                  = ES.readable                           .bind ES
 # @read_list                    = ES.readArray                          .bind ES
+
+# #-----------------------------------------------------------------------------------------------------------
+# D.$map_plus = ( transform ) ->
+#   ### TAINT looks like `write` occurs too late or `end` too early ###
+#   ### Like `map`, but calls `transform` one more time (hence the name) with `undefined` in place of data
+#   just before the stream has ended; this gives the caller one more chance to send data. ###
+#   R = ES.map transform # ( data, handler ) -> transform data, handler
+#   _end = R.end.bind R
+#   R.end = ->
+#     transform undefined, ( error, data ) ->
+#       return R.error error if error?
+#       debug '©GbYu0', data
+#       R.write data if data?
+#       setImmediate _end
+#   return R
 
 
 #===========================================================================================================
@@ -111,7 +130,26 @@ $ = @remit.bind @
 # SPECIALIZED STREAMS
 #-----------------------------------------------------------------------------------------------------------
 @create_throughstream = ( P... ) ->
-  R = through2.obj P...
+  # R           = through2.obj P...
+  ### TAINT `end` events passed through synchronously even when `write` happens asynchronously ###
+  R           = ES.through P...
+  write       = R.write.bind R
+  end         = R.end.bind R
+  #.........................................................................................................
+  R.write = ( data, handler ) ->
+    if handler?
+      setImmediate ->
+        handler null, write data
+    else
+      return write data
+  #.........................................................................................................
+  R.end = ( handler ) ->
+    if handler?
+      setImmediate ->
+        handler null, end()
+    else
+      return end()
+  #.........................................................................................................
   R.setMaxListeners 0
   return R
 
@@ -182,6 +220,66 @@ $ = @remit.bind @
 #-----------------------------------------------------------------------------------------------------------
 # @$shuffle =
 
+#===========================================================================================================
+# SAMPLING / THINNING OUT
+#-----------------------------------------------------------------------------------------------------------
+@$sample = ( p = 0.5, options ) ->
+  ### Given a `0 <= p <= 1`, interpret `p` as the *p*robability to *p*ick a given record and otherwise toss
+  it, so that `$sample 1` will keep all records, `$sample 0` will toss all records, and
+  `$sample 0.5` (the default) will toss (on average) every other record.
+
+  You can pipe several `$sample()` calls, reducing the data stream to 50% with each step. If you know
+  your data set has, say, 1000 records, you can cut down to a random sample of 10 by piping the result of
+  calling `$sample 1 / 1000 * 10` (or, of course, `$sample 0.01`).
+
+  Tests have shown that a data file with 3'722'578 records (which didn't even fit into memory when parsed)
+  could be perused in a matter of seconds with `$sample 1 / 1e4`, delivering a sample of around 370
+  records. Because these records are randomly selected and because the process is so immensely sped up, it
+  becomes possible to develop regular data processing as well as coping strategies for data-overload
+  symptoms with much more ease as compared to a situation where small but realistic data sets are not
+  available or have to be produced in an ad-hoc, non-random manner.
+
+  **Parsing CSV**: There is a slight complication when your data is in a CSV-like format: in that case,
+  there is, with `0 < p < 1`, a certain chance that the *first* line of a file is tossed, but some
+  subsequent lines are kept. If you start to transform the text line into objects with named values later in
+  the pipe (which makes sense, because you will typically want to thin out largeish streams as early on as
+  feasible), the first line kept will be mis-interpreted as a header line (which must come first in CSV
+  files) and cause all subsequent records to become weirdly malformed. To safeguard against this, use
+  `$sample p, headers: true` (JS: `$sample( p, { headers: true } )`) in your code.
+
+  **Predictable Samples**: Sometimes it is important to have randomly selected data where samples are
+  constant across multiple runs:
+
+  * once you have seen that a certain record appears on the screen log, you are certain it will be in the
+    database, so you can write a snippet to check for this specific one;
+
+  * you have implemented a new feature you want to test with an arbitrary subset of your data. You're
+    still tweaking some parameters and want to see how those affect output and performance. A random
+    sample that is different on each run would be a problem because the number of records and the sheer
+    bytecount of the data may differ from run to run, so you wouldn't be sure which effects are due to
+    which causes.
+
+  To obtain predictable samples, use `$sample p, seed: 1234` (with a non-zero number of your choice);
+  you will then get the exact same
+  sample whenever you re-run your piping application with the same stream and the same seed. An interesting
+  property of the predictable sample is that—everything else being the same—a sample with a smaller `p`
+  will always be a subset of a sample with a bigger `p` and vice versa. ###
+  #.........................................................................................................
+  unless 0 <= p <= 1
+    throw new Error "expected a number between 0 and 1, got #{rpr p}"
+  #.........................................................................................................
+  ### Handle trivial edge cases faster (hopefully): ###
+  return ( $ ( record, send ) => send record ) if p == 1
+  return ( $ ( record, send ) => null        ) if p == 0
+  #.........................................................................................................
+  headers = options?[ 'headers'     ] ? false
+  seed    = options?[ 'seed'        ] ? null
+  count   = 0
+  rnd     = rnd_from_seed seed
+  #.........................................................................................................
+  return $ ( record, send ) =>
+    count += 1
+    send record if ( count is 1 and headers ) or rnd() < p
 
 
 #===========================================================================================================
@@ -222,6 +320,18 @@ $ = @remit.bind @
       send if indexed then [ idx, value, ] else value
     send null if end
 
+#-----------------------------------------------------------------------------------------------------------
+@$batch = ( batch_size = 1000 ) ->
+  buffer = []
+  return $ ( data, send, end ) =>
+    if data?
+      buffer.push data
+      if buffer.length >= batch_size
+        send buffer
+        buffer = []
+    if end?
+      send buffer if buffer.length > 0
+      end()
 
 #===========================================================================================================
 # STREAM START & END DETECTION
@@ -411,7 +521,81 @@ $ = @remit.bind @
       has_ended = yes
 
 
+#===========================================================================================================
+# HELPERS
+#-----------------------------------------------------------------------------------------------------------
+get_random_integer = ( rnd, min, max ) ->
+  return ( Math.floor rnd() * ( max + 1 - min ) ) + min
 
+#-----------------------------------------------------------------------------------------------------------
+rnd_from_seed = ( seed ) ->
+  return if seed? then CND.get_rnd seed else Math.random
+
+
+
+#===========================================================================================================
+# EXPERIMENTAL
+# #-----------------------------------------------------------------------------------------------------------
+# @_$send_later = ->
+#   #.........................................................................................................
+#   R     = D.create_throughstream()
+#   count = 0
+#   _end  = null
+#   #.....................................................................................................
+#   send_end = =>
+#     if _end? and count <= 0
+#       _end()
+#     else
+#       setImmediate send_end
+#   #.....................................................................................................
+#   R
+#     .pipe $ ( data, send, end ) =>
+#       if data?
+#         count += +1
+#         setImmediate =>
+#           count += -1
+#           send data
+#           debug '©MxyBi', count
+#       if end?
+#         _end = end
+#   #.....................................................................................................
+#   send_end()
+#   return R
+
+# #-----------------------------------------------------------------------------------------------------------
+# @_$pull = ->
+#   queue     = []
+#   # _send     = null
+#   is_first  = yes
+#   pull = ->
+#     if queue.length > 0
+#       return queue.pop()
+#     else
+#       return [ 'empty', ]
+#   return $ ( data, send, end ) =>
+#     if is_first
+#       is_first = no
+#       send pull
+#     if data?
+#       queue.unshift [ 'data', data, ]
+#     if end?
+#       queue.unshift [ 'end', end, ]
+
+# #-----------------------------------------------------------------------------------------------------------
+# @_$take = ->
+#   return $ ( pull, send ) =>
+#     # debug '©vKkJf', pull
+#     # debug '©vKkJf', pull()
+#     process = =>
+#       [ type, data, ] = pull()
+#       # debug '©bamOB', [ type, data, ]
+#       switch type
+#         when 'data'   then send data
+#         when 'empty'  then null
+#         when 'end'    then return send.end()
+#         else send.error new Error "unknown event type #{rpr type}"
+#       setImmediate process
+#     process()
 
 
 
