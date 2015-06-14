@@ -322,7 +322,9 @@ $ = @remit.bind @
 
 #-----------------------------------------------------------------------------------------------------------
 @$batch = ( batch_size = 1000 ) ->
+  throw new Error "buffer size must be non-negative integer, got #{rpr batch_size}" if batch_size < 0
   buffer = []
+  #.........................................................................................................
   return $ ( data, send, end ) =>
     if data?
       buffer.push data
@@ -332,6 +334,7 @@ $ = @remit.bind @
     if end?
       send buffer if buffer.length > 0
       end()
+
 
 #===========================================================================================================
 # STREAM START & END DETECTION
