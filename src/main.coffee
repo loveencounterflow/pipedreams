@@ -351,10 +351,13 @@ $ = @remit.bind @
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_end = ( method ) ->
+  switch arity = method.length
+    when 1, 2 then null
+    else throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
   return $ ( data, send, end ) ->
     send data if data?
     if end?
-      method send, end
+      if arity is 1 then method end else method send, end
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
