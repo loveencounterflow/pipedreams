@@ -339,25 +339,30 @@ $ = @remit.bind @
 #===========================================================================================================
 # STREAM START & END DETECTION
 #-----------------------------------------------------------------------------------------------------------
-@$signal_end = ( signal = @eos ) ->
-  ### Given an optional `signal` (which defaults to `null`), return a stream transformer that emits
-  `signal` as last value in the stream. Observe that whatever value you choose for `signal`, that value
-  should be gracefully handled by any transformers that follow in the pipe. ###
-  on_data = null
-  on_end  = ->
-    @emit 'data', signal
-    @emit 'end'
-  return ES.through on_data, on_end
+# @$signal_end = ( signal = @eos ) ->
+#   ### Given an optional `signal` (which defaults to `null`), return a stream transformer that emits
+#   `signal` as last value in the stream. Observe that whatever value you choose for `signal`, that value
+#   should be gracefully handled by any transformers that follow in the pipe. ###
+#   on_data = null
+#   on_end  = ->
+#     @emit 'data', signal
+#     @emit 'end'
+#   return ES.through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_end = ( method ) ->
+  ### TAINT use `$map` to turn this into an async method? ###
   switch arity = method.length
-    when 1, 2 then null
+    when 0, 1, 2 then null
     else throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
   return $ ( data, send, end ) ->
     send data if data?
     if end?
-      if arity is 1 then method end else method send, end
+      if arity is 0
+        method()
+        return end()
+      return method end if arity is 1
+      method send, end
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
