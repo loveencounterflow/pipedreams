@@ -105,8 +105,19 @@ LODASH                    = CND.LODASH
   return ES.through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-$ = @remit.bind @
+@remit_async = ( method ) ->
+  ### TAINT consider to remove `$map` from API as this method does the same ###
+  unless ( arity = method.length ) is 2
+    throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
+  return @$map ( input_data, handler ) =>
+    ### TAINT should add `done.end`, `done.pause` and so on ###
+    done        = ( output_data ) => if output_data? then handler null, output_data else handler()
+    done.error  = ( error )       => handler error
+    method input_data, done
 
+#-----------------------------------------------------------------------------------------------------------
+$       = @remit.bind @
+$async  = @remit_async.bind @
 
 
 #===========================================================================================================
@@ -166,7 +177,7 @@ $ = @remit.bind @
 @$sub = ( sub_transformer ) ->
   #.........................................................................................................
   _send   = null
-  _end    = null
+  # _end    = null
   cache   = undefined
   #.........................................................................................................
   source        = @create_throughstream()
@@ -198,7 +209,7 @@ $ = @remit.bind @
   ds        = @new_densort key, first_idx, report_handler
   has_ended = no
   #.........................................................................................................
-  send_data = ( send, data ) =>
+  # send_data = ( send, data ) =>
   #.........................................................................................................
   signal_end = ( send ) =>
     send.end() unless has_ended
@@ -400,7 +411,6 @@ $ = @remit.bind @
     if end?
       stream.end()
       end()
-
 
 #-----------------------------------------------------------------------------------------------------------
 @$link = ( transforms... ) ->

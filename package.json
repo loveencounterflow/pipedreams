@@ -34,5 +34,8 @@
     "stream-combiner": "^0.2.1",
     "throttle": "^1.0.3",
     "through2": "^0.6.3"
+  },
+  "devDependencies": {
+    "coffeelint-variable-scope": "0.0.3"
   }
 }
