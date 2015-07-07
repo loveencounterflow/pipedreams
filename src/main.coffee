@@ -297,14 +297,14 @@ $async  = @remit_async.bind @
 # AGGREGATION & DISSEMINATION
 #-----------------------------------------------------------------------------------------------------------
 @$aggregate = ( aggregator, on_end = null ) ->
-  Z = null
+  Z       = null
+  on_end ?= -> Z
   return $ ( data, send, end ) =>
     if data?
       Z = aggregator data
-      send data if on_end?
+      # send data if on_end?
     if end?
-      if on_end? then on_end Z
-      else            send   Z
+      send on_end Z
       end()
 
 #-----------------------------------------------------------------------------------------------------------
@@ -318,6 +318,8 @@ $async  = @remit_async.bind @
   aggregator = ( data ) ->
     collector.push data
     return collector
+  ### Make sure the empty collector is sent in case no items were iterated over in the stream: ###
+  on_end ?= -> collector
   return @$aggregate aggregator, on_end
 
 #-----------------------------------------------------------------------------------------------------------
