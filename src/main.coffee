@@ -296,31 +296,57 @@ $async  = @remit_async.bind @
 #===========================================================================================================
 # AGGREGATION & DISSEMINATION
 #-----------------------------------------------------------------------------------------------------------
-@$aggregate = ( aggregator, on_end = null ) ->
-  Z       = null
-  on_end ?= -> Z
+@$aggregate = ( initial_value, on_data, on_end = null ) ->
+  ### `$aggregate` allows to compose stream transformers that act on the entire stream. Aggregators may
+
+  * replace all data items with a single item;
+  * observe the entire stream and either add or print out summary values.
+
+  `$aggregate` should be called with two or three arguments:
+  * `initial_value` is the base value that represents the value of the aggregator when it never
+    gets to see any data; for a count or a sum that would be `0`, for a list of all data items, that would
+    be an empty list, and so on.
+  * `on_data` is the handler for each data items. It will be called as `on_data data, send`. Whatever
+    value the data handler returns becomes the next value of the aggregator. If you want to *keep* data
+    ittems in the stream, you must call `send data`; if you want to *omit* data items (and maybe later on
+    replace them with the aggregate), do not call `send data`.
+  * `on_end`, when given, will be called as `on_end current_value, send` after the last data item has come
+    down the stream, but before `end` is emitted on the stream. It gives you the chance to perform some
+    data transformation on your aggregate. If `on_end` is not given, the default operation is to just send
+    on the current value of the aggregate.
+
+  See `$count` and `$collect` for examples of aggregators.
+
+  Note that unlike `Array::reduce`, handlers will not be given much context; it is your obligation to do
+  all the bookkeeping—which should be a simple and flexible thing to implement using JS closures.
+  ###
+  current_value = initial_value
   return $ ( data, send, end ) =>
     if data?
-      Z = aggregator data
-      # send data if on_end?
+      current_value = on_data data, send
     if end?
-      send on_end Z
+      if on_end? then on_end current_value, send else send current_value
       end()
 
 #-----------------------------------------------------------------------------------------------------------
 @$count = ( on_end = null ) ->
   count = 0
-  return @$aggregate ( -> count += +1 ), on_end
+  #.........................................................................................................
+  on_data = ( data, send ) ->
+    send data
+    return count += +1
+  #.........................................................................................................
+  return @$aggregate count, on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( on_end = null ) ->
   collector = []
-  aggregator = ( data ) ->
+  #.........................................................................................................
+  on_data = ( data, send ) ->
     collector.push data
     return collector
-  ### Make sure the empty collector is sent in case no items were iterated over in the stream: ###
-  on_end ?= -> collector
-  return @$aggregate aggregator, on_end
+  #.........................................................................................................
+  return @$aggregate collector, on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
 @$spread = ( settings ) ->
