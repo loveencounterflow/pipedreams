@@ -5,6 +5,7 @@
 	- [Stream and Transform Construction](#stream-and-transform-construction)
 		- [remit()](#remit)
 		- [create_throughstream()](#create_throughstream)
+		- [Error Handling](#error-handling)
 		- ['Retroactive' Sub-Streams: $sub()](#'retroactive'-sub-streams-$sub)
 		- [$link()](#$link)
 		- [$continue()](#$continue)
@@ -95,6 +96,76 @@ asynchronicity, that data would have to be buffered somewhere before `end` is
 called on the `input` stream. With asynchronicity, the processing steps are
 called after each single item.
 
+### Error Handling
+
+Handling errors that occur in NodeJS streams can be tough. The best solution
+known to me is to use domains. Here's an example from the
+[Hollerith](https://github.com/loveencounterflow/hollerith2) tests:
+
+```coffee
+@[ "invalid key not accepted (2)" ] = ( T, done ) ->
+  domain  = ( require 'domain' ).create();
+  domain.on 'error', ( error ) ->
+    T.eq error[ 'message' ], "invalid SPO key, must be of length 3: [ 'foo' ]"
+    done()
+  domain.run ->
+    input   = D.create_throughstream()
+    input.pipe HOLLERITH.$write db
+    input.write [ 'foo', ]
+```
+
+> thx to http://stackoverflow.com/a/22389498/256361, http://grokbase.com/t/gg/nodejs/12bwd4zm4x/should-stream-pipe-forward-errors#20121129e2ve6sah3cwqgbsc2noefyrsba
+> for this suggestion.
+
+To simplify the above, you may want to use PipeDreams' `run` method:
+
+```coffee
+@run = ( method, handler ) ->
+  domain  = ( require 'domain' ).create()
+  domain.on 'error', ( error ) -> handler error
+  domain.run -> method()
+  return domain
+```
+
+`run` expects a method to execute and a handler that will be called in case an error
+should have occurred. Another example from Hollerith tests:
+
+```coffee
+@[ "catching errors (3)" ] = ( T, done ) ->
+  #.........................................................................................................
+  D.run ->
+    input   = D.create_throughstream()
+    input
+      .pipe HOLLERITH.$write db
+      .pipe D.$on_end -> setImmediate done
+    input.write [ 'foo', 'bar', 'baz', 'gnu', ]
+    input.end()
+  , ( error ) ->
+    T.eq error[ 'message' ], "invalid SPO key, must be of length 3: [ 'foo', 'bar', 'baz', 'gnu' ]"
+    done()
+```
+
+Notes:
+
+* Nothing keeps you from calling `run` with arbitrary, non-streamy code as it is
+  a fully generic method.
+* As for the style of the above example one could frown upon
+  the use of two consecutive anonymous functions; then again, it really *looks* like
+
+  ```coffee
+  try
+    f()
+  catch error
+    boo()
+  ```
+
+* Observe we defer the call to `done` (the callback handler provided by `guy-test`, the
+  testing library used here) by using `setImmediate done`. This is sort of a nasty issue;
+  if `done` was called synchronously (in the same turn of the event loop), our error
+  handler may never get called. So the general advice is to never issue synchronous "we're done"
+  calls when completion may still be dependent upon asynchronous stuff; the tricky part is
+  where you have to decide what is asynchronous. By using `setImmediate`, you should be on the
+  safe side.
 
 ### 'Retroactive' Sub-Streams: $sub()
 

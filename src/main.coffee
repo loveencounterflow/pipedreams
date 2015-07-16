@@ -44,7 +44,7 @@ LODASH                    = CND.LODASH
 # @pimp_readstream              = HELPERS.pimp_readstream               .bind HELPERS
 # @merge                        = ES.merge                              .bind ES
 @$split                       = ES.split                              .bind ES
-@$map                         = ES.map                                .bind ES
+$map                          = ES.map                                .bind ES
 # @$chain                       = ES.pipeline                           .bind ES
 # @through                      = ES.through                            .bind ES
 # @duplex                       = ES.duplex                             .bind ES
@@ -106,10 +106,9 @@ LODASH                    = CND.LODASH
 
 #-----------------------------------------------------------------------------------------------------------
 @remit_async = ( method ) ->
-  ### TAINT consider to remove `$map` from API as this method does the same ###
   unless ( arity = method.length ) is 2
     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
-  return @$map ( input_data, handler ) =>
+  return $map ( input_data, handler ) =>
     ### TAINT should add `done.end`, `done.pause` and so on ###
     done        = ( output_data ) => if output_data? then handler null, output_data else handler()
     done.error  = ( error )       => handler error
@@ -568,6 +567,16 @@ $async  = @remit_async.bind @
     #.......................................................................................................
     if end?
       has_ended = yes
+
+
+#===========================================================================================================
+# ERROR HANDLING
+#-----------------------------------------------------------------------------------------------------------
+@run = ( method, handler ) ->
+  domain  = ( require 'domain' ).create()
+  domain.on 'error', ( error ) -> handler error
+  setImmediate -> domain.run method
+  return domain
 
 
 #===========================================================================================================
