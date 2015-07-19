@@ -125,6 +125,73 @@ $async  = @remit_async.bind @
 @combine = ( transforms... ) ->
   return combine transforms...
 
+#-----------------------------------------------------------------------------------------------------------
+D.$lockstep = ( input, settings ) ->
+  ### Usage:
+
+  ```coffee
+  input_1
+    .pipe D.$lockstep input_2 # or `.pipe D.$lockstep input_2, fallback: null`
+    .pipe $ ( [ data_1, data_2, ], send ) =>
+      ...
+  ```
+
+  `$lockstep` combines each piece of data coming down the stream with one piece of data emitted from the
+  stream you passed in when calling the function. If the two streams turn out to have unequal lengths,
+  an error is sent into the stream unless you called the function with an additional `fallback: value`
+  argument.
+  ###
+  #.........................................................................................................
+  fallback  = settings?[ 'fallback' ]
+  idx_1     = 0
+  idx_2     = 0
+  buffer_1  = []
+  buffer_2  = []
+  _send     = null
+  _end_1    = null
+  _end_2    = null
+  #.........................................................................................................
+  flush = ->
+    #.......................................................................................................
+    if _send?
+      while ( buffer_1.length > 0 ) and ( buffer_2.length > 0 ) and idx_1 is idx_2
+        _send [ buffer_1.shift(), buffer_2.shift(), ]
+        idx_1 += +1
+        idx_2 += +1
+    #.......................................................................................................
+    if _end_1? and _end_2?
+      if ( buffer_1.length > 0 ) or ( buffer_2.length > 0 )
+        for idx in [ 0 ... Math.max buffer_1.length, buffer_2.length ]
+          data_1 = buffer_1[ idx ]
+          data_2 = buffer_2[ idx ]
+          if data_1 is undefined or data_2 is undefined
+            if fallback is undefined
+              return _send.error new Error "streams of unequal lengths and no fallback value given"
+            data_1 = fallback if data_1 is undefined
+            data_2 = fallback if data_2 is undefined
+          _send [ data_1, data_2, ]
+      _end_1()
+      _end_2()
+  #.........................................................................................................
+  input.on 'data', ( data_2 ) ->
+    buffer_2.push data_2
+    flush()
+  #.........................................................................................................
+  input.pipe D.$on_end ( end ) ->
+    _end_2 = end
+    flush()
+  #.........................................................................................................
+  return $ ( data_1, send, end ) =>
+    _send   = send
+    #.......................................................................................................
+    if data_1?
+      buffer_1.push data_1
+      flush()
+    #.......................................................................................................
+    if end?
+      _end_1 = end
+      flush()
+
 
 #===========================================================================================================
 # OMITTING VALUES

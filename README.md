@@ -159,14 +159,6 @@ Notes:
     boo()
   ```
 
-* Observe we defer the call to `done` (the callback handler provided by `guy-test`, the
-  testing library used here) by using `setImmediate done`. This is sort of a nasty issue;
-  if `done` was called synchronously (in the same turn of the event loop), our error
-  handler may never get called. So the general advice is to never issue synchronous "we're done"
-  calls when completion may still be dependent upon asynchronous stuff; the tricky part is
-  where you have to decide what is asynchronous. By using `setImmediate`, you should be on the
-  safe side.
-
 ### 'Retroactive' Sub-Streams: $sub()
 
 The PipeDreams `$sub` method allows to formulate pipes which 'talk back', as it were, to upstream
