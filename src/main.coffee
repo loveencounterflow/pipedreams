@@ -125,8 +125,30 @@ $async  = @remit_async.bind @
 @combine = ( transforms... ) ->
   return combine transforms...
 
+
+#===========================================================================================================
+# EXPERIMENTAL: STREAM LINKING, CONCATENATING
 #-----------------------------------------------------------------------------------------------------------
-D.$lockstep = ( input, settings ) ->
+@$continue = ( stream ) ->
+  return $ ( data, send, end ) =>
+    stream.write data
+    if end?
+      stream.end()
+      end()
+
+# #-----------------------------------------------------------------------------------------------------------
+# @$link = ( transforms... ) ->
+#   return @create_throughstream() if transforms.length is 0
+#   source  = sink = @create_throughstream()
+#   sink    = sink.pipe transform for transform in LODASH.flatten transforms
+#   _send   = null
+#   sink.on 'data', ( data ) => _send data
+#   return $ ( data, send ) =>
+#     _send = send
+#     source.write data
+
+#-----------------------------------------------------------------------------------------------------------
+@$lockstep = ( input, settings ) ->
   ### Usage:
 
   ```coffee
@@ -151,7 +173,7 @@ D.$lockstep = ( input, settings ) ->
   _end_1    = null
   _end_2    = null
   #.........................................................................................................
-  flush = ->
+  flush = =>
     #.......................................................................................................
     if _send?
       while ( buffer_1.length > 0 ) and ( buffer_2.length > 0 ) and idx_1 is idx_2
@@ -173,11 +195,11 @@ D.$lockstep = ( input, settings ) ->
       _end_1()
       _end_2()
   #.........................................................................................................
-  input.on 'data', ( data_2 ) ->
+  input.on 'data', ( data_2 ) =>
     buffer_2.push data_2
     flush()
   #.........................................................................................................
-  input.pipe D.$on_end ( end ) ->
+  input.pipe @$on_end ( end ) =>
     _end_2 = end
     flush()
   #.........................................................................................................
@@ -481,9 +503,20 @@ D.$lockstep = ( input, settings ) ->
 #===========================================================================================================
 # FILTERING
 #-----------------------------------------------------------------------------------------------------------
-@$filter = ( select ) ->
-  return $ ( event, send ) =>
-    send event if select event
+@$filter = ( method ) ->
+  return $ ( data, send ) =>
+    send data if method data
+  # switch arity = method.length
+  #   when 1
+  #     return $ ( data, send ) =>
+  #       send data if method data
+  #   when 2
+  #     return $ ( data, send, end ) =>
+  #       send data if data? and method data, false
+  #       if end?
+  #         method undefined, true
+  #         end()
+  #   else throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
 
 
 #===========================================================================================================
@@ -495,27 +528,25 @@ D.$lockstep = ( input, settings ) ->
     my_show rpr record
     send record
 
-
-#===========================================================================================================
-# EXPERIMENTAL: STREAM LINKING, CONCATENATING
 #-----------------------------------------------------------------------------------------------------------
-@$continue = ( stream ) ->
-  return $ ( data, send, end ) =>
-    stream.write data
-    if end?
-      stream.end()
-      end()
-
-#-----------------------------------------------------------------------------------------------------------
-@$link = ( transforms... ) ->
-  return @create_throughstream() if transforms.length is 0
-  source  = sink = @create_throughstream()
-  sink    = sink.pipe transform for transform in LODASH.flatten transforms
-  _send   = null
-  sink.on 'data', ( data ) => _send data
-  return $ ( data, send ) =>
-    _send = send
-    source.write data
+@$observe = ( method ) ->
+  ### Call `method` for each piece of data; when `method` has returned with whatever result, send data on.
+  Essentially the same as a `$filter` transform whose method always returns `true`. ###
+  # return @$filter ( data ) -> method data; return true
+  switch arity = method.length
+    when 1
+      return $ ( data, send ) =>
+        method data
+        send data
+    when 2
+      return $ ( data, send, end ) =>
+        if data?
+          method data, false
+          send data
+        if end?
+          method undefined, true
+          end()
+    else throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
 
 
 #===========================================================================================================
