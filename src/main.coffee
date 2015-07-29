@@ -548,6 +548,22 @@ $async  = @remit_async.bind @
           end()
     else throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
 
+#-----------------------------------------------------------------------------------------------------------
+@$stop_time = ( badge_or_handler ) ->
+  t0 = null
+  return @$observe ( data, is_last ) =>
+    t0 = +new Date() if data? and not t0?
+    if is_last
+      dt = ( new Date() ) - t0
+      switch type = CND.type_of badge_or_handler
+        when 'function'
+          badge_or_handler dt
+        when 'text', 'jsundefined'
+          logger = CND.get_logger 'info', badge_or_handler ? 'stop time'
+          logger "#{(dt / 1000).toFixed 2}s"
+        else
+          throw new Error "expected function or text, got a #{type}"
+
 
 #===========================================================================================================
 # HYPHENATION
