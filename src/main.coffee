@@ -14,12 +14,6 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-# ### https://github.com/rvagg/through2 ###
-# through2                  = require 'through2'
-#...........................................................................................................
-# ### https://github.com/dominictarr/pause-stream ###
-# through_aka_pausestream   = require 'through'
-#...........................................................................................................
 ### https://github.com/dominictarr/event-stream ###
 ES                        = @_ES = require 'event-stream'
 #...........................................................................................................
@@ -32,7 +26,6 @@ combine                   = require 'stream-combiner'
 @new_densort              = ( DS = require './densort' ).new_densort.bind DS
 PIPEDREAMS                = @
 LODASH                    = CND.LODASH
-@HOTMETAL                 = require 'hotmetal'
 
 
 
@@ -506,18 +499,16 @@ $async  = @remit_async.bind @
 @$filter = ( method ) ->
   return $ ( data, send ) =>
     send data if method data
-  # switch arity = method.length
-  #   when 1
-  #     return $ ( data, send ) =>
-  #       send data if method data
-  #   when 2
-  #     return $ ( data, send, end ) =>
-  #       send data if data? and method data, false
-  #       if end?
-  #         method undefined, true
-  #         end()
-  #   else throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
 
+# #-----------------------------------------------------------------------------------------------------------
+# @$take_last_good = ( method ) ->
+#   last_data = null
+#   return $ ( data, send, end ) =>
+#     if data?
+#       if method data
+#       last_data = data
+#     if end?
+#       end()
 
 #===========================================================================================================
 # REPORTING
@@ -563,79 +554,6 @@ $async  = @remit_async.bind @
           logger "#{(dt / 1000).toFixed 2}s"
         else
           throw new Error "expected function or text, got a #{type}"
-
-
-#===========================================================================================================
-# HYPHENATION
-#-----------------------------------------------------------------------------------------------------------
-@$hyphenate = ( hyphenation = null, min_length = 4 ) ->
-  hyphenate = @HOTMETAL.new_hyphenate hyphenation, min_length
-  return $ ( text, send ) => send hyphenate text, min_length
-
-
-#===========================================================================================================
-# UNICODE LINE BREAKING
-#-----------------------------------------------------------------------------------------------------------
-@$break_lines = ( settings ) ->
-  #.........................................................................................................
-  return $ ( text, send ) =>
-    send @HOTMETAL.break_lines text, settings
-
-
-#===========================================================================================================
-# TYPOGRAPHIC ENHANCEMENTS
-#-----------------------------------------------------------------------------------------------------------
-@TYPO = {}
-
-#-----------------------------------------------------------------------------------------------------------
-@TYPO.$quotes = ->
-  return $ ( text, send ) => send PIPEDREAMS.HOTMETAL.TYPO.quotes text
-
-#-----------------------------------------------------------------------------------------------------------
-@TYPO.$dashes = ->
-  return $ ( text, send ) => send PIPEDREAMS.HOTMETAL.TYPO.dashes text
-
-
-#===========================================================================================================
-# MARKDOWN
-#-----------------------------------------------------------------------------------------------------------
-@MD = {}
-
-#-----------------------------------------------------------------------------------------------------------
-@MD.$as_html = ->
-  parser = PIPEDREAMS.HOTMETAL.MD.new_parser()
-  #.........................................................................................................
-  return $ ( md, send ) =>
-    send PIPEDREAMS.HOTMETAL.MD.as_html md, parser
-
-
-#===========================================================================================================
-# HTML
-#-----------------------------------------------------------------------------------------------------------
-@HTML = {}
-
-#---------------------------------------------------------------------------------------------------------
-@HTML.$parse = ( settings ) ->
-  return $ ( html, send ) =>
-    send PIPEDREAMS.HOTMETAL.HTML.parse html, settings
-
-#---------------------------------------------------------------------------------------------------------
-@HTML.$split = ( settings ) ->
-  return $ ( html, send ) =>
-    send PIPEDREAMS.HOTMETAL.HTML.split html, settings
-
-#-----------------------------------------------------------------------------------------------------------
-@HTML.$slice_toplevel_tags = ->
-  return $ ( me, send ) =>
-    PIPEDREAMS.HOTMETAL.slice_toplevel_tags me, ( error, slice ) =>
-      return send.error error if error?
-      send slice
-
-#-----------------------------------------------------------------------------------------------------------
-@HTML.$unwrap = ( silent = no) ->
-  return $ ( me, send ) =>
-    send PIPEDREAMS.HOTMETAL.unwrap me, silent
-
 
 
 #===========================================================================================================
