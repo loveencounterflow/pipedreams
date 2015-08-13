@@ -26,14 +26,14 @@
   "homepage": "https://github.com/loveencounterflow/pipedreams2",
   "dependencies": {
     "async": "^0.9.0",
-    "cnd": "^0.1.7",
+    "cnd": "^1.0.8",
     "event-stream": "^3.2.2",
     "sort-stream": "^1.0.1",
     "stream-combiner": "^0.2.1",
     "throttle": "^1.0.3"
   },
   "devDependencies": {
-    "guy-test": "^0.1.12",
-    "coffeelint-variable-scope": "0.0.3"
+    "coffeelint-variable-scope": "0.0.3",
+    "guy-test": "^1.0.5"
   }
 }
