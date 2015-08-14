@@ -1,14 +1,14 @@
 {
-  "name": "pipedreams2",
+  "name": "pipedreams",
   "version": "0.2.24",
-  "description": "Common operations for piped NodeJS streams. INCEPTIVE PACKAGE IN ALPHA (use Pipedreams v0.1.x instead)",
+  "description": "Common operations for piped NodeJS streams.",
   "main": "lib/main.js",
   "scripts": {
     "test": "./build && node lib/tests.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/loveencounterflow/pipedreams2.git"
+    "url": "https://github.com/loveencounterflow/pipedreams.git"
   },
   "keywords": [
     "pipes",
@@ -21,9 +21,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/loveencounterflow/pipedreams2/issues"
+    "url": "https://github.com/loveencounterflow/pipedreams/issues"
   },
-  "homepage": "https://github.com/loveencounterflow/pipedreams2",
+  "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
     "async": "^0.9.0",
     "cnd": "^1.0.8",
