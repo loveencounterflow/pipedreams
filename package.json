@@ -33,6 +33,7 @@
     "throttle": "^1.0.3"
   },
   "devDependencies": {
+    "coffee-script": "^1.9.3",
     "coffeelint-variable-scope": "0.0.3",
     "guy-test": "^1.0.5"
   }
