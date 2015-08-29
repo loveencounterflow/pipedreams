@@ -1,6 +1,6 @@
 {
   "name": "pipedreams",
-  "version": "0.2.27",
+  "version": "0.2.28",
   "description": "Common operations for piped NodeJS streams.",
   "main": "lib/main.js",
   "scripts": {
