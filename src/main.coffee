@@ -26,6 +26,9 @@ combine                   = require 'stream-combiner'
 @new_densort              = ( DS = require './densort' ).new_densort.bind DS
 PIPEDREAMS                = @
 LODASH                    = CND.LODASH
+#...........................................................................................................
+### http://stringjs.com ###
+S                         = require 'string'
 
 
 
@@ -599,6 +602,30 @@ $async  = @remit_async.bind @
     #.......................................................................................................
     if end?
       has_ended = yes
+
+
+#===========================================================================================================
+# CSV
+#-----------------------------------------------------------------------------------------------------------
+@$parse_csv = ( options ) ->
+  field_names = null
+  options    ?= {}
+  headers     = options[ 'headers'    ] ? true
+  delimiter   = options[ 'delimiter'  ] ? ','
+  qualifier   = options[ 'qualifier'  ] ? '"'
+  #.........................................................................................................
+  return @remit ( record, send ) =>
+    if record?
+      values = ( S record ).parseCSV delimiter, qualifier, '\\'
+      if headers
+        if field_names is null
+          field_names = values
+        else
+          record = {}
+          record[ field_names[ idx ] ] = value for value, idx in values
+          send record
+      else
+        send values
 
 
 #===========================================================================================================
