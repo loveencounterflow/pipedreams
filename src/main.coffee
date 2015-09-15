@@ -249,7 +249,10 @@ $async  = @remit_async.bind @
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-@spawn_and_read = ( P... ) -> readstream_from_spawn spawn P...
+@spawn_and_read = ( P... ) ->
+  readstream_from_spawn     = require 'spawn-to-readstream'
+  spawn                     = ( require 'child_process').spawn
+  return readstream_from_spawn spawn P...
 
 #-----------------------------------------------------------------------------------------------------------
 @spawn_and_read_lines = ( P... ) ->
