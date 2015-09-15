@@ -251,7 +251,7 @@ $async  = @remit_async.bind @
 #-----------------------------------------------------------------------------------------------------------
 @spawn_and_read = ( P... ) ->
   readstream_from_spawn     = require 'spawn-to-readstream'
-  spawn                     = ( require 'child_process').spawn
+  spawn                     = ( require 'child_process' ).spawn
   return readstream_from_spawn spawn P...
 
 #-----------------------------------------------------------------------------------------------------------
@@ -261,7 +261,7 @@ $async  = @remit_async.bind @
   input     = @spawn_and_read P...
   #.........................................................................................................
   input
-    .pipe D.$split()
+    .pipe @$split()
     .pipe $ ( line, send, end ) =>
       #.....................................................................................................
       if line?
