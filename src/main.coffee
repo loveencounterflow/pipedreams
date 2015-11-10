@@ -26,6 +26,9 @@ combine                   = require 'stream-combiner'
 @new_densort              = ( DS = require './densort' ).new_densort.bind DS
 PIPEDREAMS                = @
 LODASH                    = CND.LODASH
+#...........................................................................................................
+### http://stringjs.com ###
+S                         = require 'string'
 
 
 
@@ -141,6 +144,58 @@ $async  = @remit_async.bind @
 #     source.write data
 
 #-----------------------------------------------------------------------------------------------------------
+@create_fitting_from_pipeline = ( pipeline, settings ) ->
+  ### Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
+  derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
+  the following entries:
+
+  * `input`: the reading side of the pipeline; this will be `settings[ 'input' ]` where present, or else
+    a newly created throughstream;
+  * `output`: the writing side of the pipeline; either `settings[ 'output' ]` or a new stream;
+  * `inputs`: a copy of `settings[ 'inputs' ]` or a blank object;
+  * `outputs`: a copy of `settings[ 'outputs' ]` or a blank object.
+
+  The `inputs` and `outputs` members of the fitting are a mere convenience, a convention meant to aid
+  in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
+  in a meaningful way. ###
+  unless ( type = CND.type_of pipeline ) is 'list'
+    throw new Error "expected a list for pipeline, got a #{type}"
+  confluence  = @combine pipeline...
+  input       = settings?[ 'input'  ] ? @create_throughstream()
+  output      = settings?[ 'output' ] ? @create_throughstream()
+  input
+    .pipe confluence
+    .pipe output
+  R =
+    '~isa':       'PIPEDREAMS/fitting'
+    input:        input
+    output:       output
+    inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
+    outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->
+  ### Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
+  optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
+  should be suitable arguments to the [EventsStream `duplex`
+  method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream). ###
+  confluence  = @_ES.duplex readstream, writestream
+  input       = settings?[ 'input'  ] ? @create_throughstream()
+  output      = settings?[ 'output' ] ? @create_throughstream()
+  input
+    .pipe confluence
+    .pipe output
+  R =
+    '~isa':       'PIPEDREAMS/fitting'
+    input:        input
+    output:       output
+    inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
+    outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
+  return R
+
+
+#-----------------------------------------------------------------------------------------------------------
 @$lockstep = ( input, settings ) ->
   ### Usage:
 
@@ -243,6 +298,33 @@ $async  = @remit_async.bind @
       return end()
   #.........................................................................................................
   R.setMaxListeners 0
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@spawn_and_read = ( P... ) ->
+  readstream_from_spawn     = require 'spawn-to-readstream'
+  spawn                     = ( require 'child_process' ).spawn
+  return readstream_from_spawn spawn P...
+
+#-----------------------------------------------------------------------------------------------------------
+@spawn_and_read_lines = ( P... ) ->
+  last_line = null
+  R         = @create_throughstream()
+  input     = @spawn_and_read P...
+  #.........................................................................................................
+  input
+    .pipe @$split()
+    .pipe $ ( line, send, end ) =>
+      #.....................................................................................................
+      if line?
+        R.write last_line if last_line?
+        last_line = line
+      #.....................................................................................................
+      if end?
+        R.write last_line if last_line? and last_line.length > 0
+        R.end()
+        end()
+  #.........................................................................................................
   return R
 
 
@@ -599,6 +681,30 @@ $async  = @remit_async.bind @
     #.......................................................................................................
     if end?
       has_ended = yes
+
+
+#===========================================================================================================
+# CSV
+#-----------------------------------------------------------------------------------------------------------
+@$parse_csv = ( options ) ->
+  field_names = null
+  options    ?= {}
+  headers     = options[ 'headers'    ] ? true
+  delimiter   = options[ 'delimiter'  ] ? ','
+  qualifier   = options[ 'qualifier'  ] ? '"'
+  #.........................................................................................................
+  return @remit ( record, send ) =>
+    if record?
+      values = ( S record ).parseCSV delimiter, qualifier, '\\'
+      if headers
+        if field_names is null
+          field_names = values
+        else
+          record = {}
+          record[ field_names[ idx ] ] = value for value, idx in values
+          send record
+      else
+        send values
 
 
 #===========================================================================================================
