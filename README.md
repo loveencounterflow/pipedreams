@@ -1,3 +1,32 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [PipeDreams](#pipedreams)
+- [Stream and Transform Construction](#stream-and-transform-construction)
+  - [remit()](#remit)
+  - [create_throughstream()](#create_throughstream)
+  - [Error Handling](#error-handling)
+  - ['Retroactive' Sub-Streams: $sub()](#retroactive-sub-streams-sub)
+  - [$link()](#link)
+  - [$continue()](#continue)
+  - [Creating 'Fittings' (Higher-Order Streams)](#creating-fittings-higher-order-streams)
+    - [Motivation](#motivation)
+    - [Usage](#usage)
+    - [Example](#example)
+- [Aggregation](#aggregation)
+  - [$aggregate = ( aggregator, on_end = null ) ->](#aggregate---aggregator-on_end--null---)
+  - [$collect(), $count()](#collect-count)
+- [Strings](#strings)
+  - [$split()](#split)
+- [Sorting](#sorting)
+- ['Dense' Sorting](#dense-sorting)
+  - [new_densort()](#new_densort)
+  - [$densort()](#densort)
+  - [$sort()](#sort)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 
 - [PipeDreams](#pipedreams)
@@ -49,14 +78,12 @@ Common operations for piped NodeJS streams.
 
 **Caveat** Below examples are all written in CoffeeScript.
 
-<!-- ################################################################################################### -->
-# API
 
 <!-- =================================================================================================== -->
-## Stream and Transform Construction
+# Stream and Transform Construction
 
-### remit()
-### create_throughstream()
+## remit()
+## create_throughstream()
 
 `D2.create_throughstream` is an exact copy of [`event-streams`' `through()` method] (which in turn is implemented
 with [`through`](https://github.com/dominictarr/through)); however, the `write()` method of the
@@ -91,7 +118,7 @@ asynchronicity, that data would have to be buffered somewhere before `end` is
 called on the `input` stream. With asynchronicity, the processing steps are
 called after each single item.
 
-### Error Handling
+## Error Handling
 
 Handling errors that occur in NodeJS streams can be tough. The best solution
 known to me is to use domains. Here's an example from the
@@ -154,7 +181,7 @@ Notes:
     boo()
   ```
 
-### 'Retroactive' Sub-Streams: $sub()
+## 'Retroactive' Sub-Streams: $sub()
 
 The PipeDreams `$sub` method allows to formulate pipes which 'talk back', as it were, to upstream
 transformers. This can be handy when a given transformer performs single steps of an iterative optimization
@@ -242,7 +269,7 @@ event in the stream to be issued; such transformers must not be in the stream ab
 explicitly call `source.end()`.
 
 
-### $link()
+## $link()
 
 `$link` accepts any number of stream transforms, either as single arguments or as list arguments; it returns
 a stream transform that represents the pipeline of the individual transforms. When called with no arguments
@@ -278,13 +305,13 @@ input.pipe D.$link [
 ```
 
 
-### $continue()
+## $continue()
 
 
-### `create_transform`
+## Creating 'Fittings' (Higher-Order Streams)
 
 
-#### Motivation
+### Motivation
 
 Building stream pipelines often happens by concatenating (as far as the resulting stream is
 concerned) anonymous stream transforms with chanins of `.pipe()` calls, and often this approach is
@@ -322,7 +349,7 @@ such extensions from the stream API proper, which always felt more like an exped
   return R
 ```
 
-#### Usage
+### Usage
 
 **`@create_fitting_from_pipeline = ( transforms, settings ) ->`**:
 Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
@@ -346,7 +373,7 @@ should be suitable arguments to the [EventsStream `duplex`
 method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream).
 
 
-#### Example
+### Example
 
 As a simple demonstration how to use `create_fitting`, here's a function that defines three transforms
 to perform addition, multiplication and squaring of some numeric data, and that define extra input
@@ -391,9 +418,9 @@ input.write n for n in [ 1 ... 10 ]
 
 
 <!-- =================================================================================================== -->
-## Aggregation
+# Aggregation
 
-### $aggregate = ( aggregator, on_end = null ) ->
+## $aggregate = ( aggregator, on_end = null ) ->
 
 A generic aggregator. This is how it is used in the PipeDreams source itself:
 
@@ -422,23 +449,23 @@ and `on_end` will be called once with the last intermediate result. If `on_end` 
 individual data events will *not* be passed on; instead, when the stream has ended, the aggregation
 result will be sent downstream.
 
-### $collect(), $count()
+## $collect(), $count()
 
 Two standard aggregators; `$collect()` collects all data items into a list, and `$count()` counts how many
 data items have been encountered in a stream.
 
 <!-- =================================================================================================== -->
-## Strings
+# Strings
 
-### $split()
+## $split()
 
 <!-- =================================================================================================== -->
-## Sorting
+# Sorting
 
-## 'Dense' Sorting
+# 'Dense' Sorting
 
-### new_densort()
-### $densort()
+## new_densort()
+## $densort()
 
 `new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->`
 
@@ -504,21 +531,9 @@ to arrive in their logical order (the optimal case).
  -->
 
 
-### $sort()
+## $sort()
 
 
-<!-- =================================================================================================== -->
-## Other
-
-### $filter()
-### $on_end()
-### $on_start()
-### $show()
-### $signal_end()
-### $skip_first()
-### $spread()
-### $throttle_bytes()
-### $throttle_items()
 
 
 
