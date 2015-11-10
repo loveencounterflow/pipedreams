@@ -21,6 +21,11 @@ LODASH                    = CND.LODASH
 test                      = require 'guy-test'
 # A                         = T.asynchronous
 DS                        = require './densort'
+#...........................................................................................................
+D                         = require './main'
+$                         = D.remit.bind D
+$async                    = D.remit_async.bind D
+
 
 #-----------------------------------------------------------------------------------------------------------
 get_index = ( element, key ) -> if ( CND.isa_function key ) then key element else element[ key ]
@@ -221,12 +226,59 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   T.throws 'detected missing elements', -> collect_and_check T, key, first_idx, input, max_buffer_size
   done()
 
-
-
+#-----------------------------------------------------------------------------------------------------------
+@[ "create_fitting" ] = ( T, done ) ->
+  probes              = [ 1 ... 10 ]
+  output_matchers     = [ 16, 36, 64, 64, 100, 144, 196, 256, 324, 400, ]
+  output_results      = []
+  unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
+  unsquared_results   = []
+  #.........................................................................................................
+  create_frob_fitting = ( settings ) ->
+    multiply      = $ ( data, send ) => send data * 2
+    add           = $ ( data, send ) => send data + 2
+    square        = $ ( data, send ) => send data ** 2
+    unsquared     = D.create_throughstream()
+    #.......................................................................................................
+    inputs        = { add, }
+    outputs       = { unsquared, }
+    transforms    = [ multiply, add, unsquared, square, ]
+    #.......................................................................................................
+    return D.create_fitting transforms, { inputs, outputs, }
+  #.........................................................................................................
+  fitting = create_frob_fitting()
+  { input, output, inputs, outputs, } = fitting
+  outputs[ 'unsquared' ].pipe $ ( data, send ) =>
+    unsquared_results.push data
+  #.........................................................................................................
+  output
+    #.......................................................................................................
+    .pipe $ ( data, send ) =>
+      inputs[ 'add' ].write -10 if data is 100
+      send data
+    #.......................................................................................................
+    .pipe $ ( data, send ) =>
+      output_results.push data
+      send data
+    #.......................................................................................................
+    # .pipe D.$show()
+    #.......................................................................................................
+    output.on 'end', =>
+      T.eq unsquared_results, unsquared_matchers
+      T.eq    output_results,    output_matchers
+      done()
+  #.........................................................................................................
+  input.write n for n in probes
+  input.end()
 
 
 
 ############################################################################################################
-settings = 'timeout': 2500
-test @, settings
+@_main = ->
+  settings = 'timeout': 2500
+  test @, settings
+
+@_main() unless module.parent?
+
+
 

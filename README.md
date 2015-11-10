@@ -314,7 +314,7 @@ such extensions from the stream API proper, which always felt more like an exped
 
 ```coffee
 @create_fitting = ( transforms, settings ) ->
-  confluence  = if ( CND.isa_list transforms ) then ( D.combine transforms... ) else transforms
+  confluence  = if ( CND.isa_list transforms ) then ( @combine transforms... ) else transforms
   input       = settings?[ 'input'  ] ? @create_throughstream()
   output      = settings?[ 'output' ] ? @create_throughstream()
   input
