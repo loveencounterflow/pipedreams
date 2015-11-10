@@ -313,22 +313,33 @@ input.pipe D.$link [
 
 ### Motivation
 
-Building stream pipelines often happens by concatenating (as far as the resulting stream is
-concerned) anonymous stream transforms with chanins of `.pipe()` calls, and often this approach is
-appropriate and sufficient: figuratively, an assembly line with an input end for raw data and an
-output end for processed data is being constructed, and all that matters is that a complex
-transformation is deined in neat steps and wrapped up with a snazzy handle such as 'parse Markdown
-source and turn it to HTML'.
+Building stream pipelines often happens by concatenating (as far as the
+resulting stream is concerned) anonymous stream transforms with chanins of
+`.pipe()` calls, and often this approach is appropriate and sufficient.
+Figuratively, a pipeline of stream transforms is like an assembly line for
+data, with one end for input of raw data and one end for output of processed
+data. Often, all that matters is that the resulting complex transformation is
+defined in neat steps (so it remains easy to maintain) and wrapped up in
+method with a snazzy name. Such methods are conventionally called
+`create_xxx_stream` and do in fact return a NodeJS stream instance.
 
-Especially as transforms grow more complex, however, we often want to adapt existing pipelines to
-varied new uses, keep tabs on what's going on at intermediate points, re-inject data at specific
-points, or deal with meta data that may only become avaible at some time during processing. Such needs
-are then often dealt with by way of custom-built `create_xxxstream` methods whose call signatures and
-return values are each a law upon itself. The author of this has himself experimented with creating
-throughstreams that got extended with custom attributes, sometimes making use of ES6 Symbols to hide
-such extensions from the stream API proper, which always felt more like an expedient than a solution.
-`PIPEDREAMS.create_fitting` has been written to support a more principled approach, and, in fact,
-`create_fitting` as such does almost nothing by itself, as a look at its source will show:
+Especially as transforms grow more complex, however, we often want to adapt
+existing pipelines to varied new uses, keep tabs on what's going on at
+intermediate points, re-inject data at specific points, or deal with meta data
+that may only become avaible at some time during processing. Such needs might
+be dealt with, for example, by way of extending the return value of our
+`create_xxxstream` method, but that has two disadvantages: for one thing, we'd
+end up modifying objects that are supposed to have a certain shape  and you
+could never know whether one of the new attributes wouldn't mess with one of
+the stream-handling methods. The second disadvantage is that just tacking
+named values onto an object that was created with a whole other intended use
+tends to become semantically messy.
+
+From these considerations, it becomes clear that the solution is to not return
+a stream object, but rather an 'umbrella object' that has the pertinent
+streams and other data attached to it, and this is exactly what
+`PIPEDREAMS.create_fitting_from_pipeline` and
+`PIPEDREAMS.create_fitting_from_readwritestreams` do.
 
 ```coffee
 @create_fitting_from_pipeline = ( pipeline, settings ) ->
