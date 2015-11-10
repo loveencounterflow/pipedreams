@@ -227,49 +227,108 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "create_fitting" ] = ( T, done ) ->
-  probes              = [ 1 ... 10 ]
-  output_matchers     = [ 16, 36, 64, 64, 100, 144, 196, 256, 324, 400, ]
-  output_results      = []
-  unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
-  unsquared_results   = []
+@[ "create_fitting_from_pipeline" ] = ( T, done ) ->
+  create_frob_fitting = null
   #.........................................................................................................
-  create_frob_fitting = ( settings ) ->
-    multiply      = $ ( data, send ) => send data * 2
-    add           = $ ( data, send ) => send data + 2
-    square        = $ ( data, send ) => send data ** 2
-    unsquared     = D.create_throughstream()
-    #.......................................................................................................
-    inputs        = { add, }
-    outputs       = { unsquared, }
-    transforms    = [ multiply, add, unsquared, square, ]
-    #.......................................................................................................
-    return D.create_fitting transforms, { inputs, outputs, }
+  do ->
+    create_frob_fitting = ( settings ) ->
+      multiply      = $ ( data, send ) => send data * 2
+      add           = $ ( data, send ) => send data + 2
+      square        = $ ( data, send ) => send data ** 2
+      unsquared     = D.create_throughstream()
+      #.....................................................................................................
+      inputs        = { add, }
+      outputs       = { unsquared, }
+      transforms    = [ multiply, add, unsquared, square, ]
+      #.....................................................................................................
+      return D.create_fitting_from_pipeline transforms, { inputs, outputs, }
   #.........................................................................................................
-  fitting = create_frob_fitting()
-  { input, output, inputs, outputs, } = fitting
-  outputs[ 'unsquared' ].pipe $ ( data, send ) =>
-    unsquared_results.push data
+  do ->
+    probes              = [ 1 ... 10 ]
+    output_matchers     = [ 16, 36, 64, 64, 100, 144, 196, 256, 324, 400, ]
+    output_results      = []
+    unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
+    unsquared_results   = []
+    fitting             = create_frob_fitting()
+    { input, output, inputs, outputs, } = fitting
+    outputs[ 'unsquared' ].pipe $ ( data, send ) =>
+      unsquared_results.push data
+    #.......................................................................................................
+    output
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        inputs[ 'add' ].write -10 if data is 100
+        send data
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        output_results.push data
+        send data
+      #.....................................................................................................
+      # .pipe D.$show()
+      #.....................................................................................................
+      output.on 'end', =>
+        T.eq unsquared_results, unsquared_matchers
+        T.eq    output_results,    output_matchers
+        done()
+    #.......................................................................................................
+    input.write n for n in probes
+    input.end()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "create_fitting_from_readwritestreams" ] = ( T, done ) ->
+  create_frob_fitting       = null
   #.........................................................................................................
-  output
-    #.......................................................................................................
-    .pipe $ ( data, send ) =>
-      inputs[ 'add' ].write -10 if data is 100
-      send data
-    #.......................................................................................................
-    .pipe $ ( data, send ) =>
-      output_results.push data
-      send data
-    #.......................................................................................................
-    # .pipe D.$show()
-    #.......................................................................................................
-    output.on 'end', =>
-      T.eq unsquared_results, unsquared_matchers
-      T.eq    output_results,    output_matchers
-      done()
+  do ->
+    create_frob_fitting = ( settings ) ->
+      multiply      = $ ( data, send ) => send data * 2
+      add           = $ ( data, send ) => send data + 2
+      square        = $ ( data, send ) => send data ** 2
+      unsquared     = D.create_throughstream()
+      #.....................................................................................................
+      inputs        = { add, }
+      outputs       = { unsquared, }
+      readstream    = D.create_throughstream()
+      writestream   = D.create_throughstream()
+      readstream
+        .pipe multiply
+        .pipe add
+        .pipe unsquared
+        .pipe square
+        .pipe writestream
+      #.......................................................................................................
+      return D.create_fitting_from_readwritestreams readstream, writestream, { inputs, outputs, }
   #.........................................................................................................
-  input.write n for n in probes
-  input.end()
+  do ->
+    probes              = [ 1 ... 10 ]
+    output_matchers     = [ 16, 36, 64, 64, 100, 144, 196, 256, 324, 400, ]
+    output_results      = []
+    unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
+    unsquared_results   = []
+    fitting             = create_frob_fitting()
+    { input, output, inputs, outputs, } = fitting
+    outputs[ 'unsquared' ].pipe $ ( data, send ) =>
+      unsquared_results.push data
+    #.......................................................................................................
+    output
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        inputs[ 'add' ].write -10 if data is 100
+        send data
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        output_results.push data
+        send data
+      #.....................................................................................................
+      # .pipe D.$show()
+      #.....................................................................................................
+      output.on 'end', =>
+        # T.fail "not yet ready"
+        T.eq unsquared_results, unsquared_matchers
+        T.eq    output_results,    output_matchers
+        done()
+    #.......................................................................................................
+    input.write n for n in probes
+    input.end()
 
 
 

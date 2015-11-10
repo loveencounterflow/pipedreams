@@ -144,8 +144,8 @@ $async  = @remit_async.bind @
 #     source.write data
 
 #-----------------------------------------------------------------------------------------------------------
-@create_fitting = ( transforms, settings ) ->
-  ### Given a list of `transforms` (i.e. intermediate streams) and an optional `settings` object,
+@create_fitting_from_pipeline = ( pipeline, settings ) ->
+  ### Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
   derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
   the following entries:
 
@@ -158,7 +158,29 @@ $async  = @remit_async.bind @
   The `inputs` and `outputs` members of the fitting are a mere convenience, a convention meant to aid
   in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
   in a meaningful way. ###
-  confluence  = if ( CND.isa_list transforms ) then ( @combine transforms... ) else transforms
+  unless ( type = CND.type_of pipeline ) is 'list'
+    throw new Error "expected a list for pipeline, got a #{type}"
+  confluence  = @combine pipeline...
+  input       = settings?[ 'input'  ] ? @create_throughstream()
+  output      = settings?[ 'output' ] ? @create_throughstream()
+  input
+    .pipe confluence
+    .pipe output
+  R =
+    '~isa':       'PIPEDREAMS/fitting'
+    input:        input
+    output:       output
+    inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
+    outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->
+  ### Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
+  optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
+  should be suitable arguments to the [EventsStream `duplex`
+  method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream). ###
+  confluence  = @_ES.duplex readstream, writestream
   input       = settings?[ 'input'  ] ? @create_throughstream()
   output      = settings?[ 'output' ] ? @create_throughstream()
   input

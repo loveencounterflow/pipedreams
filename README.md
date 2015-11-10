@@ -17,16 +17,7 @@
 		- [$aggregate = ( aggregator, on_end = null ) ->](#$aggregate-=--aggregator-on_end-=-null--->)
 		- [$collect(), $count()](#$collect-$count)
 	- [Strings](#strings)
-		- [$hyphenate()](#$hyphenate)
 		- [$split()](#$split)
-		- [`new_hyphenate`](#new_hyphenate)
-	- [HTML parsing](#html-parsing)
-		- [HTML](#html)
-		- [HTML.$collect_closing_tags()](#html$collect_closing_tags)
-		- [HTML.$collect_empty_tags()](#html$collect_empty_tags)
-		- [HTML.$collect_texts()](#html$collect_texts)
-		- [HTML.$parse()](#html$parse)
-		- [HTML._new_parser()](#html_new_parser)
 	- [Sorting](#sorting)
 	- ['Dense' Sorting](#'dense'-sorting)
 		- [new_densort()](#new_densort)
@@ -313,8 +304,10 @@ such extensions from the stream API proper, which always felt more like an exped
 `create_fitting` as such does almost nothing by itself, as a look at its source will show:
 
 ```coffee
-@create_fitting = ( transforms, settings ) ->
-  confluence  = if ( CND.isa_list transforms ) then ( @combine transforms... ) else transforms
+@create_fitting_from_pipeline = ( pipeline, settings ) ->
+  unless ( type = CND.type_of pipeline ) is 'list'
+    throw new Error "expected a list for pipeline, got a #{type}"
+  confluence  = @combine pipeline...
   input       = settings?[ 'input'  ] ? @create_throughstream()
   output      = settings?[ 'output' ] ? @create_throughstream()
   input
@@ -324,14 +317,15 @@ such extensions from the stream API proper, which always felt more like an exped
     '~isa':       'PIPEDREAMS/fitting'
     input:        input
     output:       output
-    inputs:       if settings[ 'inputs'  ]? then CND.LODASH.clone settings[ 'inputs'  ] else {}
-    outputs:      if settings[ 'outputs' ]? then CND.LODASH.clone settings[ 'outputs' ] else {}
+    inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
+    outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
   return R
 ```
 
 #### Usage
 
-Given a list of `transforms` (i.e. intermediate streams) and an optional `settings` object,
+**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**:
+Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
 derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
 the following entries:
 
@@ -344,6 +338,12 @@ the following entries:
 The `inputs` and `outputs` members of the fitting are a mere convenience, a convention meant to aid
 in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
 in a meaningful way.
+
+**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**:
+Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
+optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
+should be suitable arguments to the [EventsStream `duplex`
+method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream).
 
 
 #### Example
@@ -365,7 +365,7 @@ create_frob_fitting = ( settings ) ->
   outputs       = { unsquared, }
   transforms    = [ multiply, add, unsquared, square, ]
   #...........................................................
-  return D.create_fitting transforms, { inputs, outputs, }
+  return D.create_fitting_from_pipeline transforms, { inputs, outputs, }
 ```
 
 Observe that while we have chosen to define the processing pipeline as a list of stream transforms,
@@ -430,21 +430,7 @@ data items have been encountered in a stream.
 <!-- =================================================================================================== -->
 ## Strings
 
-### $hyphenate()
 ### $split()
-### `new_hyphenate`
-
-`D.new_hyphenate = ( hyphenation = null, min_length = 2 ) ->`
-
-<!-- =================================================================================================== -->
-## HTML parsing
-
-### HTML
-### HTML.$collect_closing_tags()
-### HTML.$collect_empty_tags()
-### HTML.$collect_texts()
-### HTML.$parse()
-### HTML._new_parser()
 
 <!-- =================================================================================================== -->
 ## Sorting
