@@ -385,9 +385,10 @@ the following entries:
 + `inputs`: a copy of `settings[ 'inputs' ]` or a blank object;
 + `outputs`: a copy of `settings[ 'outputs' ]` or a blank object.
 
-The `inputs` and `outputs` members of the fitting are a mere convenience, a convention meant to aid
-in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
-in a meaningful way.
+The `inputs` and `outputs` members of the fitting are a mere convenience, a
+convention meant to aid in mainting consistent APIs. The consumer of
+`create_fitting_from_pipeline` is responsible to populate these entries in a
+meaningful way.
 
 #### **`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**
 
@@ -399,10 +400,11 @@ method](https://github.com/dominictarr/event-stream#duplex-writestream-readstrea
 
 ### Example
 
-As a simple demonstration how to use `create_fitting`, here's a function that defines three transforms
-to perform addition, multiplication and squaring of some numeric data, and that define extra input
-and output points, made available as `fitting[ 'inputs' ][ 'add' ]` and
-`fitting[ 'outputs' ][ 'unsquared' ]`, respectively:
+As a simple demonstration how to use `create_fitting_from_pipeline`, here's a
+function that defines three transforms to perform addition, multiplication and
+squaring of some numeric data, and that define extra input and output points,
+made available as `fitting[ 'inputs' ][ 'add' ]` and `fitting[ 'outputs' ][
+'unsquared' ]`, respectively:
 
 ```coffee
 #-------------------------------------------------------------
@@ -419,8 +421,32 @@ create_frob_fitting = ( settings ) ->
   return D.create_fitting_from_pipeline transforms, { inputs, outputs, }
 ```
 
-Observe that while we have chosen to define the processing pipeline as a list of stream transforms,
-we could have just as well sent in the result of consecutive `.pipe()` calls.
+In case it is preferrable to stick to the `.pipe`ing construction method, the
+two ends of a piped stream may be passed into
+`create_fitting_from_readwritestreams`:
+
+```coffee
+#-------------------------------------------------------------
+create_frob_fitting = ( settings ) ->
+  multiply      = $ ( data, send ) => send data * 2
+  add           = $ ( data, send ) => send data + 2
+  square        = $ ( data, send ) => send data ** 2
+  unsquared     = D.create_throughstream()
+  #...........................................................
+  inputs        = { add, }
+  outputs       = { unsquared, }
+  readstream    = D.create_throughstream()
+  writestream   = D.create_throughstream()
+  readstream
+    .pipe multiply
+    .pipe add
+    .pipe unsquared
+    .pipe square
+    .pipe writestream
+  #...........................................................
+  return D.create_fitting_from_readwritestreams readstream, writestream, { inputs, outputs, }
+```
+
 
 Here's how to use our new frob fitting: we keep an eye on all the data that passes through the pipeline
 at the point before it gets squared; also, we want to re-inject a value of `-10` (into the input point
@@ -428,16 +454,22 @@ labelled `add`) whenever the pipeline yields a `100`; having set up the workings
 write our source data into the input:
 
 ```coffee
-#-------------------------------------------------------------
+#.............................................................
 fitting = create_frob_fitting()
 { input, output, inputs, outputs, } = fitting
-outputs[ 'unsquared' ].pipe $ ( data, send ) -> help 'unsquared:', data
+#.............................................................
+outputs[ 'unsquared' ]
+  .pipe $ ( data, send ) ->
+    help 'unsquared:', data
+#.............................................................
 output
   .pipe $ ( data, send ) ->
     inputs[ 'add' ].write -10 if data is 100
     send data
   .pipe D.$show()
+#.............................................................
 input.write n for n in [ 1 ... 10 ]
+input.end()
 ```
 
 
