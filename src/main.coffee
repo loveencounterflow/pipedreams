@@ -161,18 +161,7 @@ $async  = @remit_async.bind @
   unless ( type = CND.type_of pipeline ) is 'list'
     throw new Error "expected a list for pipeline, got a #{type}"
   confluence  = @combine pipeline...
-  input       = settings?[ 'input'  ] ? @create_throughstream()
-  output      = settings?[ 'output' ] ? @create_throughstream()
-  input
-    .pipe confluence
-    .pipe output
-  R =
-    '~isa':       'PIPEDREAMS/fitting'
-    input:        input
-    output:       output
-    inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
-    outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
-  return R
+  return @_create_fitting_from_confluence confluence, settings ? {}
 
 #-----------------------------------------------------------------------------------------------------------
 @create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->
@@ -181,8 +170,12 @@ $async  = @remit_async.bind @
   should be suitable arguments to the [EventsStream `duplex`
   method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream). ###
   confluence  = @_ES.duplex readstream, writestream
-  input       = settings?[ 'input'  ] ? @create_throughstream()
-  output      = settings?[ 'output' ] ? @create_throughstream()
+  return @_create_fitting_from_confluence confluence, settings ? {}
+
+#-----------------------------------------------------------------------------------------------------------
+@_create_fitting_from_confluence = ( confluence, settings ) ->
+  input       = settings[ 'input'  ] ? @create_throughstream()
+  output      = settings[ 'output' ] ? @create_throughstream()
   input
     .pipe confluence
     .pipe output
@@ -193,7 +186,6 @@ $async  = @remit_async.bind @
     inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
     outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
   return R
-
 
 #-----------------------------------------------------------------------------------------------------------
 @$lockstep = ( input, settings ) ->
