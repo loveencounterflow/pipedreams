@@ -339,7 +339,8 @@ From these considerations, it becomes clear that the solution is to not return
 a stream object, but rather an 'umbrella object' that has the pertinent
 streams and other data attached to it, and this is exactly what
 `PIPEDREAMS.create_fitting_from_pipeline` and
-`PIPEDREAMS.create_fitting_from_readwritestreams` do.
+`PIPEDREAMS.create_fitting_from_readwritestreams` do, and, in fact, that is
+already pretty much they do at all, as a look into the source readily shows:
 
 ```coffee
 @create_fitting_from_pipeline = ( pipeline, settings ) ->
@@ -359,6 +360,12 @@ streams and other data attached to it, and this is exactly what
     outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
   return R
 ```
+
+The only—but important—added value of this method is that it (1) turns an array of
+stream transforms into a pipeline using `PIPEDREAMS.combine`, that it (2) suggestes
+to call the stream's two ends `input` and `output`, and that it (3) suggests to keep
+all other points of in- and output under `inputs` and `outputs`.
+
 
 ### Usage
 
