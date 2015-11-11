@@ -13,6 +13,8 @@
   - [Creating 'Fittings' (Higher-Order Streams)](#creating-fittings-higher-order-streams)
     - [Motivation](#motivation)
     - [Usage](#usage)
+      - [**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**](#@create_fitting_from_pipeline---transforms-settings---)
+      - [**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**](#@create_fitting_from_readwritestreams---readstream-writestream-settings---)
     - [Example](#example)
 - [Aggregation](#aggregation)
   - [$aggregate = ( aggregator, on_end = null ) ->](#aggregate---aggregator-on_end--null---)
@@ -337,10 +339,10 @@ tends to become semantically messy.
 
 From these considerations, it becomes clear that the solution is to not return
 a stream object, but rather an 'umbrella object' that has the pertinent
-streams and other data attached to it, and this is exactly what
+streams and other data attached to it. This is exactly what
 `PIPEDREAMS.create_fitting_from_pipeline` and
 `PIPEDREAMS.create_fitting_from_readwritestreams` do, and, in fact, that is
-already pretty much they do at all, as a look into the source readily shows:
+already pretty much all they do, as a look into the source readily shows:
 
 ```coffee
 @create_fitting_from_pipeline = ( pipeline, settings ) ->
@@ -361,15 +363,18 @@ already pretty much they do at all, as a look into the source readily shows:
   return R
 ```
 
-The only—but important—added value of this method is that it (1) turns an array of
-stream transforms into a pipeline using `PIPEDREAMS.combine`, that it (2) suggestes
-to call the stream's two ends `input` and `output`, and that it (3) suggests to keep
-all other points of in- and output under `inputs` and `outputs`.
+The only—but important—added value of the two methods is that they (1) turn an
+array of stream transforms into a pipeline using `PIPEDREAMS.combine` (in the
+case of `create_fitting_from_pipeline`) or `EVENTSTREAM.duplex` (in the case
+of `create_fitting_from_readwritestreams`), that they (2) suggest to call the
+stream's two ends `input` and `output`, and that they (3) suggest to keep all
+other points of in- and output under `inputs` and `outputs`.
 
 
 ### Usage
 
-**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**:
+#### **`@create_fitting_from_pipeline = ( transforms, settings ) ->`**
+
 Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
 derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
 the following entries:
@@ -384,7 +389,8 @@ The `inputs` and `outputs` members of the fitting are a mere convenience, a conv
 in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
 in a meaningful way.
 
-**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**:
+#### **`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**
+
 Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
 optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
 should be suitable arguments to the [EventsStream `duplex`
