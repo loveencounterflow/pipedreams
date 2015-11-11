@@ -1,3 +1,34 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [PipeDreams](#pipedreams)
+- [Stream and Transform Construction](#stream-and-transform-construction)
+  - [remit()](#remit)
+  - [create_throughstream()](#create_throughstream)
+  - [Error Handling](#error-handling)
+  - ['Retroactive' Sub-Streams: $sub()](#retroactive-sub-streams-sub)
+  - [$link()](#link)
+  - [$continue()](#continue)
+  - [Creating 'Fittings' (Higher-Order Streams)](#creating-fittings-higher-order-streams)
+    - [Motivation](#motivation)
+    - [Usage](#usage)
+      - [**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**](#@create_fitting_from_pipeline---transforms-settings---)
+      - [**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**](#@create_fitting_from_readwritestreams---readstream-writestream-settings---)
+    - [Example](#example)
+- [Aggregation](#aggregation)
+  - [$aggregate = ( aggregator, on_end = null ) ->](#aggregate---aggregator-on_end--null---)
+  - [$collect(), $count()](#collect-count)
+- [Strings](#strings)
+  - [$split()](#split)
+- [Sorting](#sorting)
+- ['Dense' Sorting](#dense-sorting)
+  - [new_densort()](#new_densort)
+  - [$densort()](#densort)
+  - [$sort()](#sort)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 
 - [PipeDreams](#pipedreams)
@@ -49,14 +80,12 @@ Common operations for piped NodeJS streams.
 
 **Caveat** Below examples are all written in CoffeeScript.
 
-<!-- ################################################################################################### -->
-# API
 
 <!-- =================================================================================================== -->
-## Stream and Transform Construction
+# Stream and Transform Construction
 
-### remit()
-### create_throughstream()
+## remit()
+## create_throughstream()
 
 `D2.create_throughstream` is an exact copy of [`event-streams`' `through()` method] (which in turn is implemented
 with [`through`](https://github.com/dominictarr/through)); however, the `write()` method of the
@@ -91,7 +120,7 @@ asynchronicity, that data would have to be buffered somewhere before `end` is
 called on the `input` stream. With asynchronicity, the processing steps are
 called after each single item.
 
-### Error Handling
+## Error Handling
 
 Handling errors that occur in NodeJS streams can be tough. The best solution
 known to me is to use domains. Here's an example from the
@@ -154,7 +183,7 @@ Notes:
     boo()
   ```
 
-### 'Retroactive' Sub-Streams: $sub()
+## 'Retroactive' Sub-Streams: $sub()
 
 The PipeDreams `$sub` method allows to formulate pipes which 'talk back', as it were, to upstream
 transformers. This can be handy when a given transformer performs single steps of an iterative optimization
@@ -242,7 +271,7 @@ event in the stream to be issued; such transformers must not be in the stream ab
 explicitly call `source.end()`.
 
 
-### $link()
+## $link()
 
 `$link` accepts any number of stream transforms, either as single arguments or as list arguments; it returns
 a stream transform that represents the pipeline of the individual transforms. When called with no arguments
@@ -278,30 +307,42 @@ input.pipe D.$link [
 ```
 
 
-### $continue()
+## $continue()
 
 
-### `create_transform`
+## Creating 'Fittings' (Higher-Order Streams)
 
 
-#### Motivation
+### Motivation
 
-Building stream pipelines often happens by concatenating (as far as the resulting stream is
-concerned) anonymous stream transforms with chanins of `.pipe()` calls, and often this approach is
-appropriate and sufficient: figuratively, an assembly line with an input end for raw data and an
-output end for processed data is being constructed, and all that matters is that a complex
-transformation is deined in neat steps and wrapped up with a snazzy handle such as 'parse Markdown
-source and turn it to HTML'.
+Building stream pipelines often happens by concatenating (as far as the
+resulting stream is concerned) anonymous stream transforms with chanins of
+`.pipe()` calls, and often this approach is appropriate and sufficient.
+Figuratively, a pipeline of stream transforms is like an assembly line for
+data, with one end for input of raw data and one end for output of processed
+data. Often, all that matters is that the resulting complex transformation is
+defined in neat steps (so it remains easy to maintain) and wrapped up in
+method with a snazzy name. Such methods are conventionally called
+`create_xxx_stream` and do in fact return a NodeJS stream instance.
 
-Especially as transforms grow more complex, however, we often want to adapt existing pipelines to
-varied new uses, keep tabs on what's going on at intermediate points, re-inject data at specific
-points, or deal with meta data that may only become avaible at some time during processing. Such needs
-are then often dealt with by way of custom-built `create_xxxstream` methods whose call signatures and
-return values are each a law upon itself. The author of this has himself experimented with creating
-throughstreams that got extended with custom attributes, sometimes making use of ES6 Symbols to hide
-such extensions from the stream API proper, which always felt more like an expedient than a solution.
-`PIPEDREAMS.create_fitting` has been written to support a more principled approach, and, in fact,
-`create_fitting` as such does almost nothing by itself, as a look at its source will show:
+Especially as transforms grow more complex, however, we often want to adapt
+existing pipelines to varied new uses, keep tabs on what's going on at
+intermediate points, re-inject data at specific points, or deal with meta data
+that may only become avaible at some time during processing. Such needs might
+be dealt with, for example, by way of extending the return value of our
+`create_xxxstream` method, but that has two disadvantages: for one thing, we'd
+end up modifying objects that are supposed to have a certain shape  and you
+could never know whether one of the new attributes wouldn't mess with one of
+the stream-handling methods. The second disadvantage is that just tacking
+named values onto an object that was created with a whole other intended use
+tends to become semantically messy.
+
+From these considerations, it becomes clear that the solution is to not return
+a stream object, but rather an 'umbrella object' that has the pertinent
+streams and other data attached to it. This is exactly what
+`PIPEDREAMS.create_fitting_from_pipeline` and
+`PIPEDREAMS.create_fitting_from_readwritestreams` do, and, in fact, that is
+already pretty much all they do, as a look into the source readily shows:
 
 ```coffee
 @create_fitting_from_pipeline = ( pipeline, settings ) ->
@@ -322,9 +363,18 @@ such extensions from the stream API proper, which always felt more like an exped
   return R
 ```
 
-#### Usage
+The only—but important—added value of the two methods is that they (1) turn an
+array of stream transforms into a pipeline using `PIPEDREAMS.combine` (in the
+case of `create_fitting_from_pipeline`) or `EVENTSTREAM.duplex` (in the case
+of `create_fitting_from_readwritestreams`), that they (2) suggest to call the
+stream's two ends `input` and `output`, and that they (3) suggest to keep all
+other points of in- and output under `inputs` and `outputs`.
 
-**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**:
+
+### Usage
+
+#### **`@create_fitting_from_pipeline = ( transforms, settings ) ->`**
+
 Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
 derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
 the following entries:
@@ -335,23 +385,26 @@ the following entries:
 + `inputs`: a copy of `settings[ 'inputs' ]` or a blank object;
 + `outputs`: a copy of `settings[ 'outputs' ]` or a blank object.
 
-The `inputs` and `outputs` members of the fitting are a mere convenience, a convention meant to aid
-in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
-in a meaningful way.
+The `inputs` and `outputs` members of the fitting are a mere convenience, a
+convention meant to aid in mainting consistent APIs. The consumer of
+`create_fitting_from_pipeline` is responsible to populate these entries in a
+meaningful way.
 
-**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**:
+#### **`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**
+
 Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
 optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
 should be suitable arguments to the [EventsStream `duplex`
 method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream).
 
 
-#### Example
+### Example
 
-As a simple demonstration how to use `create_fitting`, here's a function that defines three transforms
-to perform addition, multiplication and squaring of some numeric data, and that define extra input
-and output points, made available as `fitting[ 'inputs' ][ 'add' ]` and
-`fitting[ 'outputs' ][ 'unsquared' ]`, respectively:
+As a simple demonstration how to use `create_fitting_from_pipeline`, here's a
+function that defines three transforms to perform addition, multiplication and
+squaring of some numeric data, and that define extra input and output points,
+made available as `fitting[ 'inputs' ][ 'add' ]` and `fitting[ 'outputs' ][
+'unsquared' ]`, respectively:
 
 ```coffee
 #-------------------------------------------------------------
@@ -368,8 +421,32 @@ create_frob_fitting = ( settings ) ->
   return D.create_fitting_from_pipeline transforms, { inputs, outputs, }
 ```
 
-Observe that while we have chosen to define the processing pipeline as a list of stream transforms,
-we could have just as well sent in the result of consecutive `.pipe()` calls.
+In case it is preferrable to stick to the `.pipe`ing construction method, the
+two ends of a piped stream may be passed into
+`create_fitting_from_readwritestreams`:
+
+```coffee
+#-------------------------------------------------------------
+create_frob_fitting = ( settings ) ->
+  multiply      = $ ( data, send ) => send data * 2
+  add           = $ ( data, send ) => send data + 2
+  square        = $ ( data, send ) => send data ** 2
+  unsquared     = D.create_throughstream()
+  #...........................................................
+  inputs        = { add, }
+  outputs       = { unsquared, }
+  readstream    = D.create_throughstream()
+  writestream   = D.create_throughstream()
+  readstream
+    .pipe multiply
+    .pipe add
+    .pipe unsquared
+    .pipe square
+    .pipe writestream
+  #...........................................................
+  return D.create_fitting_from_readwritestreams readstream, writestream, { inputs, outputs, }
+```
+
 
 Here's how to use our new frob fitting: we keep an eye on all the data that passes through the pipeline
 at the point before it gets squared; also, we want to re-inject a value of `-10` (into the input point
@@ -377,23 +454,29 @@ labelled `add`) whenever the pipeline yields a `100`; having set up the workings
 write our source data into the input:
 
 ```coffee
-#-------------------------------------------------------------
+#.............................................................
 fitting = create_frob_fitting()
 { input, output, inputs, outputs, } = fitting
-outputs[ 'unsquared' ].pipe $ ( data, send ) -> help 'unsquared:', data
+#.............................................................
+outputs[ 'unsquared' ]
+  .pipe $ ( data, send ) ->
+    help 'unsquared:', data
+#.............................................................
 output
   .pipe $ ( data, send ) ->
     inputs[ 'add' ].write -10 if data is 100
     send data
   .pipe D.$show()
+#.............................................................
 input.write n for n in [ 1 ... 10 ]
+input.end()
 ```
 
 
 <!-- =================================================================================================== -->
-## Aggregation
+# Aggregation
 
-### $aggregate = ( aggregator, on_end = null ) ->
+## $aggregate = ( aggregator, on_end = null ) ->
 
 A generic aggregator. This is how it is used in the PipeDreams source itself:
 
@@ -422,23 +505,23 @@ and `on_end` will be called once with the last intermediate result. If `on_end` 
 individual data events will *not* be passed on; instead, when the stream has ended, the aggregation
 result will be sent downstream.
 
-### $collect(), $count()
+## $collect(), $count()
 
 Two standard aggregators; `$collect()` collects all data items into a list, and `$count()` counts how many
 data items have been encountered in a stream.
 
 <!-- =================================================================================================== -->
-## Strings
+# Strings
 
-### $split()
+## $split()
 
 <!-- =================================================================================================== -->
-## Sorting
+# Sorting
 
-## 'Dense' Sorting
+# 'Dense' Sorting
 
-### new_densort()
-### $densort()
+## new_densort()
+## $densort()
 
 `new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->`
 
@@ -504,21 +587,9 @@ to arrive in their logical order (the optimal case).
  -->
 
 
-### $sort()
+## $sort()
 
 
-<!-- =================================================================================================== -->
-## Other
-
-### $filter()
-### $on_end()
-### $on_start()
-### $show()
-### $signal_end()
-### $skip_first()
-### $spread()
-### $throttle_bytes()
-### $throttle_items()
 
 
 
