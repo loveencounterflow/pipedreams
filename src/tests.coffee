@@ -263,6 +263,20 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     input.end()
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "create_fitting_from_pipeline reflects extra settings" ] = ( T, done ) ->
+  settings  =
+    inputs:
+      foo:    D.create_throughstream()
+    bar:      []
+    baz:      42
+  pipeline  = [ D.$show(), ]
+  fitting   = D.create_fitting_from_pipeline pipeline, settings
+  T.eq fitting[ 'inputs' ][ 'foo' ], settings[ 'inputs' ][ 'foo' ]
+  T.eq fitting[ 'bar' ], settings[ 'bar' ]
+  T.eq fitting[ 'baz' ], settings[ 'baz' ]
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "create_fitting_from_pipeline" ] = ( T, done ) ->
   create_frob_fitting = null
   #.........................................................................................................

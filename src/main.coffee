@@ -176,15 +176,22 @@ $async  = @remit_async.bind @
 @_create_fitting_from_confluence = ( confluence, settings ) ->
   input       = settings[ 'input'  ] ? @create_throughstream()
   output      = settings[ 'output' ] ? @create_throughstream()
+  #.........................................................................................................
   input
     .pipe confluence
     .pipe output
+  #.........................................................................................................
   R =
     '~isa':       'PIPEDREAMS/fitting'
     input:        input
     output:       output
     inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
     outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
+  #.........................................................................................................
+  for key, value of settings
+    continue if key in [ 'input', 'inputs', 'output', 'outputs', ]
+    R[ key ] = value
+  #.........................................................................................................
   return R
 
 #-----------------------------------------------------------------------------------------------------------
