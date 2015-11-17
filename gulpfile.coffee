@@ -42,7 +42,9 @@ gulp.task 'build-coffee', ->
     .pipe gulp.dest 'lib'
 
 #-----------------------------------------------------------------------------------------------------------
+# gulp.task 'test', [ 'build-coffee', ], ( done ) ->
 gulp.task 'test', [ 'build-coffee', ], ->
+  ### TAINT should define an asynchronous task but guy-test is not prepared for that ###
   tests = require './lib/tests'
   tests._main()
   return 'x'

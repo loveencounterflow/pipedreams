@@ -389,13 +389,55 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
     here.
     """
-  input = D.stream_from_text text
-  count = 0
+  input     = D.stream_from_text text
+  count     = 0
   input
     .pipe $ ( data, send, end ) ->
-      T.eq data, text
+      if data?
+        T.eq data, text
+        count += +1
       if end?
+        T.eq count, 1
         end()
+        done()
+  input.resume()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "synchronous collect" ] = ( T, done ) ->
+  text = """
+    Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
+    codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
+    as five characters. Dictionaries will list 馬马 as 'one character with two variants’
+    and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
+    here.
+    """
+  input   = D.stream_from_text text
+  input   = input.pipe D.$split()
+  result  = D.collect input
+  input.resume()
+  T.eq result, text.split '\n'
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "asynchronous collect" ] = ( T, done ) ->
+  text = """
+    Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
+    codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
+    as five characters. Dictionaries will list 馬马 as 'one character with two variants’
+    and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
+    here.
+    """
+  input   = D.stream_from_text text
+  #.........................................................................................................
+  stream  = input
+    .pipe D.$split()
+    .pipe $async ( line, D_done ) => setTimeout ( => D_done line ), 200
+  #.........................................................................................................
+  D.collect stream, ( error, result ) =>
+    T.eq result, text.split '\n'
+    debug '©4D8tA', 'done'
+    done()
+  #.........................................................................................................
   input.resume()
 
 # #-----------------------------------------------------------------------------------------------------------

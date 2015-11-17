@@ -116,7 +116,7 @@ $async  = @remit_async.bind @
 #===========================================================================================================
 # SPLITTING & JOINING
 #-----------------------------------------------------------------------------------------------------------
-D.$join = ( joiner = '\n' ) ->
+@$join = ( joiner = '\n' ) ->
   ### Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
   of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
   well. ###
@@ -316,10 +316,12 @@ D.$join = ( joiner = '\n' ) ->
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-D.stream_from_text = ( text, P... ) ->
+@stream_from_text = ( text ) ->
   ### Given a text, return a paused stream; when `stream.resume()` is called, `text` will be written to
-  the stream and the stream will be ended. ###
-  R = @create_throughstream P...
+  the stream and the stream will be ended. In theory, one could argue that `stream_from_text` should send
+  the text in a piecemeal fashion like `fs.createReadStream` does, but since the text has to reside in
+  memory already when passed to this method anyhow, nothing would be gained by that. ###
+  R = @create_throughstream()
   R.pause()
   R.on 'resume', =>
     R.write text
@@ -553,6 +555,49 @@ D.stream_from_text = ( text, P... ) ->
     return collector
   #.........................................................................................................
   return @$aggregate collector, on_data, on_end
+
+#-----------------------------------------------------------------------------------------------------------
+@collect = ( stream, handler = null ) ->
+  ### The non-streamy evil twin of `$collect`, `collect` (without the dollar sign), turns synchronous and
+  asynchronous streams into 'ordinary' (synchronous and asynchronous) functions (with an optional callback
+  handler). Notice that a single asynchronous stream transform may render the return value of this function
+  useless, so always pass in a handler in case of doubt.
+
+  One more remark should be made about the—perhaps surprising—arrangement to be made for paused strings.
+  The PIPEDREAMS test suite sports the following lines:
+
+  ```coffee
+  input   = D.stream_from_text text
+  input   = input.pipe D.$split()
+  result  = D.collect input
+  input.resume()
+  T.eq result, text.split '\n'
+  ```
+
+  Here we obtain the `result` *after* setting up the stream, but *before* resuming it. Were we to *first*
+  resume and *then* call `collect`, we'd obtain an empty list, because the (synchronous) stream resulting
+  from `stream_from_text` would have already been exhausted before `collect` comes around to see it. ###
+  R = []
+  stream.pipe $ ( data, send, end ) =>
+    R.push data unless data is undefined
+    if end?
+      handler null, R if handler?
+      end()
+  return null if handler?
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@call_transform = ( stream, transform, handler ) ->
+  ### Given a `stream`, `transform` and a callback `handler`, pipe stream into transform, `D.$collect` all
+  results into a list, and call handler with that list as second argument. The callback is mandatory even
+  if the stream is synchronous because it may be paused, in which case you'll want to resume it at a
+  convenient point in time. ###
+  throw new Error "expected 2 or 3 arguments, got #{arity}" unless 2 <= ( arity = arguments.length ) <= 3
+  stream
+    .pipe transform()
+    .pipe @$collect ( result, send ) =>
+      return handler null, result
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
 @$spread = ( settings ) ->
