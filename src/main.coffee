@@ -39,7 +39,6 @@ S                         = require 'string'
 # @create_readstream_from_text  = HELPERS.create_readstream_from_text   .bind HELPERS
 # @pimp_readstream              = HELPERS.pimp_readstream               .bind HELPERS
 # @merge                        = ES.merge                              .bind ES
-@$split                       = ES.split                              .bind ES
 $map                          = ES.map                                .bind ES
 # @$chain                       = ES.pipeline                           .bind ES
 # @through                      = ES.through                            .bind ES
@@ -114,6 +113,23 @@ $map                          = ES.map                                .bind ES
 $       = @remit.bind @
 $async  = @remit_async.bind @
 
+#===========================================================================================================
+# SPLITTING & JOINING
+#-----------------------------------------------------------------------------------------------------------
+D.$join = ( joiner = '\n' ) ->
+  ### Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
+  of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
+  well. ###
+  return @combine [
+    @$collect()
+    $ ( collection, send ) =>
+      send collection.join joiner
+    ]
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$split = ES.split.bind ES
+
 
 #===========================================================================================================
 # COMBINING STREAM TRANSFORMS
@@ -160,7 +176,7 @@ $async  = @remit_async.bind @
   in a meaningful way. ###
   unless ( type = CND.type_of pipeline ) is 'list'
     throw new Error "expected a list for pipeline, got a #{type}"
-  confluence  = @combine pipeline...
+  confluence = @combine pipeline...
   return @_create_fitting_from_confluence confluence, settings ? {}
 
 #-----------------------------------------------------------------------------------------------------------
@@ -169,7 +185,7 @@ $async  = @remit_async.bind @
   optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
   should be suitable arguments to the [EventsStream `duplex`
   method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream). ###
-  confluence  = @_ES.duplex readstream, writestream
+  confluence = @_ES.duplex readstream, writestream
   return @_create_fitting_from_confluence confluence, settings ? {}
 
 #-----------------------------------------------------------------------------------------------------------
@@ -300,7 +316,35 @@ $async  = @remit_async.bind @
   return R
 
 #-----------------------------------------------------------------------------------------------------------
+D.stream_from_text = ( text, P... ) ->
+  ### Given a text, return a paused stream; when `stream.resume()` is called, `text` will be written to
+  the stream and the stream will be ended. ###
+  R = @create_throughstream P...
+  R.pause()
+  R.on 'resume', =>
+    R.write text
+    R.end()
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
 @spawn_and_read = ( P... ) ->
+  ### from https://github.com/alessioalex/spawn-to-readstream:
+
+  Make child process spawn behave like a read stream (buffer the error, don't emit end if error emitted).
+
+  ```js
+  var toReadStream = require('spawn-to-readstream'),
+      spawn        = require('child_process').spawn;
+
+  toReadStream(spawn('ls', ['-lah'])).on('error', function(err) {
+    throw err;
+  }).on('end', function() {
+    console.log('~~~ DONE ~~~');
+  }).on('data', function(data) {
+    console.log('ls data :::', data.toString());
+  });
+  ```
+  ###
   readstream_from_spawn     = require 'spawn-to-readstream'
   spawn                     = ( require 'child_process' ).spawn
   return readstream_from_spawn spawn P...

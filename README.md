@@ -1,3 +1,34 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [PipeDreams](#pipedreams)
+- [Stream and Transform Construction](#stream-and-transform-construction)
+  - [remit()](#remit)
+  - [create_throughstream()](#create_throughstream)
+  - [Error Handling](#error-handling)
+  - ['Retroactive' Sub-Streams: $sub()](#retroactive-sub-streams-sub)
+  - [$link()](#link)
+  - [$continue()](#continue)
+  - [Creating 'Fittings' (Higher-Order Streams)](#creating-fittings-higher-order-streams)
+    - [Motivation](#motivation)
+    - [Usage](#usage)
+      - [**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**](#@create_fitting_from_pipeline---transforms-settings---)
+      - [**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**](#@create_fitting_from_readwritestreams---readstream-writestream-settings---)
+    - [Example](#example)
+- [Aggregation](#aggregation)
+  - [$aggregate = ( aggregator, on_end = null ) ->](#aggregate---aggregator-on_end--null---)
+  - [$collect(), $count()](#collect-count)
+- [Strings](#strings)
+  - [$split()](#split)
+- [Sorting](#sorting)
+- ['Dense' Sorting](#dense-sorting)
+  - [new_densort()](#new_densort)
+  - [$densort()](#densort)
+  - [$sort()](#sort)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 
 - [PipeDreams](#pipedreams)

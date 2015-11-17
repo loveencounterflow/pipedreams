@@ -380,6 +380,39 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     input.write n for n in probes
     input.end()
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "stream_from_text" ] = ( T, done ) ->
+  text = """
+    Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
+    codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
+    as five characters. Dictionaries will list 馬马 as 'one character with two variants’
+    and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
+    here.
+    """
+  input = D.stream_from_text text
+  count = 0
+  input
+    .pipe $ ( data, send, end ) ->
+      T.eq data, text
+      if end?
+        end()
+  input.resume()
+
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "stream_from_text" ] = ( T, done ) ->
+#   text = """
+#     Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
+#     codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
+#     as five characters. Dictionaries will list 馬马 as 'one character with two variants’
+#     and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
+#     here.
+#     """
+#   input = D.stream_from_text text
+#   input
+#     .pipe D.$split()
+#     .pipe D.$join '--\n'
+#     .pipe D.$observe ( data ) -> urge data
+#   input.resume()
 
 
 ############################################################################################################
