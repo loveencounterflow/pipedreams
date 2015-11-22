@@ -160,7 +160,10 @@ $async  = @remit_async.bind @
 #     source.write data
 
 #-----------------------------------------------------------------------------------------------------------
-@create_fitting_from_pipeline = ( pipeline, settings ) ->
+@TEE = {}
+
+#-----------------------------------------------------------------------------------------------------------
+@TEE.from_pipeline = ( pipeline, settings ) =>
   ### Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
   derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
   the following entries:
@@ -177,19 +180,19 @@ $async  = @remit_async.bind @
   unless ( type = CND.type_of pipeline ) is 'list'
     throw new Error "expected a list for pipeline, got a #{type}"
   confluence = @combine pipeline...
-  return @_create_fitting_from_confluence confluence, settings ? {}
+  return @TEE._from_confluence confluence, settings ? {}
 
 #-----------------------------------------------------------------------------------------------------------
-@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->
+@TEE.from_readwritestreams = ( readstream, writestream, settings ) =>
   ### Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
   optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
   should be suitable arguments to the [EventsStream `duplex`
   method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream). ###
   confluence = @_ES.duplex readstream, writestream
-  return @_create_fitting_from_confluence confluence, settings ? {}
+  return @TEE._from_confluence confluence, settings ? {}
 
 #-----------------------------------------------------------------------------------------------------------
-@_create_fitting_from_confluence = ( confluence, settings ) ->
+@TEE._from_confluence = ( confluence, settings ) =>
   input       = settings[ 'input'  ] ? @create_throughstream()
   output      = settings[ 'output' ] ? @create_throughstream()
   #.........................................................................................................
@@ -198,7 +201,7 @@ $async  = @remit_async.bind @
     .pipe output
   #.........................................................................................................
   R =
-    '~isa':       'PIPEDREAMS/fitting'
+    '~isa':       'PIPEDREAMS/tee'
     input:        input
     output:       output
     inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}

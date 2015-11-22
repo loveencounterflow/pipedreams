@@ -227,11 +227,11 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "create_fitting_from_pipeline accepts missing settings argument" ] = ( T, done ) ->
-  create_frob_fitting = null
+@[ "TEE.from_pipeline accepts missing settings argument" ] = ( T, done ) ->
+  create_frob_tee = null
   #.........................................................................................................
   do ->
-    create_frob_fitting = ( settings ) ->
+    create_frob_tee = ( settings ) ->
       multiply      = $ ( data, send ) => send data * 2
       add           = $ ( data, send ) => send data + 2
       square        = $ ( data, send ) => send data ** 2
@@ -239,14 +239,14 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
       #.....................................................................................................
       transforms    = [ multiply, add, unsquared, square, ]
       #.....................................................................................................
-      return D.create_fitting_from_pipeline transforms
+      return D.TEE.from_pipeline transforms
   #.........................................................................................................
   do ->
     probes              = [ 1 ... 10 ]
     output_matchers     = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
     output_results      = []
-    fitting             = create_frob_fitting()
-    { input, output, }  = fitting
+    tee                 = create_frob_tee()
+    { input, output, }  = tee
     #.......................................................................................................
     output
       .pipe $ ( data, send ) =>
@@ -263,25 +263,25 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     input.end()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "create_fitting_from_pipeline reflects extra settings" ] = ( T, done ) ->
+@[ "TEE.from_pipeline reflects extra settings" ] = ( T, done ) ->
   settings  =
     inputs:
       foo:    D.create_throughstream()
     bar:      []
     baz:      42
   pipeline  = [ D.$show(), ]
-  fitting   = D.create_fitting_from_pipeline pipeline, settings
-  T.eq fitting[ 'inputs' ][ 'foo' ], settings[ 'inputs' ][ 'foo' ]
-  T.eq fitting[ 'bar' ], settings[ 'bar' ]
-  T.eq fitting[ 'baz' ], settings[ 'baz' ]
+  tee       = D.TEE.from_pipeline pipeline, settings
+  T.eq tee[ 'inputs' ][ 'foo' ], settings[ 'inputs' ][ 'foo' ]
+  T.eq tee[ 'bar' ], settings[ 'bar' ]
+  T.eq tee[ 'baz' ], settings[ 'baz' ]
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "create_fitting_from_pipeline" ] = ( T, done ) ->
-  create_frob_fitting = null
+@[ "TEE.from_pipeline" ] = ( T, done ) ->
+  create_frob_tee = null
   #.........................................................................................................
   do ->
-    create_frob_fitting = ( settings ) ->
+    create_frob_tee = ( settings ) ->
       multiply      = $ ( data, send ) => send data * 2
       add           = $ ( data, send ) => send data + 2
       square        = $ ( data, send ) => send data ** 2
@@ -291,7 +291,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
       outputs       = { unsquared, }
       transforms    = [ multiply, add, unsquared, square, ]
       #.....................................................................................................
-      return D.create_fitting_from_pipeline transforms, { inputs, outputs, }
+      return D.TEE.from_pipeline transforms, { inputs, outputs, }
   #.........................................................................................................
   do ->
     probes              = [ 1 ... 10 ]
@@ -299,8 +299,8 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     output_results      = []
     unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
     unsquared_results   = []
-    fitting             = create_frob_fitting()
-    { input, output, inputs, outputs, } = fitting
+    tee                 = create_frob_tee()
+    { input, output, inputs, outputs, } = tee
     outputs[ 'unsquared' ].pipe $ ( data, send ) =>
       unsquared_results.push data
     #.......................................................................................................
@@ -325,11 +325,11 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     input.end()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "create_fitting_from_readwritestreams" ] = ( T, done ) ->
-  create_frob_fitting       = null
+@[ "TEE.from_readwritestreams" ] = ( T, done ) ->
+  create_frob_tee       = null
   #.........................................................................................................
   do ->
-    create_frob_fitting = ( settings ) ->
+    create_frob_tee = ( settings ) ->
       multiply      = $ ( data, send ) => send data * 2
       add           = $ ( data, send ) => send data + 2
       square        = $ ( data, send ) => send data ** 2
@@ -346,7 +346,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
         .pipe square
         .pipe writestream
       #.......................................................................................................
-      return D.create_fitting_from_readwritestreams readstream, writestream, { inputs, outputs, }
+      return D.TEE.from_readwritestreams readstream, writestream, { inputs, outputs, }
   #.........................................................................................................
   do ->
     probes              = [ 1 ... 10 ]
@@ -354,8 +354,8 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     output_results      = []
     unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
     unsquared_results   = []
-    fitting             = create_frob_fitting()
-    { input, output, inputs, outputs, } = fitting
+    tee                 = create_frob_tee()
+    { input, output, inputs, outputs, } = tee
     outputs[ 'unsquared' ].pipe $ ( data, send ) =>
       unsquared_results.push data
     #.......................................................................................................
