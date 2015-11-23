@@ -314,7 +314,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
         output_results.push data
         send data
       #.....................................................................................................
-      # .pipe D.$show()
+      .pipe D.$show()
       #.....................................................................................................
       output.on 'end', =>
         T.eq unsquared_results, unsquared_matchers
@@ -347,6 +347,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     results             = []
     tee                 = create_frob_tee()
     input               = D.create_throughstream()
+    output              = D.create_throughstream()
     #.......................................................................................................
     input
       .pipe tee[ 'confluence' ]
@@ -356,13 +357,55 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
         send data
       #.....................................................................................................
       .pipe D.$show()
+      .pipe output
       #.....................................................................................................
-      .pipe D.$on_end, =>
+      .pipe D.$on_end =>
         T.eq results, matchers
         done()
     #.......................................................................................................
     input.write n for n in probes
     input.end()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "D.combine produces new stream from existing ones 1" ] = ( T, done ) ->
+  probes      = [ 10 .. 20 ]
+  matchers    = [20,22,24,26,28,30,32,34,36,38,40]
+  results     = []
+  input       = D.create_throughstream()
+  output      = D.create_throughstream()
+  confluence  = D.combine input, output
+  input
+    .pipe $ ( data, send ) => send n * 2
+    .pipe $ ( data, send ) => results.push data; send data
+    .pipe D.$show()
+  for n in probes
+    input.write n
+  input.end()
+  # debug '©ΧΞΩΞΒ', JSON.stringify results
+  T.eq results, matchers
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "D.combine produces new stream from existing ones 2" ] = ( T, done ) ->
+  probes      = [ 10 .. 20 ]
+  matchers    = [20,22,24,26,28,30,32,34,36,38,40]
+  results     = []
+  input       = D.create_throughstream()
+  # output      = D.create_throughstream()
+  transforms = [
+    ( $ ( data, send ) => send n + 2 )
+    ( $ ( data, send ) => send n * 2 )
+    ]
+  confluence  = D.combine input, transforms...
+  confluence
+    .pipe $ ( data, send ) => results.push data; send data
+    .pipe D.$show()
+  for n in probes
+    input.write n
+  input.end()
+  # debug '©ΧΞΩΞΒ', JSON.stringify results
+  T.eq results, matchers
+  done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "TEE.from_readwritestreams 1" ] = ( T, done ) ->

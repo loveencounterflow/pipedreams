@@ -647,16 +647,14 @@ $async  = @remit_async.bind @
 @$on_end = ( method ) ->
   ### TAINT use `$map` to turn this into an async method? ###
   switch arity = method.length
-    when 0, 1, 2 then null
-    else throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
+    when 0, 1 then null
+    else throw new Error "expected method with one optional parameter, got one with arity #{arity}"
   return $ ( data, send, end ) ->
     send data if data?
     if end?
-      if arity is 0
-        method()
-        return end()
       return method end if arity is 1
-      method send, end
+      method()
+      end()
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
