@@ -200,9 +200,11 @@ $async  = @remit_async.bind @
     .pipe confluence
     .pipe output
   #.........................................................................................................
-  R =
+  if confluence.tee isnt undefined
+    throw new Error "naming conflict: `confluence.tee` already defined"
+  #.........................................................................................................
+  confluence.tee =
     '~isa':       'PIPEDREAMS/tee'
-    confluence:   confluence
     input:        input
     output:       output
     inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
@@ -210,9 +212,9 @@ $async  = @remit_async.bind @
   #.........................................................................................................
   for key, value of settings
     continue if key in [ 'input', 'inputs', 'output', 'outputs', ]
-    R[ key ] = value
+    confluence.tee[ key ] = value
   #.........................................................................................................
-  return R
+  return confluence
 
 #-----------------------------------------------------------------------------------------------------------
 @$lockstep = ( input, settings ) ->

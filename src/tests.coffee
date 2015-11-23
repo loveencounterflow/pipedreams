@@ -245,8 +245,8 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     probes              = [ 1 ... 10 ]
     output_matchers     = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
     output_results      = []
-    tee                 = create_frob_tee()
-    { input, output, }  = tee
+    frob                = create_frob_tee()
+    { input, output, }  = frob.tee
     #.......................................................................................................
     output
       .pipe $ ( data, send ) =>
@@ -270,10 +270,10 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     bar:      []
     baz:      42
   pipeline  = [ D.$show(), ]
-  tee       = D.TEE.from_pipeline pipeline, settings
-  T.eq tee[ 'inputs' ][ 'foo' ], settings[ 'inputs' ][ 'foo' ]
-  T.eq tee[ 'bar' ], settings[ 'bar' ]
-  T.eq tee[ 'baz' ], settings[ 'baz' ]
+  frob      = D.TEE.from_pipeline pipeline, settings
+  T.eq frob.tee[ 'inputs' ][ 'foo' ], settings[ 'inputs' ][ 'foo' ]
+  T.eq frob.tee[ 'bar' ], settings[ 'bar' ]
+  T.eq frob.tee[ 'baz' ], settings[ 'baz' ]
   done()
 
 #-----------------------------------------------------------------------------------------------------------
@@ -299,8 +299,11 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     output_results      = []
     unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
     unsquared_results   = []
-    tee                 = create_frob_tee()
-    { input, output, inputs, outputs, } = tee
+    frob                = create_frob_tee()
+    { input
+      output
+      inputs
+      outputs }         = frob.tee
     outputs[ 'unsquared' ].pipe $ ( data, send ) =>
       unsquared_results.push data
     #.......................................................................................................
@@ -345,12 +348,12 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     probes              = [ 1 ... 10 ]
     matchers            = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
     results             = []
-    tee                 = create_frob_tee()
+    frob                = create_frob_tee()
     input               = D.create_throughstream()
     output              = D.create_throughstream()
     #.......................................................................................................
     input
-      .pipe tee[ 'confluence' ]
+      .pipe frob
       #.....................................................................................................
       .pipe $ ( data, send ) =>
         results.push data
@@ -437,8 +440,11 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     output_results      = []
     unsquared_matchers  = [ 4, 6, 8, -8, 10, 12, 14, 16, 18, 20, ]
     unsquared_results   = []
-    tee                 = create_frob_tee()
-    { input, output, inputs, outputs, } = tee
+    frob                = create_frob_tee()
+    { input
+      output
+      inputs
+      outputs }         = frob.tee
     outputs[ 'unsquared' ].pipe $ ( data, send ) =>
       unsquared_results.push data
     #.......................................................................................................
@@ -492,11 +498,11 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     probes              = [ 1 ... 10 ]
     matchers            = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
     results             = []
-    tee                 = create_frob_tee()
+    frob                = create_frob_tee()
     input               = D.create_throughstream()
     #.......................................................................................................
     input
-      .pipe tee[ 'confluence' ]
+      .pipe frob
       #.....................................................................................................
       .pipe $ ( data, send ) =>
         results.push data
