@@ -202,6 +202,7 @@ $async  = @remit_async.bind @
   #.........................................................................................................
   R =
     '~isa':       'PIPEDREAMS/tee'
+    confluence:   confluence
     input:        input
     output:       output
     inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}

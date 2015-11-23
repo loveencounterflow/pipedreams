@@ -277,7 +277,7 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "TEE.from_pipeline" ] = ( T, done ) ->
+@[ "TEE.from_pipeline 1" ] = ( T, done ) ->
   create_frob_tee = null
   #.........................................................................................................
   do ->
@@ -325,7 +325,47 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
     input.end()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "TEE.from_readwritestreams" ] = ( T, done ) ->
+@[ "TEE.from_pipeline 2" ] = ( T, done ) ->
+  create_frob_tee = null
+  #.........................................................................................................
+  do ->
+    create_frob_tee = ( settings ) ->
+      multiply      = $ ( data, send ) => send data * 2
+      add           = $ ( data, send ) => send data + 2
+      square        = $ ( data, send ) => send data ** 2
+      unsquared     = D.create_throughstream()
+      #.....................................................................................................
+      inputs        = { add, }
+      outputs       = { unsquared, }
+      transforms    = [ multiply, add, unsquared, square, ]
+      #.....................................................................................................
+      return D.TEE.from_pipeline transforms, { inputs, outputs, }
+  #.........................................................................................................
+  do ->
+    probes              = [ 1 ... 10 ]
+    matchers            = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
+    results             = []
+    tee                 = create_frob_tee()
+    input               = D.create_throughstream()
+    #.......................................................................................................
+    input
+      .pipe tee[ 'confluence' ]
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        results.push data
+        send data
+      #.....................................................................................................
+      .pipe D.$show()
+      #.....................................................................................................
+      .pipe D.$on_end, =>
+        T.eq results, matchers
+        done()
+    #.......................................................................................................
+    input.write n for n in probes
+    input.end()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "TEE.from_readwritestreams 1" ] = ( T, done ) ->
   create_frob_tee       = null
   #.........................................................................................................
   do ->
@@ -375,6 +415,55 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
         # T.fail "not yet ready"
         T.eq unsquared_results, unsquared_matchers
         T.eq    output_results,    output_matchers
+        done()
+    #.......................................................................................................
+    input.write n for n in probes
+    input.end()
+
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "TEE.from_readwritestreams 2" ] = ( T, done ) ->
+  create_frob_tee       = null
+  #.........................................................................................................
+  do ->
+    create_frob_tee = ( settings ) ->
+      multiply      = $ ( data, send ) => send data * 2
+      add           = $ ( data, send ) => send data + 2
+      square        = $ ( data, send ) => send data ** 2
+      unsquared     = D.create_throughstream()
+      #.....................................................................................................
+      inputs        = { add, }
+      outputs       = { unsquared, }
+      readstream    = D.create_throughstream()
+      writestream   = D.create_throughstream()
+      readstream
+        .pipe multiply
+        .pipe add
+        .pipe unsquared
+        .pipe square
+        .pipe writestream
+      #.......................................................................................................
+      return D.TEE.from_readwritestreams readstream, writestream, { inputs, outputs, }
+  #.........................................................................................................
+  do ->
+    probes              = [ 1 ... 10 ]
+    matchers            = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
+    results             = []
+    tee                 = create_frob_tee()
+    input               = D.create_throughstream()
+    #.......................................................................................................
+    input
+      .pipe tee[ 'confluence' ]
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        results.push data
+        send data
+      #.....................................................................................................
+      .pipe D.$show()
+      #.....................................................................................................
+      .pipe D.$on_end =>
+        # T.fail "not yet ready"
+        T.eq results, matchers
         done()
     #.......................................................................................................
     input.write n for n in probes
