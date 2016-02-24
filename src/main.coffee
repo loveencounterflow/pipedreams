@@ -110,8 +110,49 @@ $map                          = ES.map                                .bind ES
     method input_data, done
 
 #-----------------------------------------------------------------------------------------------------------
-$       = @remit.bind @
-$async  = @remit_async.bind @
+@remit_async_spread = ( method ) ->
+  ### Like `remit_async`, but allows the transform to send an arbitrary number of responses per incoming
+  event by using `send data`. cCompletion of the transform step is signalled by `send.done data` or
+  `send.done()`. ###
+  unless ( arity = method.length ) is 2
+    throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
+  #.........................................................................................................
+  Z       = []
+  input   = D.create_throughstream()
+  output  = D.create_throughstream()
+  #.........................................................................................................
+  $call = =>
+    return $async ( event, done ) =>
+      #.....................................................................................................
+      collect = ( data ) =>
+        Z.push data
+        return null
+      #.....................................................................................................
+      collect.done = ( data ) =>
+        collect data if data?
+        done Object.assign [], Z
+        Z.length = 0
+      method event, collect
+      return null
+  #.........................................................................................................
+  $spread = =>
+    return $ ( collection, send, end ) =>
+      if collection?
+        send event for event in collection
+      if end?
+        end()
+  #.........................................................................................................
+  input
+    .pipe $call()
+    .pipe $spread()
+    .pipe output
+  #.........................................................................................................
+  return @TEE.from_readwritestreams input, output
+
+#-----------------------------------------------------------------------------------------------------------
+$             = @remit.bind @
+$async        = @remit_async.bind @
+$async_spread = @remit_async_spread.bind @
 
 #===========================================================================================================
 # SPLITTING & JOINING
