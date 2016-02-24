@@ -118,8 +118,8 @@ $map                          = ES.map                                .bind ES
     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
   #.........................................................................................................
   Z       = []
-  input   = D.create_throughstream()
-  output  = D.create_throughstream()
+  input   = @create_throughstream()
+  output  = @create_throughstream()
   #.........................................................................................................
   $call = =>
     return $async ( event, done ) =>
