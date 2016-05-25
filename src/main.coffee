@@ -112,7 +112,7 @@ $map                          = ES.map                                .bind ES
 #-----------------------------------------------------------------------------------------------------------
 @remit_async_spread = ( method ) ->
   ### Like `remit_async`, but allows the transform to send an arbitrary number of responses per incoming
-  event by using `send data`. cCompletion of the transform step is signalled by `send.done data` or
+  event by using `send data`. Completion of the transform step is signalled by `send.done data` or
   `send.done()`. ###
   unless ( arity = method.length ) is 2
     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
