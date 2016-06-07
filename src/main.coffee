@@ -25,7 +25,6 @@ combine                   = require 'stream-combiner'
 #...........................................................................................................
 @new_densort              = ( DS = require './densort' ).new_densort.bind DS
 PIPEDREAMS                = @
-LODASH                    = CND.LODASH
 #...........................................................................................................
 ### http://stringjs.com ###
 S                         = require 'string'
@@ -248,8 +247,8 @@ $async_spread = @remit_async_spread.bind @
     '~isa':       'PIPEDREAMS/tee'
     input:        input
     output:       output
-    inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
-    outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
+    inputs:       Object.assign {}, settings[ 'inputs'  ] ? null
+    outputs:      Object.assign {}, settings[ 'outputs' ] ? null
   #.........................................................................................................
   for key, value of settings
     continue if key in [ 'input', 'inputs', 'output', 'outputs', ]
