@@ -3,7 +3,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPEDREAMS2'
+badge                     = 'PIPEDREAMS'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
 whisper                   = CND.get_logger 'whisper',   badge
@@ -22,9 +22,6 @@ ES                        = @_ES = require 'event-stream'
 #...........................................................................................................
 ### https://github.com/dominictarr/stream-combiner ###
 combine                   = require 'stream-combiner'
-#...........................................................................................................
-@new_densort              = ( DS = require './densort' ).new_densort.bind DS
-PIPEDREAMS                = @
 #...........................................................................................................
 ### http://stringjs.com ###
 S                         = require 'string'
@@ -455,35 +452,6 @@ $async_spread = @remit_async_spread.bind @
       source.ended = true
       source.write cache unless cache is undefined
 
-
-#===========================================================================================================
-# SORT AND SHUFFLE
-#-----------------------------------------------------------------------------------------------------------
-@$densort = ( key = 1, first_idx = 0, report_handler = null ) ->
-  ds        = @new_densort key, first_idx, report_handler
-  has_ended = no
-  #.........................................................................................................
-  # send_data = ( send, data ) =>
-  #.........................................................................................................
-  signal_end = ( send ) =>
-    send.end() unless has_ended
-    has_ended = yes
-  #.........................................................................................................
-  return $ ( input_data, send, end ) =>
-    #.......................................................................................................
-    if input_data?
-      ds input_data, ( error, output_data ) =>
-        return send.error error if error?
-        send output_data
-    #.......................................................................................................
-    if end?
-      ds null, ( error, output_data ) =>
-        return send.error error if error?
-        if output_data? then  send output_data
-        else                  signal_end send
-
-#-----------------------------------------------------------------------------------------------------------
-# @$shuffle =
 
 #===========================================================================================================
 # SAMPLING / THINNING OUT
