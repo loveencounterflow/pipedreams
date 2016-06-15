@@ -17,45 +17,12 @@ echo                      = CND.echo.bind CND
 ### https://github.com/dominictarr/event-stream ###
 ES                        = @_ES = require 'event-stream'
 #...........................................................................................................
-### https://github.com/dominictarr/sort-stream ###
-@$sort                    = require 'sort-stream'
-#...........................................................................................................
 ### https://github.com/dominictarr/stream-combiner ###
 combine                   = require 'stream-combiner'
 #...........................................................................................................
 ### http://stringjs.com ###
 S                         = require 'string'
 
-
-
-#===========================================================================================================
-# GENERIC METHODS
-#-----------------------------------------------------------------------------------------------------------
-# @create_readstream            = HELPERS.create_readstream             .bind HELPERS
-# @create_readstream_from_text  = HELPERS.create_readstream_from_text   .bind HELPERS
-# @pimp_readstream              = HELPERS.pimp_readstream               .bind HELPERS
-# @merge                        = ES.merge                              .bind ES
-$map                          = ES.map                                .bind ES
-# @$chain                       = ES.pipeline                           .bind ES
-# @through                      = ES.through                            .bind ES
-# @duplex                       = ES.duplex                             .bind ES
-# @as_readable                  = ES.readable                           .bind ES
-# @read_list                    = ES.readArray                          .bind ES
-
-# #-----------------------------------------------------------------------------------------------------------
-# D.$map_plus = ( transform ) ->
-#   ### TAINT looks like `write` occurs too late or `end` too early ###
-#   ### Like `map`, but calls `transform` one more time (hence the name) with `undefined` in place of data
-#   just before the stream has ended; this gives the caller one more chance to send data. ###
-#   R = ES.map transform # ( data, handler ) -> transform data, handler
-#   _end = R.end.bind R
-#   R.end = ->
-#     transform undefined, ( error, data ) ->
-#       return R.error error if error?
-#       debug '©GbYu0', data
-#       R.write data if data?
-#       setImmediate _end
-#   return R
 
 
 #===========================================================================================================
@@ -96,7 +63,7 @@ $map                          = ES.map                                .bind ES
   return ES.through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-@remit_async = ( method ) ->
+@$async = ( method ) ->
   unless ( arity = method.length ) is 2
     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
   return $map ( input_data, handler ) =>
@@ -118,7 +85,7 @@ $map                          = ES.map                                .bind ES
   output  = @create_throughstream()
   #.........................................................................................................
   $call = =>
-    return $async ( event, done ) =>
+    return $.async ( event, done ) =>
       #.....................................................................................................
       collect = ( data ) =>
         Z.push data
@@ -132,7 +99,7 @@ $map                          = ES.map                                .bind ES
       return null
   #.........................................................................................................
   $spread = =>
-    return $ ( collection, send, end ) =>
+    return @remit ( collection, send, end ) =>
       if collection?
         send event for event in collection
       if end?
@@ -145,10 +112,6 @@ $map                          = ES.map                                .bind ES
   #.........................................................................................................
   return @TEE.from_readwritestreams input, output
 
-#-----------------------------------------------------------------------------------------------------------
-$             = @remit.bind @
-$async        = @remit_async.bind @
-$async_spread = @remit_async_spread.bind @
 
 #===========================================================================================================
 # SPLITTING & JOINING
@@ -159,13 +122,10 @@ $async_spread = @remit_async_spread.bind @
   well. ###
   return @combine [
     @$collect()
-    $ ( collection, send ) =>
+    @remit ( collection, send ) =>
       send collection.join joiner
     ]
   return null
-
-#-----------------------------------------------------------------------------------------------------------
-@$split = ES.split.bind ES
 
 
 #===========================================================================================================
@@ -179,7 +139,7 @@ $async_spread = @remit_async_spread.bind @
 # EXPERIMENTAL: STREAM LINKING, CONCATENATING
 #-----------------------------------------------------------------------------------------------------------
 @$continue = ( stream ) ->
-  return $ ( data, send, end ) =>
+  return @remit ( data, send, end ) =>
     stream.write data
     if end?
       stream.end()
@@ -192,7 +152,7 @@ $async_spread = @remit_async_spread.bind @
 #   sink    = sink.pipe transform for transform in LODASH.flatten transforms
 #   _send   = null
 #   sink.on 'data', ( data ) => _send data
-#   return $ ( data, send ) =>
+#   return @remit ( data, send ) =>
 #     _send = send
 #     source.write data
 
@@ -309,7 +269,7 @@ $async_spread = @remit_async_spread.bind @
     _end_2 = end
     flush()
   #.........................................................................................................
-  return $ ( data_1, send, end ) =>
+  return @remit ( data_1, send, end ) =>
     _send   = send
     #.......................................................................................................
     if data_1?
@@ -326,7 +286,7 @@ $async_spread = @remit_async_spread.bind @
 #-----------------------------------------------------------------------------------------------------------
 @$skip_first = ( n = 1 ) ->
   count = 0
-  return $ ( data, send ) ->
+  return @remit ( data, send ) ->
     count += +1
     send data if count > n
 
@@ -402,7 +362,7 @@ $async_spread = @remit_async_spread.bind @
   #.........................................................................................................
   input
     .pipe @$split()
-    .pipe $ ( line, send, end ) =>
+    .pipe @remit ( line, send, end ) =>
       #.....................................................................................................
       if line?
         R.write last_line if last_line?
@@ -419,7 +379,7 @@ $async_spread = @remit_async_spread.bind @
 #===========================================================================================================
 # NO-OP
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> $ ( data, send ) -> send data
+@$pass_through = -> @remit ( data, send ) -> send data
 
 
 #===========================================================================================================
@@ -440,7 +400,7 @@ $async_spread = @remit_async_spread.bind @
   sink.on   'data', ( data )  => _send data
   sink.on   'end',            => _send.end()
   #.........................................................................................................
-  return $ ( data, send, end ) =>
+  return @remit ( data, send, end ) =>
     if data?
       _send = send
       if cache is undefined
@@ -502,15 +462,15 @@ $async_spread = @remit_async_spread.bind @
     throw new Error "expected a number between 0 and 1, got #{rpr p}"
   #.........................................................................................................
   ### Handle trivial edge cases faster (hopefully): ###
-  return ( $ ( record, send ) => send record ) if p == 1
-  return ( $ ( record, send ) => null        ) if p == 0
+  return ( @remit ( record, send ) => send record ) if p == 1
+  return ( @remit ( record, send ) => null        ) if p == 0
   #.........................................................................................................
   headers = options?[ 'headers'     ] ? false
   seed    = options?[ 'seed'        ] ? null
   count   = 0
   rnd     = rnd_from_seed seed
   #.........................................................................................................
-  return $ ( record, send ) =>
+  return @remit ( record, send ) =>
     count += 1
     send record if ( count is 1 and headers ) or rnd() < p
 
@@ -543,7 +503,7 @@ $async_spread = @remit_async_spread.bind @
   all the bookkeeping—which should be a simple and flexible thing to implement using JS closures.
   ###
   current_value = initial_value
-  return $ ( data, send, end ) =>
+  return @remit ( data, send, end ) =>
     if data?
       current_value = on_data data, send
     if end?
@@ -592,7 +552,7 @@ $async_spread = @remit_async_spread.bind @
   resume and *then* call `collect`, we'd obtain an empty list, because the (synchronous) stream resulting
   from `stream_from_text` would have already been exhausted before `collect` comes around to see it. ###
   R = []
-  stream.pipe $ ( data, send, end ) =>
+  stream.pipe @remit ( data, send, end ) =>
     R.push data unless data is undefined
     if end?
       handler null, R if handler?
@@ -617,7 +577,7 @@ $async_spread = @remit_async_spread.bind @
 @$spread = ( settings ) ->
   indexed   = settings?[ 'indexed'  ] ? no
   end       = settings?[ 'end'      ] ? no
-  return $ ( data, send ) =>
+  return @remit ( data, send ) =>
     unless type = ( CND.type_of data ) is 'list'
       return send.error new Error "expected a list, got a #{rpr type}"
     for value, idx in data
@@ -629,7 +589,7 @@ $async_spread = @remit_async_spread.bind @
   throw new Error "buffer size must be non-negative integer, got #{rpr batch_size}" if batch_size < 0
   buffer = []
   #.........................................................................................................
-  return $ ( data, send, end ) =>
+  return @remit ( data, send, end ) =>
     if data?
       buffer.push data
       if buffer.length >= batch_size
@@ -659,7 +619,7 @@ $async_spread = @remit_async_spread.bind @
   switch arity = method.length
     when 0, 1 then null
     else throw new Error "expected method with one optional parameter, got one with arity #{arity}"
-  return $ ( data, send, end ) ->
+  return @remit ( data, send, end ) ->
     send data if data?
     if end?
       return method end if arity is 1
@@ -669,7 +629,7 @@ $async_spread = @remit_async_spread.bind @
 #-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
   is_first = yes
-  return $ ( data, send ) ->
+  return @remit ( data, send ) ->
     method send if is_first
     is_first = no
     send data
@@ -679,13 +639,13 @@ $async_spread = @remit_async_spread.bind @
 # FILTERING
 #-----------------------------------------------------------------------------------------------------------
 @$filter = ( method ) ->
-  return $ ( data, send ) =>
+  return @remit ( data, send ) =>
     send data if method data
 
 # #-----------------------------------------------------------------------------------------------------------
 # @$take_last_good = ( method ) ->
 #   last_data = null
-#   return $ ( data, send, end ) =>
+#   return @remit ( data, send, end ) =>
 #     if data?
 #       if method data
 #       last_data = data
@@ -697,7 +657,7 @@ $async_spread = @remit_async_spread.bind @
 #-----------------------------------------------------------------------------------------------------------
 @$show = ( badge = null ) ->
   my_show = CND.get_logger 'info', badge ? '*'
-  return $ ( record, send ) =>
+  return @remit ( record, send ) =>
     my_show rpr record
     send record
 
@@ -708,11 +668,11 @@ $async_spread = @remit_async_spread.bind @
   # return @$filter ( data ) -> method data; return true
   switch arity = method.length
     when 1
-      return $ ( data, send ) =>
+      return @remit ( data, send ) =>
         method data
         send data
     when 2
-      return $ ( data, send, end ) =>
+      return @remit ( data, send, end ) =>
         if data?
           method data, false
           send data
@@ -771,7 +731,7 @@ $async_spread = @remit_async_spread.bind @
   start = ->
     timer = setInterval emit, 1 / items_per_second * 1000
   #---------------------------------------------------------------------------------------------------------
-  return $ ( data, send, end ) =>
+  return @remit ( data, send, end ) =>
     if data?
       unless _send?
         _send = send
@@ -820,79 +780,37 @@ $async_spread = @remit_async_spread.bind @
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
-get_random_integer = ( rnd, min, max ) ->
-  return ( Math.floor rnd() * ( max + 1 - min ) ) + min
-
-#-----------------------------------------------------------------------------------------------------------
+### TAINT use CND method ###
 rnd_from_seed = ( seed ) ->
   return if seed? then CND.get_rnd seed else Math.random
 
 
+#===========================================================================================================
+# EXPORT
+#-----------------------------------------------------------------------------------------------------------
+do ( PIPEDREAMS = @ ) ->
+  for key in Object.keys PIPEDREAMS
+    if CND.isa_function value = PIPEDREAMS[ key ]
+      PIPEDREAMS[ key ] = value.bind PIPEDREAMS
+    else
+      PIPEDREAMS[ key ] = value
+
 
 #===========================================================================================================
-# EXPERIMENTAL
-# #-----------------------------------------------------------------------------------------------------------
-# @_$send_later = ->
-#   #.........................................................................................................
-#   R     = D.create_throughstream()
-#   count = 0
-#   _end  = null
-#   #.....................................................................................................
-#   send_end = =>
-#     if _end? and count <= 0
-#       _end()
-#     else
-#       setImmediate send_end
-#   #.....................................................................................................
-#   R
-#     .pipe $ ( data, send, end ) =>
-#       if data?
-#         count += +1
-#         setImmediate =>
-#           count += -1
-#           send data
-#           debug '©MxyBi', count
-#       if end?
-#         _end = end
-#   #.....................................................................................................
-#   send_end()
-#   return R
-
-# #-----------------------------------------------------------------------------------------------------------
-# @_$pull = ->
-#   queue     = []
-#   # _send     = null
-#   is_first  = yes
-#   pull = ->
-#     if queue.length > 0
-#       return queue.pop()
-#     else
-#       return [ 'empty', ]
-#   return $ ( data, send, end ) =>
-#     if is_first
-#       is_first = no
-#       send pull
-#     if data?
-#       queue.unshift [ 'data', data, ]
-#     if end?
-#       queue.unshift [ 'end', end, ]
-
-# #-----------------------------------------------------------------------------------------------------------
-# @_$take = ->
-#   return $ ( pull, send ) =>
-#     # debug '©vKkJf', pull
-#     # debug '©vKkJf', pull()
-#     process = =>
-#       [ type, data, ] = pull()
-#       # debug '©bamOB', [ type, data, ]
-#       switch type
-#         when 'data'   then send data
-#         when 'empty'  then null
-#         when 'end'    then return send.end()
-#         else send.error new Error "unknown event type #{rpr type}"
-#       setImmediate process
-#     process()
-
-
-
+# GENERIC METHODS
+#-----------------------------------------------------------------------------------------------------------
+### https://github.com/dominictarr/sort-stream ###
+@$sort                        = require 'sort-stream'
+#...........................................................................................................
+@$split                       = ES.split    .bind ES
+$map                          = ES.map      .bind ES
+# @$chain                       = ES.pipeline                           .bind ES
+# @through                      = ES.through                            .bind ES
+# @duplex                       = ES.duplex                             .bind ES
+# @as_readable                  = ES.readable                           .bind ES
+# @read_list                    = ES.readArray                          .bind ES
+# @create_readstream            = HELPERS.create_readstream             .bind HELPERS
+# @create_readstream_from_text  = HELPERS.create_readstream_from_text   .bind HELPERS
+# @pimp_readstream              = HELPERS.pimp_readstream               .bind HELPERS
+# @merge                        = ES.merge                              .bind ES
 

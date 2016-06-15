@@ -14,16 +14,9 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-LODASH                    = CND.LODASH
-#...........................................................................................................
-# ### https://github.com/dominictarr/event-stream ###
-# ES                        = require 'event-stream'
 test                      = require 'guy-test'
-# A                         = T.asynchronous
-#...........................................................................................................
 D                         = require './main'
-$                         = D.remit.bind D
-$async                    = D.remit_async.bind D
+$                         = D.remit
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -361,7 +354,7 @@ get_index = ( element, key ) -> if ( CND.isa_function key ) then key element els
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "asynchronous collect" ] = ( T, done ) ->
+@[ "asynchronous collect" ] = ( T, T_done ) ->
   text = """
     Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
     codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
@@ -370,15 +363,14 @@ get_index = ( element, key ) -> if ( CND.isa_function key ) then key element els
     here.
     """
   input   = D.stream_from_text text
-  #.........................................................................................................
   stream  = input
     .pipe D.$split()
-    .pipe $async ( line, D_done ) => setTimeout ( => D_done line ), 200
+    .pipe D.$async ( line, send ) => setTimeout ( => send.done line ), 200
   #.........................................................................................................
   D.collect stream, ( error, result ) =>
     T.eq result, text.split '\n'
-    debug '©4D8tA', 'done'
-    done()
+    debug '©4D8tA', 'T_done'
+    T_done()
   #.........................................................................................................
   input.resume()
 
