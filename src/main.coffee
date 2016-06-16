@@ -23,10 +23,57 @@ combine                   = require 'stream-combiner'
 ### http://stringjs.com ###
 S                         = require 'string'
 
+#===========================================================================================================
+# STREAM CREATION
+#-----------------------------------------------------------------------------------------------------------
+@new_stream = ( settings ) ->
+  return @create_throughstream() if ( not settings? ) or ( keys = Object.keys ).length is 0
+  return @new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
+  return @new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
+  return @new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
+  expected  = ( rpr key for key in @new_stream.keys ).join ', '
+  got       = ( rpr key for key in             keys ).join ', '
+  throw new Error "expected one of #{expected}, got #{got}"
 
+#-----------------------------------------------------------------------------------------------------------
+pluck = ( x, key ) ->
+  R = x[ key ]
+  delete x[ key ]
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@new_stream_from_text = ( text, settings ) ->
+  ### Given a text, return a paused stream; when `stream.resume()` is called, `text` will be written to
+  the stream and the stream will be ended. In theory, one could argue that `stream_from_text` should send
+  the text in a piecemeal fashion like `fs.createReadStream` does, but since the text has to reside in
+  memory already when passed to this method anyhow, nothing would be gained by that. ###
+  R = @create_throughstream()
+  R.pause()
+  R.on 'resume', =>
+    R.write text
+    R.end()
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@new_stream_from_pipeline = ( pipeline, settings ) ->
+  input         = pipeline[ 0 ]
+  output        = pipeline[ pipeline.length - 1 ]
+  R             = combine pipeline
+  R[ 'input' ]  = input
+  R[ 'output' ] = output
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@new_file_readstream = ->          throw new Error "new_file_readstream not implemented"
+@new_file_readlinestream = ->      throw new Error "new_file_readlinestream not implemented"
+@new_file_writestream = ->         throw new Error "new_file_writestream not implemented"
+
+#-----------------------------------------------------------------------------------------------------------
+### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
+@isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 #===========================================================================================================
-# REMIT
+# TRANSFORM CREATION
 #-----------------------------------------------------------------------------------------------------------
 @remit = ( method ) ->
   send      = null
@@ -72,6 +119,55 @@ S                         = require 'string'
     done.error  = ( error )       => handler error
     method input_data, done
 
+###
+#-----------------------------------------------------------------------------------------------------------
+@remit_async_spread = ( method ) ->
+  unless ( arity = method.length ) is 2
+    throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
+  #.........................................................................................................
+  Z       = []
+  input   = @create_throughstream()
+  output  = @create_throughstream()
+  END     = Symbol 'end'
+  #.........................................................................................................
+  $wait_for_stream_end = =>
+    return $ ( data, send, end ) =>
+      send data if data?
+      if end?
+        send [ END, end, ]
+        # end()
+  #.........................................................................................................
+  $call = =>
+    return $async ( event, done ) =>
+      if CND.isa_list event and event[ 0 ] is END
+        collect.end = event[ 1 ]
+      #.....................................................................................................
+      collect = ( data ) =>
+        Z.push data
+        return null
+      #.....................................................................................................
+      collect.done = ( data ) =>
+        collect data if data?
+        done Object.assign [], Z
+        Z.length = 0
+      method event, collect
+      return null
+  #.........................................................................................................
+  $spread = =>
+    return $ ( collection, send, end ) =>
+        send event for event in collection
+      if end?
+        end()
+  #.........................................................................................................
+  input
+    .pipe $wait_for_stream_end()
+    .pipe $call()
+    .pipe $spread()
+    .pipe output
+  #.........................................................................................................
+  return @TEE.from_readwritestreams input, output
+###
+
 #-----------------------------------------------------------------------------------------------------------
 @remit_async_spread = ( method ) ->
   ### Like `remit_async`, but allows the transform to send an arbitrary number of responses per incoming
@@ -85,7 +181,7 @@ S                         = require 'string'
   output  = @create_throughstream()
   #.........................................................................................................
   $call = =>
-    return $.async ( event, done ) =>
+    return @$async ( event, done ) =>
       #.....................................................................................................
       collect = ( data ) =>
         Z.push data
@@ -110,7 +206,7 @@ S                         = require 'string'
     .pipe $spread()
     .pipe output
   #.........................................................................................................
-  return @TEE.from_readwritestreams input, output
+  return @new_stream pipeline: [ input, output, ]
 
 
 #===========================================================================================================
@@ -156,62 +252,62 @@ S                         = require 'string'
 #     _send = send
 #     source.write data
 
-#-----------------------------------------------------------------------------------------------------------
-@TEE = {}
+# #-----------------------------------------------------------------------------------------------------------
+# @TEE = {}
 
-#-----------------------------------------------------------------------------------------------------------
-@TEE.from_pipeline = ( pipeline, settings ) =>
-  ### Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
-  derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
-  the following entries:
+# #-----------------------------------------------------------------------------------------------------------
+# @TEE.from_pipeline = ( pipeline, settings ) =>
+#   ### Given a pipeline (in the form of a list of `transforms`) and an optional `settings` object,
+#   derive input, transformation and output from these givens and return a `PIPEDREAMS/fitting` object with
+#   the following entries:
 
-  * `input`: the reading side of the pipeline; this will be `settings[ 'input' ]` where present, or else
-    a newly created throughstream;
-  * `output`: the writing side of the pipeline; either `settings[ 'output' ]` or a new stream;
-  * `inputs`: a copy of `settings[ 'inputs' ]` or a blank object;
-  * `outputs`: a copy of `settings[ 'outputs' ]` or a blank object.
+#   * `input`: the reading side of the pipeline; this will be `settings[ 'input' ]` where present, or else
+#     a newly created throughstream;
+#   * `output`: the writing side of the pipeline; either `settings[ 'output' ]` or a new stream;
+#   * `inputs`: a copy of `settings[ 'inputs' ]` or a blank object;
+#   * `outputs`: a copy of `settings[ 'outputs' ]` or a blank object.
 
-  The `inputs` and `outputs` members of the fitting are a mere convenience, a convention meant to aid
-  in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
-  in a meaningful way. ###
-  unless ( type = CND.type_of pipeline ) is 'list'
-    throw new Error "expected a list for pipeline, got a #{type}"
-  confluence = @combine pipeline...
-  return @TEE._from_confluence confluence, settings ? {}
+#   The `inputs` and `outputs` members of the fitting are a mere convenience, a convention meant to aid
+#   in mainting consistent APIs. The consumer of `create_fitting` is responsible to populate these entries
+#   in a meaningful way. ###
+#   unless ( type = CND.type_of pipeline ) is 'list'
+#     throw new Error "expected a list for pipeline, got a #{type}"
+#   confluence = @combine pipeline...
+#   return @TEE._from_confluence confluence, settings ? {}
 
-#-----------------------------------------------------------------------------------------------------------
-@TEE.from_readwritestreams = ( readstream, writestream, settings ) =>
-  ### Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
-  optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
-  should be suitable arguments to the [EventsStream `duplex`
-  method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream). ###
-  confluence = @_ES.duplex readstream, writestream
-  return @TEE._from_confluence confluence, settings ? {}
+# #-----------------------------------------------------------------------------------------------------------
+# @TEE.from_readwritestreams = ( readstream, writestream, settings ) =>
+#   ### Same as `create_fitting_from_pipeline`, but accepts a `readstream` and a `writestream` (and an
+#   optional `settings` object). `readstream` should somehow be connected to `writestream`, and the pair
+#   should be suitable arguments to the [EventsStream `duplex`
+#   method](https://github.com/dominictarr/event-stream#duplex-writestream-readstream). ###
+#   confluence = @_ES.duplex readstream, writestream
+#   return @TEE._from_confluence confluence, settings ? {}
 
-#-----------------------------------------------------------------------------------------------------------
-@TEE._from_confluence = ( confluence, settings ) =>
-  input       = settings[ 'input'  ] ? @create_throughstream()
-  output      = settings[ 'output' ] ? @create_throughstream()
-  #.........................................................................................................
-  input
-    .pipe confluence
-    .pipe output
-  #.........................................................................................................
-  if confluence.tee isnt undefined
-    throw new Error "naming conflict: `confluence.tee` already defined"
-  #.........................................................................................................
-  confluence.tee =
-    '~isa':       'PIPEDREAMS/tee'
-    input:        input
-    output:       output
-    inputs:       Object.assign {}, settings[ 'inputs'  ] ? null
-    outputs:      Object.assign {}, settings[ 'outputs' ] ? null
-  #.........................................................................................................
-  for key, value of settings
-    continue if key in [ 'input', 'inputs', 'output', 'outputs', ]
-    confluence.tee[ key ] = value
-  #.........................................................................................................
-  return confluence
+# #-----------------------------------------------------------------------------------------------------------
+# @TEE._from_confluence = ( confluence, settings ) =>
+#   input       = settings[ 'input'  ] ? @create_throughstream()
+#   output      = settings[ 'output' ] ? @create_throughstream()
+#   #.........................................................................................................
+#   input
+#     .pipe confluence
+#     .pipe output
+#   #.........................................................................................................
+#   if confluence.tee isnt undefined
+#     throw new Error "naming conflict: `confluence.tee` already defined"
+#   #.........................................................................................................
+#   confluence.tee =
+#     '~isa':       'PIPEDREAMS/tee'
+#     input:        input
+#     output:       output
+#     inputs:       Object.assign {}, settings[ 'inputs'  ] ? null
+#     outputs:      Object.assign {}, settings[ 'outputs' ] ? null
+#   #.........................................................................................................
+#   for key, value of settings
+#     continue if key in [ 'input', 'inputs', 'output', 'outputs', ]
+#     confluence.tee[ key ] = value
+#   #.........................................................................................................
+#   return confluence
 
 #-----------------------------------------------------------------------------------------------------------
 @$lockstep = ( input, settings ) ->
@@ -316,19 +412,6 @@ S                         = require 'string'
       return end()
   #.........................................................................................................
   R.setMaxListeners 0
-  return R
-
-#-----------------------------------------------------------------------------------------------------------
-@stream_from_text = ( text ) ->
-  ### Given a text, return a paused stream; when `stream.resume()` is called, `text` will be written to
-  the stream and the stream will be ended. In theory, one could argue that `stream_from_text` should send
-  the text in a piecemeal fashion like `fs.createReadStream` does, but since the text has to reside in
-  memory already when passed to this method anyhow, nothing would be gained by that. ###
-  R = @create_throughstream()
-  R.pause()
-  R.on 'resume', =>
-    R.write text
-    R.end()
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -792,6 +875,8 @@ do ( PIPEDREAMS = @ ) ->
   for key in Object.keys PIPEDREAMS
     if CND.isa_function value = PIPEDREAMS[ key ]
       PIPEDREAMS[ key ] = value.bind PIPEDREAMS
+      for sub_key in Object.keys value
+        PIPEDREAMS[ key ][ sub_key ] = value[ sub_key ]
     else
       PIPEDREAMS[ key ] = value
 
