@@ -493,11 +493,10 @@ and did so largely successfully, but problems with aysnchronous streams did surf
 places. 
 
 Unfortunately, *event-stream* is pegged to NodeJS streams v1 (as used in
-NodeJS v0.8), but we're now at NodeJS streams v3 (as of NodeJS v5.x) (see
-Dominic Tarr's [rundown of NodeJS Streams
-History](http://dominictarr.com/post/145135293917/history-of-streams)).
+NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v5.x) 
 
-Worthwhile reading:
+See Dominic Tarr's [rundown of NodeJS Streams
+History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
 
 > If node streams teach us anything, it’s that it’s very difficult to develop
 > something as fundamental as streams inside a “core” you can’t change core
@@ -518,12 +517,14 @@ library on.
 
 ### Through2
 
-[github.com/rvagg/*through2*](https://github.com/rvagg/through2) 
+So, [Through2](https://github.com/rvagg/through2) it is. Let's have a look
+at the docs: 
 
-```
-through2([ options, ] [ transformFunction ] [, flushFunction ])
-```
 
+> ```js
+> var through2 = require('through2');
+> var transform = through2([ options, ] [ transformFunction ] [, flushFunction ])
+> ```
 
 > To queue a new chunk, call `this.push(chunk)`—this can be called as many
 > times as required before the `callback()` if you have multiple pieces to
