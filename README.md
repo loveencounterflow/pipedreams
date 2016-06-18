@@ -520,7 +520,6 @@ library on.
 So, [Through2](https://github.com/rvagg/through2) it is. Let's have a look
 at the docs: 
 
-
 > ```js
 > var through2 = require('through2');
 > var transform = through2([ options, ] [ transformFunction ] [, flushFunction ])
@@ -550,22 +549,27 @@ at the docs:
   t2_settings = {}
   input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
   #.........................................................................................................
+  ### Set an arbitrary timeout for a function, report it, and execute after a while; used to 
+  simulate some kind of asynchronous DB or network retrieval stuff: ### 
   delay = ( name, f ) =>
     dt = CND.random_integer 1, 1500
     # dt = 1
     whisper "delay for #{rpr name}: #{dt}ms"
     setTimeout f, dt
   #.........................................................................................................
-  ### must not be a bound method b/c of `@push` ###
+  ### The main transform method accepts a line, takes it out of the stream unless it matches
+  either `"name"` or `"version"`, trims it, and emits two events (formatted as lists) per remaining
+  line. This method must be free (a.k.a. bound, using a slim arrow) so we can use `@push`. ###
   transform_main = ( line, encoding, handler ) ->
+    throw new Error "unknown encoding #{rpr encoding}" unless encoding is 'utf8'
     return handler() unless ( /"(name|version)"/ ).test line
-    line.trim()
+    line = line.trim()
     delay line, =>
       @push [ 'first-chr', ( Array.from line )[ 0 ], ]
       handler null, [ 'text', line, ]
   #.........................................................................................................
   ### must not be a bound method b/c of `@push` ###
-  transform_flush = ( done ) -> # ( line, encoding, handler ) ->
+  transform_flush = ( done ) ->
     push = @push.bind @
     delay 'flush', =>
       push [ 'message', "ok", ]
@@ -574,7 +578,6 @@ at the docs:
   #.........................................................................................................
   input
     .pipe D.$split()
-    # .pipe D.$observe ( line ) => whisper rpr line
     .pipe through2.obj t2_settings, transform_main, transform_flush
     .pipe D.$show()
     .pipe D.$on_end => T_done()

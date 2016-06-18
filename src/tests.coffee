@@ -420,10 +420,13 @@ D                         = require './main'
     whisper "delay for #{rpr name}: #{dt}ms"
     setTimeout f, dt
   #.........................................................................................................
-  ### must not be a bound method b/c of `@push` ###
+  ### The main transform method accepts a line, takes it out of the stream unless it matches
+  either `"name"` or `"version"`, trims it, and emits two events (formatted as lists) per remaining
+  line. This method must be free (a.k.a. bound, using a slim arrow) so we can use `@push`. ###
   transform_main = ( line, encoding, handler ) ->
+    throw new Error "unknown encoding #{rpr encoding}" unless encoding is 'utf8'
     return handler() unless ( /"(name|version)"/ ).test line
-    line.trim()
+    line = line.trim()
     delay line, =>
       @push [ 'first-chr', ( Array.from line )[ 0 ], ]
       handler null, [ 'text', line, ]
