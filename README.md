@@ -495,20 +495,20 @@ places.
 Unfortunately, *event-stream* is pegged to NodeJS streams v1 (as used in
 NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v5.x) 
 
-See Dominic Tarr's [rundown of NodeJS Streams
-History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
+> For more details, see Dominic Tarr's [rundown of NodeJS Streams
+> History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
 
-> If node streams teach us anything, it’s that it’s very difficult to develop
-> something as fundamental as streams inside a “core”[. Y]ou can’t change core
-> without breaking things, because things simply assume core and never declare
-> what aspects of core they depend on. Hence a very strong incentive occurs to
-> simply make core always be backwards compatible, and to focus only on
-> performance improvements. This is still a pretty good thing, except
-> sometimes decisions get inadvertently made that have negative implications,
-> but that isn’t apparent until it’s too late.
+> > If node streams teach us anything, it’s that it’s very difficult to develop
+> > something as fundamental as streams inside a “core”[. Y]ou can’t change core
+> > without breaking things, because things simply assume core and never declare
+> > what aspects of core they depend on. Hence a very strong incentive occurs to
+> > simply make core always be backwards compatible, and to focus only on
+> > performance improvements. This is still a pretty good thing, except
+> > sometimes decisions get inadvertently made that have negative implications,
+> > but that isn’t apparent until it’s too late.
 
-How very true. People should keep this in mind when they berate JavaScript as 
-a 'language with virtual no standard library at all'. 
+> How very true. People should keep this in mind when they berate JavaScript as 
+> a 'language with virtual no standard library at all'. 
 
 My best guess at this time (June 2016) is that
 [github.com/rvagg/*through2*](https://github.com/rvagg/through2) and
