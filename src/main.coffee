@@ -19,6 +19,8 @@ ES                        = @_ES = require 'event-stream'
 #...........................................................................................................
 ### https://github.com/dominictarr/stream-combiner ###
 combine                   = require 'stream-combiner'
+# ### https://github.com/substack/stream-combiner2 ###
+# combine                   = require 'stream-combiner2'
 #...........................................................................................................
 ### http://stringjs.com ###
 S                         = require 'string'
@@ -34,6 +36,10 @@ S                         = require 'string'
   expected  = ( rpr key for key in @new_stream.keys ).join ', '
   got       = ( rpr key for key in             keys ).join ', '
   throw new Error "expected one of #{expected}, got #{got}"
+@new_stream.keys = [
+  'file'
+  'text'
+  'pipeline' ]
 
 #-----------------------------------------------------------------------------------------------------------
 pluck = ( x, key ) ->
@@ -75,7 +81,7 @@ pluck = ( x, key ) ->
 #===========================================================================================================
 # TRANSFORM CREATION
 #-----------------------------------------------------------------------------------------------------------
-@remit = ( method ) ->
+@remit = @$ = ( method ) ->
   send      = null
   on_end    = null
   #.........................................................................................................
@@ -110,52 +116,69 @@ pluck = ( x, key ) ->
   return ES.through on_data, on_end
 
 #-----------------------------------------------------------------------------------------------------------
-@$async = ( method ) ->
+@$async_v4 = ( method ) ->
+  unless 2 <= ( arity = method.length ) <= 3
+    throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
+  #.........................................................................................................
+  # Z                 = []
+  has_end_argument  = arity is 3
+  _send_end         = null
+  _stream_end       = null
+  #.........................................................................................................
+
+  #.........................................................................................................
+  retun @new_stream_from_pipeline []
+
+#-----------------------------------------------------------------------------------------------------------
+@_$async_single = ( method ) ->
   unless ( arity = method.length ) is 2
     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
   return $map ( input_data, handler ) =>
-    ### TAINT should add `done.end`, `done.pause` and so on ###
     done        = ( output_data ) => if output_data? then handler null, output_data else handler()
     done.error  = ( error )       => handler error
     method input_data, done
 
-###
 #-----------------------------------------------------------------------------------------------------------
-@remit_async_spread = ( method ) ->
-  unless ( arity = method.length ) is 2
-    throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
+@$async = ( method ) ->
+  unless 2 <= ( arity = method.length ) <= 3
+    throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
   #.........................................................................................................
-  Z       = []
-  input   = @create_throughstream()
-  output  = @create_throughstream()
-  END     = Symbol 'end'
+  Z                 = []
+  has_end_argument  = arity is 3
+  input             = @create_throughstream()
+  output            = @create_throughstream()
+  _send_end         = null
+  _stream_end       = null
   #.........................................................................................................
   $wait_for_stream_end = =>
-    return $ ( data, send, end ) =>
+    return @$ ( data, send, end ) =>
       send data if data?
+      # debug '7765', ( CND.truth CND.isa_function send.end )
+      _send_end = send.end
       if end?
-        send [ END, end, ]
-        # end()
+        if has_end_argument then  _stream_end = end
+        else                      end()
   #.........................................................................................................
   $call = =>
-    return $async ( event, done ) =>
-      if CND.isa_list event and event[ 0 ] is END
-        collect.end = event[ 1 ]
+    return @_$async_single ( event, done ) =>
       #.....................................................................................................
-      collect = ( data ) =>
+      _send = ( data ) =>
         Z.push data
         return null
       #.....................................................................................................
-      collect.done = ( data ) =>
-        collect data if data?
+      _send.done = ( data ) =>
+        _send data if data?
         done Object.assign [], Z
         Z.length = 0
-      method event, collect
+      #.....................................................................................................
+      _send.end = _send_end
+      #.....................................................................................................
+      method event, _send, _stream_end
       return null
   #.........................................................................................................
   $spread = =>
-    return $ ( collection, send, end ) =>
-        send event for event in collection
+    return @$ ( collection, send, end ) =>
+      send event for event in collection
       if end?
         end()
   #.........................................................................................................
@@ -165,48 +188,27 @@ pluck = ( x, key ) ->
     .pipe $spread()
     .pipe output
   #.........................................................................................................
-  return @TEE.from_readwritestreams input, output
-###
+  return @new_stream pipeline: [ input, output, ]
+
+
+
+
+  return $map ( input_data, handler ) =>
+    ### TAINT should add `done.end`, `done.pause` and so on ###
+    done        = ( output_data ) => if output_data? then handler null, output_data else handler()
+    done.error  = ( error )       => handler error
+    method input_data, done
 
 #-----------------------------------------------------------------------------------------------------------
-@remit_async_spread = ( method ) ->
-  ### Like `remit_async`, but allows the transform to send an arbitrary number of responses per incoming
-  event by using `send data`. Completion of the transform step is signalled by `send.done data` or
-  `send.done()`. ###
+@$async_OLD = ( method ) ->
   unless ( arity = method.length ) is 2
     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
-  #.........................................................................................................
-  Z       = []
-  input   = @create_throughstream()
-  output  = @create_throughstream()
-  #.........................................................................................................
-  $call = =>
-    return @$async ( event, done ) =>
-      #.....................................................................................................
-      collect = ( data ) =>
-        Z.push data
-        return null
-      #.....................................................................................................
-      collect.done = ( data ) =>
-        collect data if data?
-        done Object.assign [], Z
-        Z.length = 0
-      method event, collect
-      return null
-  #.........................................................................................................
-  $spread = =>
-    return @remit ( collection, send, end ) =>
-      if collection?
-        send event for event in collection
-      if end?
-        end()
-  #.........................................................................................................
-  input
-    .pipe $call()
-    .pipe $spread()
-    .pipe output
-  #.........................................................................................................
-  return @new_stream pipeline: [ input, output, ]
+  return $map ( input_data, handler ) =>
+    ### TAINT should add `done.end`, `done.pause` and so on ###
+    done        = ( output_data ) => if output_data? then handler null, output_data else handler()
+    done.error  = ( error )       => handler error
+    method input_data, done
+
 
 
 #===========================================================================================================
@@ -218,7 +220,7 @@ pluck = ( x, key ) ->
   well. ###
   return @combine [
     @$collect()
-    @remit ( collection, send ) =>
+    @$ ( collection, send ) =>
       send collection.join joiner
     ]
   return null
@@ -235,7 +237,7 @@ pluck = ( x, key ) ->
 # EXPERIMENTAL: STREAM LINKING, CONCATENATING
 #-----------------------------------------------------------------------------------------------------------
 @$continue = ( stream ) ->
-  return @remit ( data, send, end ) =>
+  return @$ ( data, send, end ) =>
     stream.write data
     if end?
       stream.end()
@@ -248,7 +250,7 @@ pluck = ( x, key ) ->
 #   sink    = sink.pipe transform for transform in LODASH.flatten transforms
 #   _send   = null
 #   sink.on 'data', ( data ) => _send data
-#   return @remit ( data, send ) =>
+#   return @$ ( data, send ) =>
 #     _send = send
 #     source.write data
 
@@ -365,7 +367,7 @@ pluck = ( x, key ) ->
     _end_2 = end
     flush()
   #.........................................................................................................
-  return @remit ( data_1, send, end ) =>
+  return @$ ( data_1, send, end ) =>
     _send   = send
     #.......................................................................................................
     if data_1?
@@ -382,7 +384,7 @@ pluck = ( x, key ) ->
 #-----------------------------------------------------------------------------------------------------------
 @$skip_first = ( n = 1 ) ->
   count = 0
-  return @remit ( data, send ) ->
+  return @$ ( data, send ) ->
     count += +1
     send data if count > n
 
@@ -414,55 +416,55 @@ pluck = ( x, key ) ->
   R.setMaxListeners 0
   return R
 
-#-----------------------------------------------------------------------------------------------------------
-@spawn_and_read = ( P... ) ->
-  ### from https://github.com/alessioalex/spawn-to-readstream:
+# #-----------------------------------------------------------------------------------------------------------
+# @spawn_and_read = ( P... ) ->
+#   ### from https://github.com/alessioalex/spawn-to-readstream:
 
-  Make child process spawn behave like a read stream (buffer the error, don't emit end if error emitted).
+#   Make child process spawn behave like a read stream (buffer the error, don't emit end if error emitted).
 
-  ```js
-  var toReadStream = require('spawn-to-readstream'),
-      spawn        = require('child_process').spawn;
+#   ```js
+#   var toReadStream = require('spawn-to-readstream'),
+#       spawn        = require('child_process').spawn;
 
-  toReadStream(spawn('ls', ['-lah'])).on('error', function(err) {
-    throw err;
-  }).on('end', function() {
-    console.log('~~~ DONE ~~~');
-  }).on('data', function(data) {
-    console.log('ls data :::', data.toString());
-  });
-  ```
-  ###
-  readstream_from_spawn     = require 'spawn-to-readstream'
-  spawn                     = ( require 'child_process' ).spawn
-  return readstream_from_spawn spawn P...
+#   toReadStream(spawn('ls', ['-lah'])).on('error', function(err) {
+#     throw err;
+#   }).on('end', function() {
+#     console.log('~~~ DONE ~~~');
+#   }).on('data', function(data) {
+#     console.log('ls data :::', data.toString());
+#   });
+#   ```
+#   ###
+#   readstream_from_spawn     = require 'spawn-to-readstream'
+#   spawn                     = ( require 'child_process' ).spawn
+#   return readstream_from_spawn spawn P...
 
-#-----------------------------------------------------------------------------------------------------------
-@spawn_and_read_lines = ( P... ) ->
-  last_line = null
-  R         = @create_throughstream()
-  input     = @spawn_and_read P...
-  #.........................................................................................................
-  input
-    .pipe @$split()
-    .pipe @remit ( line, send, end ) =>
-      #.....................................................................................................
-      if line?
-        R.write last_line if last_line?
-        last_line = line
-      #.....................................................................................................
-      if end?
-        R.write last_line if last_line? and last_line.length > 0
-        R.end()
-        end()
-  #.........................................................................................................
-  return R
+# #-----------------------------------------------------------------------------------------------------------
+# @spawn_and_read_lines = ( P... ) ->
+#   last_line = null
+#   R         = @create_throughstream()
+#   input     = @spawn_and_read P...
+#   #.........................................................................................................
+#   input
+#     .pipe @$split()
+#     .pipe @$ ( line, send, end ) =>
+#       #.....................................................................................................
+#       if line?
+#         R.write last_line if last_line?
+#         last_line = line
+#       #.....................................................................................................
+#       if end?
+#         R.write last_line if last_line? and last_line.length > 0
+#         R.end()
+#         end()
+#   #.........................................................................................................
+#   return R
 
 
 #===========================================================================================================
 # NO-OP
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> @remit ( data, send ) -> send data
+@$pass_through = -> @$ ( data, send ) -> send data
 
 
 #===========================================================================================================
@@ -483,7 +485,7 @@ pluck = ( x, key ) ->
   sink.on   'data', ( data )  => _send data
   sink.on   'end',            => _send.end()
   #.........................................................................................................
-  return @remit ( data, send, end ) =>
+  return @$ ( data, send, end ) =>
     if data?
       _send = send
       if cache is undefined
@@ -545,15 +547,15 @@ pluck = ( x, key ) ->
     throw new Error "expected a number between 0 and 1, got #{rpr p}"
   #.........................................................................................................
   ### Handle trivial edge cases faster (hopefully): ###
-  return ( @remit ( record, send ) => send record ) if p == 1
-  return ( @remit ( record, send ) => null        ) if p == 0
+  return ( @$ ( record, send ) => send record ) if p == 1
+  return ( @$ ( record, send ) => null        ) if p == 0
   #.........................................................................................................
   headers = options?[ 'headers'     ] ? false
   seed    = options?[ 'seed'        ] ? null
   count   = 0
   rnd     = rnd_from_seed seed
   #.........................................................................................................
-  return @remit ( record, send ) =>
+  return @$ ( record, send ) =>
     count += 1
     send record if ( count is 1 and headers ) or rnd() < p
 
@@ -586,7 +588,7 @@ pluck = ( x, key ) ->
   all the bookkeeping—which should be a simple and flexible thing to implement using JS closures.
   ###
   current_value = initial_value
-  return @remit ( data, send, end ) =>
+  return @$ ( data, send, end ) =>
     if data?
       current_value = on_data data, send
     if end?
@@ -635,7 +637,7 @@ pluck = ( x, key ) ->
   resume and *then* call `collect`, we'd obtain an empty list, because the (synchronous) stream resulting
   from `stream_from_text` would have already been exhausted before `collect` comes around to see it. ###
   R = []
-  stream.pipe @remit ( data, send, end ) =>
+  stream.pipe @$ ( data, send, end ) =>
     R.push data unless data is undefined
     if end?
       handler null, R if handler?
@@ -660,7 +662,7 @@ pluck = ( x, key ) ->
 @$spread = ( settings ) ->
   indexed   = settings?[ 'indexed'  ] ? no
   end       = settings?[ 'end'      ] ? no
-  return @remit ( data, send ) =>
+  return @$ ( data, send ) =>
     unless type = ( CND.type_of data ) is 'list'
       return send.error new Error "expected a list, got a #{rpr type}"
     for value, idx in data
@@ -672,7 +674,7 @@ pluck = ( x, key ) ->
   throw new Error "buffer size must be non-negative integer, got #{rpr batch_size}" if batch_size < 0
   buffer = []
   #.........................................................................................................
-  return @remit ( data, send, end ) =>
+  return @$ ( data, send, end ) =>
     if data?
       buffer.push data
       if buffer.length >= batch_size
@@ -702,7 +704,7 @@ pluck = ( x, key ) ->
   switch arity = method.length
     when 0, 1 then null
     else throw new Error "expected method with one optional parameter, got one with arity #{arity}"
-  return @remit ( data, send, end ) ->
+  return @$ ( data, send, end ) ->
     send data if data?
     if end?
       return method end if arity is 1
@@ -712,7 +714,7 @@ pluck = ( x, key ) ->
 #-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
   is_first = yes
-  return @remit ( data, send ) ->
+  return @$ ( data, send ) ->
     method send if is_first
     is_first = no
     send data
@@ -722,13 +724,13 @@ pluck = ( x, key ) ->
 # FILTERING
 #-----------------------------------------------------------------------------------------------------------
 @$filter = ( method ) ->
-  return @remit ( data, send ) =>
+  return @$ ( data, send ) =>
     send data if method data
 
 # #-----------------------------------------------------------------------------------------------------------
 # @$take_last_good = ( method ) ->
 #   last_data = null
-#   return @remit ( data, send, end ) =>
+#   return @$ ( data, send, end ) =>
 #     if data?
 #       if method data
 #       last_data = data
@@ -740,7 +742,7 @@ pluck = ( x, key ) ->
 #-----------------------------------------------------------------------------------------------------------
 @$show = ( badge = null ) ->
   my_show = CND.get_logger 'info', badge ? '*'
-  return @remit ( record, send ) =>
+  return @$ ( record, send ) =>
     my_show rpr record
     send record
 
@@ -751,11 +753,11 @@ pluck = ( x, key ) ->
   # return @$filter ( data ) -> method data; return true
   switch arity = method.length
     when 1
-      return @remit ( data, send ) =>
+      return @$ ( data, send ) =>
         method data
         send data
     when 2
-      return @remit ( data, send, end ) =>
+      return @$ ( data, send, end ) =>
         if data?
           method data, false
           send data
@@ -814,7 +816,7 @@ pluck = ( x, key ) ->
   start = ->
     timer = setInterval emit, 1 / items_per_second * 1000
   #---------------------------------------------------------------------------------------------------------
-  return @remit ( data, send, end ) =>
+  return @$ ( data, send, end ) =>
     if data?
       unless _send?
         _send = send
@@ -836,7 +838,7 @@ pluck = ( x, key ) ->
   delimiter   = options[ 'delimiter'  ] ? ','
   qualifier   = options[ 'qualifier'  ] ? '"'
   #.........................................................................................................
-  return @remit ( record, send ) =>
+  return @$ ( record, send ) =>
     if record?
       values = ( S record ).parseCSV delimiter, qualifier, '\\'
       if headers

@@ -16,16 +16,7 @@ echo                      = CND.echo.bind CND
 #...........................................................................................................
 test                      = require 'guy-test'
 D                         = require './main'
-$                         = D.remit
-
-
-#===========================================================================================================
-# HELPERS
-#-----------------------------------------------------------------------------------------------------------
-get_index = ( element, key ) -> if ( CND.isa_function key ) then key element else element[ key ]
-
-#-----------------------------------------------------------------------------------------------------------
-isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
+{ $, $async, }            = D
 
 
 #===========================================================================================================
@@ -172,7 +163,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "new_stream_from_text" ] = ( T, done ) ->
+@[ "(v4) new_stream_from_text" ] = ( T, done ) ->
   text = """
     Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
     codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
@@ -194,7 +185,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input.resume()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "synchronous collect" ] = ( T, done ) ->
+@[ "(v4) synchronous collect" ] = ( T, done ) ->
   text = """
     Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
     codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
@@ -210,7 +201,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "asynchronous collect" ] = ( T, T_done ) ->
+@[ "(v4) asynchronous collect" ] = ( T, T_done ) ->
   text = """
     Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
     codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
@@ -221,58 +212,314 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input   = D.new_stream_from_text text
   stream  = input
     .pipe D.$split()
-    .pipe D.remit_async_spread ( line, send ) => setTimeout ( => send.done line ), 200
+    .pipe $async ( line, send, end ) =>
+      debug '1121', ( CND.truth line? ), ( CND.truth send.end? ), ( CND.truth end? )
+      if line?
+        setTimeout ( => send line ), 200
+      if end?
+        urge 'text completed'
+        send.done "\ntext completed."
+        end()
   #.........................................................................................................
   D.collect stream, ( error, result ) =>
-    T.eq result, text.split '\n'
+    T.eq result, ( text.split '\n' ) + "\ntext completed."
     debug '©4D8tA', 'T_done'
     T_done()
   #.........................................................................................................
   input.resume()
 
-# #-----------------------------------------------------------------------------------------------------------
-# @[ "$async with stream end detection" ] = ( T, T_done ) ->
-#   ###
-#   input   = D.create_throughstream()
-#   #.........................................................................................................
-#   D.remit_async_v2 = ( method ) ->
-#     pipeline = [
-#       ]
-#   $async_v2 = D.remit_async_v2.bind D
-#   #.........................................................................................................
-#   input
-#     .pipe $async_v2 ( n, done, end ) =>
-#       if n?
-#         return "item ##{n}" if ( n / 2 ) is parseInt ( n / 2 ), 10
-#       if end?
-#         send "That's all, folks"
-#         setTimeout ( => end() ), 200
-#     .pipe D.$show()
-#     .pipe D.$on_end => T_done()
-#   #.........................................................................................................
-#   for n in [ 0 .. 10 ]
-#     input.write n
-#   input.end()
-#   #.........................................................................................................
-#   return null
-#   ###
-#   delay   = ( t, f ) => setTimeout f, t
-#   input   = D.create_throughstream()
-#   #.........................................................................................................
-#   input
-#     .pipe D.remit_async_spread ( n, send ) =>
-#       return send.done "item ##{n}" if ( n / 2 ) is parseInt ( n / 2 ), 10
-#       delay 200, =>
-#         send "an odd number: #{n}"
-#         send.done "item ##{n}"
-#     .pipe D.$show()
-#     .pipe D.$on_end => T_done()
-#   #.........................................................................................................
-#   for n in [ 0 .. 10 ]
-#     input.write n
-#   input.end()
-#   #.........................................................................................................
-#   return null
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) asynchronous DB-like" ] = ( T, T_done ) ->
+  db = [
+    [ '千', 'variant',     '仟',                         ]
+    [ '千', 'variant',     '韆',                         ]
+    [ '千', 'similarity',  '于',                         ]
+    [ '千', 'similarity',  '干',                         ]
+    [ '千', 'usagecode',   'CJKTHM',                    ]
+    [ '千', 'strokeorder', '312',                       ]
+    [ '千', 'reading',     'qian',                      ]
+    [ '千', 'reading',     'foo',                       ]
+    [ '千', 'reading',     'bar',                       ]
+    [ '仟', 'strokeorder', '32312',                     ]
+    [ '仟', 'usagecode',   'CJKTHm',                    ]
+    [ '仟', 'reading',     'qian',                      ]
+    [ '韆', 'strokeorder', '122125112125221134515454',  ]
+    [ '韆', 'usagecode',   'KTHm',                      ]
+    [ '韆', 'reading',     'qian',                      ]
+    ]
+  #.........................................................................................................
+  delay = ( f ) => setTimeout f, CND.random_integer 100, 800
+  #.........................................................................................................
+  read_facets = ( glyph, handler ) =>
+    delay =>
+      for record in CND.shuffle db
+        [ sbj, prd, obj, ] = record
+        continue unless sbj is glyph
+        urge '1'; handler null, { value: record, done: no, }
+      urge '2'; handler null, { value: null, done: yes, }
+  #.........................................................................................................
+  input = D.new_stream()
+  input
+    #.......................................................................................................
+    .pipe D.$show "before:"
+    #.......................................................................................................
+    .pipe $async ( glyph, send ) =>
+      read_facets glyph, ( error, event ) =>
+        throw error if error?
+        urge '7765', event
+        { value, done, } = event
+        send value if value?
+        debug '4431', value
+        send.done() if done
+    #.......................................................................................................
+    .pipe D.$show "after: "
+    #.......................................................................................................
+    .pipe do =>
+      collector = []
+      return $ ( data, send, end ) =>
+        collector.push data if data?
+        debug '4432', collector
+        if end?
+          # T.eq collector, [ 'foo', 'bar', 'baz', ]
+          delay =>
+            # end()
+            # T_done()
+  #.........................................................................................................
+  for glyph in Array.from '千仟韆國'
+    input.write glyph
+  input.end()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) asynchronous (using ES.map)" ] = ( T, T_done ) ->
+  db = [
+    [ '千', 'strokeorder', '312',                       ]
+    [ '仟', 'strokeorder', '32312',                     ]
+    [ '韆', 'strokeorder', '122125112125221134515454',  ]
+    ]
+  #.........................................................................................................
+  delay = ( glyph, f ) =>
+    dt = CND.random_integer 1, 1500
+    # dt = 1
+    whisper "delay for #{glyph}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  read_one_phrase = ( glyph, handler ) =>
+    delay glyph, =>
+      for phrase in db
+        [ sbj, prd, obj, ] = phrase
+        continue unless sbj is glyph
+        return handler null, phrase
+      handler null, null
+  #.........................................................................................................
+  $detect_stream_end = ( S ) =>
+    return $ ( data, send, end ) =>
+      if data?
+        send data
+      if end?
+        warn "$detect_stream_end detected end of stream at count #{S.count}"
+        S.end_stream = end
+  #.........................................................................................................
+  $client_method_called_here = ( S ) =>
+    return D._ES.map ( glyph, handler ) =>
+      debug '7762', S.input.readable
+      S.count += +1
+      read_one_phrase glyph, ( error, phrase ) =>
+        return handler error if error?
+        info ( S.count ), ( CND.truth S.end_stream? )
+        S.count += -1
+        urge '7765', phrase
+        handler null, phrase if phrase?
+        handler()
+  #.........................................................................................................
+  $foo = ( S ) =>
+    if S.end_stream? and S.count <= 0
+      S.end_stream()
+      T_done()
+  #.........................................................................................................
+  $collect_results = ( S ) =>
+    collector = []
+    return $ ( data, send ) =>
+      info '7764', '$collect_results', ( CND.truth data? )
+      if data?
+        collector.push data
+        help '7765 $collect_results data:', data
+  #.........................................................................................................
+  S             = {}
+  S.count       = 0
+  S.end_stream  = null
+  # S.input       = D.new_stream_from_pipeline [
+  #   $detect_stream_end          S
+  #   $client_method_called_here  S
+  #   $collect_results            S ]
+  S.input       = D.new_stream()
+  S.input
+    # .pipe ( $detect_stream_end          S ) #, { end: false, }
+    .pipe ( $client_method_called_here  S ) #, { end: false, }
+    .pipe ( $collect_results            S )
+  #.........................................................................................................
+  # for glyph in CND.shuffle Array.from '千仟韆國'
+  for glyph in Array.from '千仟韆'
+    S.input.write glyph
+  S.input.end()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) D.new_stream" ] = ( T, done ) ->
+  T.ok isa_stream stream = D.new_stream()
+  stream
+    # .pipe D.$show()
+    .pipe do =>
+      collector = []
+      $ ( data, send, end ) =>
+        collector.push data if data?
+        if end?
+          T.eq collector, [ 'foo', 'bar', 'baz', ]
+          end()
+          done()
+  stream.write 'foo'
+  stream.write 'bar'
+  stream.write 'baz'
+  stream.end()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) stream / transform construction with through2" ] = ( T, T_done ) ->
+  FS        = require 'fs'
+  PATH      = require 'path'
+  through2  = require 'through2'
+  ###
+  ```
+  through2([ options, ] [ transformFunction ] [, flushFunction ])
+  ```
+
+  ```
+
+  > To queue a new chunk, call `this.push(chunk)`—this can be called as many
+  > times as required before the `callback()` if you have multiple pieces to
+  > send on.
+
+  > Alternatively, you may use `callback(err, chunk)` as shorthand for emitting
+  > a single chunk or an error.
+
+  > The optional `flushFunction` is provided as the last argument (2nd or 3rd,
+  > depending on whether you've supplied `options`) is called just prior to the
+  > stream ending. Can be used to finish up any processing that may be in
+  > progress.
+
+  ```
+
+  ###
+  t2_settings = {}
+  input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
+  #.........................................................................................................
+  delay = ( name, f ) =>
+    dt = CND.random_integer 1, 1500
+    # dt = 1
+    whisper "delay for #{rpr name}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  ### must not be a bound method b/c of `@push` ###
+  transform_main = ( line, encoding, handler ) ->
+    return handler() unless ( /"(name|version)"/ ).test line
+    line.trim()
+    delay line, =>
+      @push [ 'first-chr', ( Array.from line )[ 0 ], ]
+      handler null, [ 'text', line, ]
+  #.........................................................................................................
+  ### must not be a bound method b/c of `@push` ###
+  transform_flush = ( done ) -> # ( line, encoding, handler ) ->
+    push = @push.bind @
+    delay 'flush', =>
+      push [ 'message', "ok", ]
+      push [ 'message', "we're done", ]
+      done()
+  #.........................................................................................................
+  input
+    .pipe D.$split()
+    # .pipe D.$observe ( line ) => whisper rpr line
+    .pipe through2.obj t2_settings, transform_main, transform_flush
+    .pipe D.$show()
+    .pipe D.$on_end => T_done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) asynchronous (using ES.map, stream-combiner2)" ] = ( T, T_done ) ->
+  combine2  = require 'stream-combiner2'
+  through2  = require 'through2'
+  #.........................................................................................................
+  db = [
+    [ '千', 'strokeorder', '312',                       ]
+    [ '仟', 'strokeorder', '32312',                     ]
+    [ '韆', 'strokeorder', '122125112125221134515454',  ]
+    ]
+  #.........................................................................................................
+  delay = ( glyph, f ) =>
+    # dt = CND.random_integer 1, 1500
+    dt = 1
+    whisper "delay for #{glyph}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  read_one_phrase = ( glyph, handler ) =>
+    delay glyph, =>
+      for phrase in db
+        [ sbj, prd, obj, ] = phrase
+        continue unless sbj is glyph
+        return handler null, phrase
+      handler null, null
+  #.........................................................................................................
+  $detect_stream_end = ( S ) =>
+    return $ ( data, send, end ) =>
+      if data?
+        send data
+      if end?
+        warn "$detect_stream_end detected end of stream at count #{S.count}"
+        S.end_stream = end
+  #.........................................................................................................
+  $client_method_called_here = ( S ) =>
+    return D._ES.map ( glyph, handler ) =>
+      debug '7762', S.input.readable
+      S.count += +1
+      read_one_phrase glyph, ( error, phrase ) =>
+        return handler error if error?
+        info ( S.count ), ( CND.truth S.end_stream? )
+        S.count += -1
+        urge '7765', phrase
+        handler null, phrase if phrase?
+        handler()
+  #.........................................................................................................
+  $foo = ( S ) =>
+    if S.end_stream? and S.count <= 0
+      S.end_stream()
+      T_done()
+  #.........................................................................................................
+  $collect_results = ( S ) =>
+    collector = []
+    return $ ( data, send ) =>
+      info '7764', '$collect_results', ( CND.truth data? )
+      if data?
+        collector.push data
+        help '7765 $collect_results data:', data
+  #.........................................................................................................
+  S             = {}
+  S.count       = 0
+  S.end_stream  = null
+  # S.input       = D.new_stream_from_pipeline [
+  #   $detect_stream_end          S
+  #   $client_method_called_here  S
+  #   $collect_results            S ]
+  S.input       = D.new_stream()
+  S.input
+    # .pipe ( $detect_stream_end          S ) #, { end: false, }
+    .pipe ( $client_method_called_here  S ) #, { end: false, }
+    .pipe ( $collect_results            S )
+  #.........................................................................................................
+  # for glyph in CND.shuffle Array.from '千仟韆國'
+  for glyph in Array.from '千仟韆'
+    S.input.write glyph
+  S.input.end()
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) D.new_stream" ] = ( T, done ) ->
@@ -298,7 +545,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # D.$show()
     do =>
       collector = []
-      $ ( data, send, end ) =>
+      return $ ( data, send, end ) =>
         collector.push data if data?
         if end?
           T.eq collector, [ 'foo', 'bar', 'baz', ]
@@ -325,10 +572,14 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   throw new Error "not implemented"
 
 
-
-
 #===========================================================================================================
-#
+# HELPERS
+#-----------------------------------------------------------------------------------------------------------
+get_index = ( element, key ) -> if ( CND.isa_function key ) then key element else element[ key ]
+
+#-----------------------------------------------------------------------------------------------------------
+isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
+
 #-----------------------------------------------------------------------------------------------------------
 @_prune = ->
   for name, value of @
@@ -338,24 +589,29 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 #-----------------------------------------------------------------------------------------------------------
 @_main = ->
-  test @, 'timeout': 2500
+  test @, 'timeout': 30000
+
 
 ############################################################################################################
 unless module.parent?
   include = [
-    "(v4) new_stream_from_pipeline (1)"
-    "(v4) new_stream_from_pipeline (2)"
-    "(v4) new_stream_from_pipeline (3)"
-    "(v4) new_stream_from_pipeline using existing streams"
-    "new_stream_from_text"
-    "synchronous collect"
-    "asynchronous collect"
-    "(v4) D.new_stream"
-    "(v4) D.new_stream_from_pipeline"
-    "(v4) $async with stream end detection"
-    "(v4) $async with arbitrary number of results"
+    # "(v4) new_stream_from_pipeline (1)"
+    # "(v4) new_stream_from_pipeline (2)"
+    # "(v4) new_stream_from_pipeline (3)"
+    # "(v4) new_stream_from_pipeline using existing streams"
+    # "(v4) new_stream_from_text"
+    # "(v4) synchronous collect"
+    # "(v4) asynchronous collect"
+    # "(v4) D.new_stream"
+    # "(v4) D.new_stream_from_pipeline"
+    # "(v4) asynchronous DB-like"
+    # "(v4) asynchronous (using ES.map)"
+    "(v4) stream / transform construction with through2"
+    # "(v4) asynchronous (using ES.map, stream-combiner2)"
+    # "(v4) $async with stream end detection"
+    # "(v4) $async with arbitrary number of results"
     ]
-  # @_prune()
+  @_prune()
   @_main()
 
 

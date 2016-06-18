@@ -22,41 +22,13 @@
 - [Strings](#strings)
   - [$split()](#split)
 - [Sorting](#sorting)
-- ['Dense' Sorting](#dense-sorting)
-  - [new_densort()](#new_densort)
-  - [$densort()](#densort)
-  - [$sort()](#sort)
+  - [Roadmap to Pipedreams Version 4](#roadmap-to-pipedreams-version-4)
+    - [Base Libraries](#base-libraries)
+      - [Through2](#through2)
+      - [Stream-Combiner2](#stream-combiner2)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-
-
-- [PipeDreams](#pipedreams)
-- [Stream and Transform Construction](#stream-and-transform-construction)
-	- [remit()](#remit)
-	- [create_throughstream()](#create_throughstream)
-	- [Error Handling](#error-handling)
-	- ['Retroactive' Sub-Streams: $sub()](#'retroactive'-sub-streams-$sub)
-	- [$link()](#$link)
-	- [$continue()](#$continue)
-	- [Creating 'Fittings' (Higher-Order Streams)](#creating-'fittings'-higher-order-streams)
-		- [Motivation](#motivation)
-		- [Usage](#usage)
-			- [**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**](#@create_fitting_from_pipeline-=--transforms-settings--->)
-			- [**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**](#@create_fitting_from_readwritestreams-=--readstream-writestream-settings--->)
-		- [Example](#example)
-- [Aggregation](#aggregation)
-	- [$aggregate = ( aggregator, on_end = null ) ->](#$aggregate-=--aggregator-on_end-=-null--->)
-	- [$collect(), $count()](#$collect-$count)
-- [Strings](#strings)
-	- [$split()](#$split)
-- [Sorting](#sorting)
-- ['Dense' Sorting](#'dense'-sorting)
-	- [new_densort()](#new_densort)
-	- [$densort()](#$densort)
-	- [$sort()](#$sort)
-
-> **Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
 
 
 # PipeDreams
@@ -509,79 +481,77 @@ data items have been encountered in a stream.
 <!-- =================================================================================================== -->
 # Sorting
 
-# 'Dense' Sorting
-
-## new_densort()
-## $densort()
-
-`new_densort = ( key = 1, first_idx = 0, report_handler = null ) ->`
-
-The motivation for this function is the observation that in order to sort a stream of elements, it is in
-the general case necessary to buffer *all* elements before they can be sorted and sent on. This is because
-in the general case it is unknown prior to stream completion whether or not yet another element that will
-fit into any given position is pending; for example, if you queried a database for a list of words to
-be sorted alphabetically, it is, generally, not possible to decide whether between any two words—say,
-`'train'` and `'trainspotter'`—a third word is due, say, `'trains'`. This is because the sorting criterion
-(i.e. the sequence of letters of each word) is 'sparse'.
-
-I love trains, but i don't like the fact that i will always have to backup potentially large streams in
-memory before i can go on with processing.
-
-Fortunately, there is an important class of cases that provide 'dense' sorting criterion coupled with
-moderate disorder among the elements: Consider a stream that originates from a database query similar to
-`SELECT INDEX(), word FROM words ORDER BY word ASC` (where `INDEX()` is a function to add a zero-based row
-index to each record in the result set); we want to send each record to a consumer over a network
-connection\*, one record at a time. We can then be reasonably sure that that the order of items arriving
-at the consumer is *somewhat* correlated to their original order; at the same time, we may be justified in
-suspecting that *some* items might have swapped places; in other words, the `INDEX()` field in each record
-will be very similar to a monotonically growing series.
-
-> \*) In fact, network connections—e.g. those using WebSockets—may indeed be order-preserving, but it's
-> easy to imagine a transport protocol (like UDP) that isn't, or a result set that is assembled from
-> asynchronous calls to a database with each call originating from one piece of data in the stream.
-> There may also be cases where a proof of sequentiality is not obvious, and it would be nice to have
-> a guaranteed ordering without incurring too much of an overhead in time and space.
-
-This is where `densort` comes in: assuming records are offered in a 'dense' fashion, with some field of
-the recording containing an integer index `i`, forming a finite series with a definite lower bound `i0`
-and a certain number of elements `n` such that the index of the last element is `i1 = n + i0 - 1` and each
-index `i` in the range `i0 <= i <= i1` is associated with exactly one record.
-<!--
-Given a stream of `data` items with an index available as `data[ key ]`, re-emit data items in order
-such that indexes are ordered, and no items are left out. This is is called 'dense sort' as it presupposes
-that no single index is left out of the sequence, such that whenever an item with index `n` is seen, it
-can be passed on as soon as all items with index m < n have been seen and passed on. Conversely, any item
-whose predecessors have not yet been seen and passed on must be buffered. The method my be called as
-`$densort k, n0`, where `k` is the key to pick up the index from each data item (defaulting to `1`,
-i.e. assuming an 'element list' whose first item is the index element name, the second is the index, and
-the rest represents the payload), and `n0` is the lowest index (defaulting to `0` as
-well).
-
-In contradistinction to 'agnostic' sorting (which must buffer all data until the stream has ended), the
-hope in a dense sort is that buffering will only ever occur over few data items which should hold as long
-as the stream originates from a source that emitted items in ascending order over a reasonably 'reliable'
-network (i.e. one that does not arbitrarily scramble the ordering of packages); however, it is always
-trivial to cause the buffering of *all* data items by withholding the first data item until all others
-have been sent; thus, the performance of this method cannot be guaranteed.
-
-To ensure data integrity, this method will throw an exception if the stream should end before all items
-between `n0` and the last seen index have been sent (i.e. in cases where the stream was expected to be
-dense, but turned out to be sparse), and when a duplicate index has been detected.
-
-You may pass in a `handler` that will be called after the entire stream has been processed; that function,
-if present, will be called with a pair `[ n, m, ]` where `n` is the total number of elements encountered,
-and `m <= n` is the maximal number of elements that had to be buffered at any one single point in time.
-`m` will equal `n` if the logically first item happened to arrive last (and corresponds to the number of
-items that have to be buffered with 'sparse', agnostic sorting); `m` will be zero if all items happened
-to arrive in their logical order (the optimal case).
-
- -->
 
 
-## $sort()
+## Roadmap to Pipedreams Version 4
+
+### Base Libraries
+
+#### Through2
+
+[github.com/rvagg/**through2**](https://github.com/rvagg/through2) 
+
+```
+through2([ options, ] [ transformFunction ] [, flushFunction ])
+```
+
+
+> To queue a new chunk, call `this.push(chunk)`—this can be called as many
+> times as required before the `callback()` if you have multiple pieces to
+> send on.
+
+> Alternatively, you may use `callback(err, chunk)` as shorthand for emitting
+> a single chunk or an error.
+
+> The optional `flushFunction` is provided as the last argument (2nd or 3rd,
+> depending on whether you've supplied `options`) is called just prior to the
+> stream ending. Can be used to finish up any processing that may be in
+> progress.
 
 
 
 
+```coffee
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) stream / transform construction with through2" ] = ( T, T_done ) ->
+  FS          = require 'fs'
+  PATH        = require 'path'
+  through2    = require 'through2'
+  t2_settings = {}
+  input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
+  #.........................................................................................................
+  delay = ( name, f ) =>
+    dt = CND.random_integer 1, 1500
+    # dt = 1
+    whisper "delay for #{rpr name}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  ### must not be a bound method b/c of `@push` ###
+  transform_main = ( line, encoding, handler ) ->
+    return handler() unless ( /"(name|version)"/ ).test line
+    line.trim()
+    delay line, =>
+      @push [ 'first-chr', ( Array.from line )[ 0 ], ]
+      handler null, [ 'text', line, ]
+  #.........................................................................................................
+  ### must not be a bound method b/c of `@push` ###
+  transform_flush = ( done ) -> # ( line, encoding, handler ) ->
+    push = @push.bind @
+    delay 'flush', =>
+      push [ 'message', "ok", ]
+      push [ 'message', "we're done", ]
+      done()
+  #.........................................................................................................
+  input
+    .pipe D.$split()
+    # .pipe D.$observe ( line ) => whisper rpr line
+    .pipe through2.obj t2_settings, transform_main, transform_flush
+    .pipe D.$show()
+    .pipe D.$on_end => T_done()
+```
+
+#### Stream-Combiner2
+
+[github.com/substack/**stream-combiner2**](https://github.com/substack/stream-combiner2) 
 
 
