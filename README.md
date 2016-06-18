@@ -609,13 +609,13 @@ result:
 > (a matter) to a committee or authority for decision*, and also *to transmit (money in payment)*.
 > Somehow PipeDreams' `remit` does a bit of all of these things. 
 
-> `remit` itself refrains from doing anything with the business data that we build that 
-> pipeline of stream transforms for; instead, that data is remitted to the function
-> that `remit` accepts as argument. `remit` helps to transmit (not money in payment but)
-> business data from source to sink. Transform functions built with `remit` are not meant
-> to be used—called with business data—directly; rather, they are like factory functions
-> in that they accept a number of configurational settings and return another, possibly
-> stateful, function to do the transformation work, according to settings and current state.
+> `remit` itself 'refrains' from doing anything with the business data that we build that 
+> pipeline of stream transforms for; instead, that data is 'remitted' (referred) to the function
+> that `remit` accepts as argument. `remit` helps to 'transmit' (not money in payment but
+> business data from source to sink). Transform functions built with `remit` are not meant
+> to be used—called with business data—directly; rather, like factory functions
+> they accept an optional configuration and return another (possibly stateful) function 
+> to do the transformation work.
 
 
 
