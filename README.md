@@ -483,13 +483,42 @@ data items have been encountered in a stream.
 
 
 
-## Roadmap to Pipedreams Version 4
+# Roadmap to Pipedreams Version 4
 
-### Base Libraries
+## Base Libraries
 
-#### Through2
+**Abstract**: PipeDreams was previously based on 
+[`github.com/dominictarr/**event-stream**`](https://github.com/dominictarr/event-stream) 
+and did so largely successfully, but problems with aysnchronous streams did surface in some
+places. 
 
-[github.com/rvagg/**through2**](https://github.com/rvagg/through2) 
+Unfortunately, `event-stream` is pegged to NodeJS streams v1 (as used in
+NodeJS v0.8), but we're now at NodeJS streams v3 (as of NodeJS v5.x) (see
+Dominic Tarr's [rundown of NodeJS Streams
+History](http://dominictarr.com/post/145135293917/history-of-streams)).
+
+Worthwhile reading:
+
+> If node streams teach us anything, it’s that it’s very difficult to develop
+> something as fundamental as streams inside a “core” you can’t change core
+> without breaking things, because things simply assume core and never declare
+> what aspects of core they depend on. Hence a very strong incentive occurs to
+> simply make core always be backwards compatible, and to focus only on
+> performance improvements. This is still a pretty good thing, except
+> sometimes decisions get inadvertently made that have negative implications,
+> but that isn’t apparent until it’s too late.
+
+How very true.
+
+My best guess at this time (June 2016) is that
+[`github.com/rvagg/**through2**`](https://github.com/rvagg/through2) and
+[`github.com/substack/**stream-combiner2**`](https://github.com/substack/stream-combiner2)
+provide the best available future-proof path for basing a NodeJS Stream 
+library on. 
+
+### Through2
+
+[`github.com/rvagg/**through2**`](https://github.com/rvagg/through2) 
 
 ```
 through2([ options, ] [ transformFunction ] [, flushFunction ])
@@ -552,6 +581,6 @@ through2([ options, ] [ transformFunction ] [, flushFunction ])
 
 #### Stream-Combiner2
 
-[github.com/substack/**stream-combiner2**](https://github.com/substack/stream-combiner2) 
+[`github.com/substack/**stream-combiner2**`](https://github.com/substack/stream-combiner2) 
 
 
