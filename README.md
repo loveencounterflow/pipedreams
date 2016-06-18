@@ -26,6 +26,8 @@
   - [Base Libraries](#base-libraries)
     - [Through2](#through2)
       - [Stream-Combiner2](#stream-combiner2)
+  - [Notes on the PipeDreams v4 API](#notes-on-the-pipedreams-v4-api)
+    - [`remit` (aka `$`) and `remit_async` (aka `$async`)](#remit-aka--and-remit_async-aka-async)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -539,7 +541,9 @@ at the docs:
 > progress.
 
 So I wrote this simple 'demo test' (i.e. a tentative implementation as a proof
-of concept) to see whether things work out the way I need them to have:
+of concept) to see whether things work out the way I need them to have. Below
+I will give the (much shorter) PipeDreams version for achieving the same
+result:
 
 ```coffee
 #-----------------------------------------------------------------------------------------------------------
@@ -590,5 +594,13 @@ of concept) to see whether things work out the way I need them to have:
 #### Stream-Combiner2
 
 [github.com/substack/*stream-combiner2*](https://github.com/substack/stream-combiner2) 
+
+## Notes on the PipeDreams v4 API 
+
+### `remit` (aka `$`) and `remit_async` (aka `$async`)
+
+
+
+
 
 
