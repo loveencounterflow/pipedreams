@@ -385,37 +385,15 @@ D                         = require './main'
   stream.end()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) stream / transform construction with through2" ] = ( T, T_done ) ->
-  FS        = require 'fs'
-  PATH      = require 'path'
-  through2  = require 'through2'
-  ###
-  ```
-  through2([ options, ] [ transformFunction ] [, flushFunction ])
-  ```
-
-  ```
-
-  > To queue a new chunk, call `this.push(chunk)`—this can be called as many
-  > times as required before the `callback()` if you have multiple pieces to
-  > send on.
-
-  > Alternatively, you may use `callback(err, chunk)` as shorthand for emitting
-  > a single chunk or an error.
-
-  > The optional `flushFunction` is provided as the last argument (2nd or 3rd,
-  > depending on whether you've supplied `options`) is called just prior to the
-  > stream ending. Can be used to finish up any processing that may be in
-  > progress.
-
-  ```
-
-  ###
+@[ "(v4) stream / transform construction with through2 (1)" ] = ( T, T_done ) ->
+  FS          = require 'fs'
+  PATH        = require 'path'
+  through2    = require 'through2'
   t2_settings = {}
   input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
   #.........................................................................................................
   delay = ( name, f ) =>
-    dt = CND.random_integer 1, 1500
+    dt = CND.random_integer 100, 500
     # dt = 1
     whisper "delay for #{rpr name}: #{dt}ms"
     setTimeout f, dt
@@ -431,8 +409,11 @@ D                         = require './main'
       @push [ 'first-chr', ( Array.from line )[ 0 ], ]
       handler null, [ 'text', line, ]
   #.........................................................................................................
-  ### must not be a bound method b/c of `@push` ###
-  transform_flush = ( done ) -> # ( line, encoding, handler ) ->
+  ### The 'flush' transform is called once, right before the stream has ended; the callback must be called
+  exactly once, and it's possible to put additional 'last-minute' data into the stream by calling `@push`.
+  Because we have to access `this`/`@`, the method must again be free and not bound, but of course we
+  can set up an alias for `@push`: ###
+  transform_flush = ( done ) ->
     push = @push.bind @
     delay 'flush', =>
       push [ 'message', "ok", ]
@@ -445,11 +426,76 @@ D                         = require './main'
     .pipe through2.obj t2_settings, transform_main, transform_flush
     .pipe D.$show()
     .pipe D.$on_end => T_done()
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) asynchronous (using ES.map, stream-combiner2)" ] = ( T, T_done ) ->
-  combine2  = require 'stream-combiner2'
-  through2  = require 'through2'
+@[ "(v4) stream / transform construction with through2 (2)" ] = ( T, T_done ) ->
+  through2    = require 'through2'
+  t2_settings = {}
+  S           = {}
+  S.input     = through2.obj()
+  #.........................................................................................................
+  db = CND.shuffle [
+    [ '千', 'variant',     '仟',                         ]
+    [ '千', 'variant',     '韆',                         ]
+    [ '千', 'similarity',  '于',                         ]
+    [ '千', 'similarity',  '干',                         ]
+    [ '千', 'usagecode',   'CJKTHM',                    ]
+    [ '千', 'strokeorder', '312',                       ]
+    [ '千', 'reading',     'qian',                      ]
+    [ '千', 'reading',     'foo',                       ]
+    [ '千', 'reading',     'bar',                       ]
+    [ '仟', 'strokeorder', '32312',                     ]
+    [ '仟', 'usagecode',   'CJKTHm',                    ]
+    [ '仟', 'reading',     'qian',                      ]
+    [ '韆', 'strokeorder', '122125112125221134515454',  ]
+    [ '韆', 'usagecode',   'KTHm',                      ]
+    [ '韆', 'reading',     'qian',                      ]
+    ]
+  #.........................................................................................................
+  delay = ( name, f ) =>
+    dt = CND.random_integer 100, 500
+    # dt = 1
+    whisper "delay for #{rpr name}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  read_one_phrase = ( glyph, handler ) =>
+    delay glyph, =>
+      for phrase in db
+        [ sbj, prd, obj, ] = phrase
+        continue unless sbj is glyph
+        handler null, phrase
+      handler null, null
+  #.........................................................................................................
+  transform_main = ( glyph, encoding, handler ) ->
+    push = @push.bind @
+    push [ glyph, 'start', ]
+    read_one_phrase glyph, ( error, phrase ) =>
+      return handler error if error?
+      return handler null, [ glyph, 'stop', ] unless phrase?
+      push phrase
+  #.........................................................................................................
+  transform_flush = ( done ) ->
+    push = @push.bind @
+    delay 'flush', =>
+      push [ 'message', "ok", ]
+      push [ 'message', "we're done", ]
+      done()
+  #.........................................................................................................
+  S.input
+    .pipe through2.obj t2_settings, transform_main, transform_flush
+    .pipe D.$show()
+    .pipe D.$on_end => T_done()
+  #.........................................................................................................
+  for glyph in Array.from '千仟韆'
+    S.input.write glyph
+  S.input.end()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) failing asynchronous demo with event-stream, PipeDreams v2" ] = ( T, T_done ) ->
   #.........................................................................................................
   db = [
     [ '千', 'strokeorder', '312',                       ]
@@ -458,8 +504,8 @@ D                         = require './main'
     ]
   #.........................................................................................................
   delay = ( glyph, f ) =>
-    # dt = CND.random_integer 1, 1500
-    dt = 1
+    dt = CND.random_integer 1, 1500
+    # dt = 1
     whisper "delay for #{glyph}: #{dt}ms"
     setTimeout f, dt
   #.........................................................................................................
@@ -471,53 +517,36 @@ D                         = require './main'
         return handler null, phrase
       handler null, null
   #.........................................................................................................
-  $detect_stream_end = ( S ) =>
-    return $ ( data, send, end ) =>
-      if data?
-        send data
-      if end?
-        warn "$detect_stream_end detected end of stream at count #{S.count}"
-        S.end_stream = end
-  #.........................................................................................................
   $client_method_called_here = ( S ) =>
     return D._ES.map ( glyph, handler ) =>
-      debug '7762', S.input.readable
       S.count += +1
+      urge '7765-1 $client_method_called_here:', glyph
       read_one_phrase glyph, ( error, phrase ) =>
         return handler error if error?
-        info ( S.count ), ( CND.truth S.end_stream? )
         S.count += -1
-        urge '7765', phrase
+        urge '7765-2 $client_method_called_here:', phrase
         handler null, phrase if phrase?
         handler()
   #.........................................................................................................
-  $foo = ( S ) =>
-    if S.end_stream? and S.count <= 0
-      S.end_stream()
-      T_done()
-  #.........................................................................................................
   $collect_results = ( S ) =>
     collector = []
-    return $ ( data, send ) =>
-      info '7764', '$collect_results', ( CND.truth data? )
+    return $ ( data, send, end ) =>
       if data?
         collector.push data
-        help '7765 $collect_results data:', data
+        help '7765-3 $collect_results data:     ', data
+      if end?
+        info collector
+        end()
   #.........................................................................................................
   S             = {}
   S.count       = 0
   S.end_stream  = null
-  # S.input       = D.new_stream_from_pipeline [
-  #   $detect_stream_end          S
-  #   $client_method_called_here  S
-  #   $collect_results            S ]
   S.input       = D.new_stream()
   S.input
-    # .pipe ( $detect_stream_end          S ) #, { end: false, }
-    .pipe ( $client_method_called_here  S ) #, { end: false, }
-    .pipe ( $collect_results            S )
+    .pipe $client_method_called_here  S
+    .pipe $collect_results            S
+    .pipe D.$on_end => T_done()
   #.........................................................................................................
-  # for glyph in CND.shuffle Array.from '千仟韆國'
   for glyph in Array.from '千仟韆'
     S.input.write glyph
   S.input.end()
@@ -609,8 +638,9 @@ unless module.parent?
     # "(v4) D.new_stream_from_pipeline"
     # "(v4) asynchronous DB-like"
     # "(v4) asynchronous (using ES.map)"
-    "(v4) stream / transform construction with through2"
-    # "(v4) asynchronous (using ES.map, stream-combiner2)"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) stream / transform construction with through2 (2)"
+    # "(v4) failing asynchronous demo with event-stream, PipeDreams v2"
     # "(v4) $async with stream end detection"
     # "(v4) $async with arbitrary number of results"
     ]

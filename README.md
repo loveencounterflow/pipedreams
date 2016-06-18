@@ -149,9 +149,9 @@ Notes:
 ## 'Retroactive' Sub-Streams: $sub()
 
 The PipeDreams `$sub` method allows to formulate pipes which 'talk back', as it were, to upstream
-transformers. This can be handy when a given transformer performs single steps of an iterative optimization
+transformers. This can be handy when a given transform performs single steps of an iterative optimization
 process; with `$sub`, it becomes possible to re-submit a less-than-perfect value from a downstream
-tranformer. Let's have a look at a simple example; we start with a stream of numbers, and our goal is to
+transform. Let's have a look at a simple example; we start with a stream of numbers, and our goal is to
 'reduce' each number to a value closer to `1` than a given quality margin `epsilon` allows. We implement
 that by an 'optimizer' transform which takes the square root of each number and passes it on. The result
 will always be closer to 1 (if input was > 0), but not necessarily good enough. We verify for that in
@@ -499,7 +499,7 @@ See Dominic Tarr's [rundown of NodeJS Streams
 History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
 
 > If node streams teach us anything, it’s that it’s very difficult to develop
-> something as fundamental as streams inside a “core” you can’t change core
+> something as fundamental as streams inside a “core”[. Y]ou can’t change core
 > without breaking things, because things simply assume core and never declare
 > what aspects of core they depend on. Hence a very strong incentive occurs to
 > simply make core always be backwards compatible, and to focus only on
@@ -507,7 +507,8 @@ History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhil
 > sometimes decisions get inadvertently made that have negative implications,
 > but that isn’t apparent until it’s too late.
 
-How very true.
+How very true. People should keep this in mind when they berate JavaScript as 
+a 'language with virtual no standard library at all'. 
 
 My best guess at this time (June 2016) is that
 [github.com/rvagg/*through2*](https://github.com/rvagg/through2) and
@@ -537,8 +538,8 @@ at the docs:
 > stream ending. Can be used to finish up any processing that may be in
 > progress.
 
-
-
+So I wrote this simple 'demo test' (i.e. a tentative implementation as a proof
+of concept) to see whether things work out the way I need them to have:
 
 ```coffee
 #-----------------------------------------------------------------------------------------------------------
@@ -568,7 +569,10 @@ at the docs:
       @push [ 'first-chr', ( Array.from line )[ 0 ], ]
       handler null, [ 'text', line, ]
   #.........................................................................................................
-  ### must not be a bound method b/c of `@push` ###
+  ### The 'flush' transform is called once, right before the stream has ended; the callback must be called
+  exactly once, and it's possible to put additional 'last-minute' data into the stream by calling `@push`. 
+  Because we have to access `this`/`@`, the method must again be free and not bound, but of course we
+  can set up an alias for `@push`: ###
   transform_flush = ( done ) ->
     push = @push.bind @
     delay 'flush', =>
