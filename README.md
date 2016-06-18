@@ -22,9 +22,9 @@
 - [Strings](#strings)
   - [$split()](#split)
 - [Sorting](#sorting)
-  - [Roadmap to Pipedreams Version 4](#roadmap-to-pipedreams-version-4)
-    - [Base Libraries](#base-libraries)
-      - [Through2](#through2)
+- [Roadmap to Pipedreams Version 4](#roadmap-to-pipedreams-version-4)
+  - [Base Libraries](#base-libraries)
+    - [Through2](#through2)
       - [Stream-Combiner2](#stream-combiner2)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -488,11 +488,11 @@ data items have been encountered in a stream.
 ## Base Libraries
 
 **Abstract**: PipeDreams was previously based on 
-[`github.com/dominictarr/**event-stream**`](https://github.com/dominictarr/event-stream) 
+[github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream) 
 and did so largely successfully, but problems with aysnchronous streams did surface in some
 places. 
 
-Unfortunately, `event-stream` is pegged to NodeJS streams v1 (as used in
+Unfortunately, *event-stream* is pegged to NodeJS streams v1 (as used in
 NodeJS v0.8), but we're now at NodeJS streams v3 (as of NodeJS v5.x) (see
 Dominic Tarr's [rundown of NodeJS Streams
 History](http://dominictarr.com/post/145135293917/history-of-streams)).
@@ -511,14 +511,14 @@ Worthwhile reading:
 How very true.
 
 My best guess at this time (June 2016) is that
-[`github.com/rvagg/**through2**`](https://github.com/rvagg/through2) and
-[`github.com/substack/**stream-combiner2**`](https://github.com/substack/stream-combiner2)
+[github.com/rvagg/*through2*](https://github.com/rvagg/through2) and
+[github.com/substack/*stream-combiner2*](https://github.com/substack/stream-combiner2)
 provide the best available future-proof path for basing a NodeJS Stream 
 library on. 
 
 ### Through2
 
-[`github.com/rvagg/**through2**`](https://github.com/rvagg/through2) 
+[github.com/rvagg/*through2*](https://github.com/rvagg/through2) 
 
 ```
 through2([ options, ] [ transformFunction ] [, flushFunction ])
@@ -581,6 +581,6 @@ through2([ options, ] [ transformFunction ] [, flushFunction ])
 
 #### Stream-Combiner2
 
-[`github.com/substack/**stream-combiner2**`](https://github.com/substack/stream-combiner2) 
+[github.com/substack/*stream-combiner2*](https://github.com/substack/stream-combiner2) 
 
 
