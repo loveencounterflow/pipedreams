@@ -468,23 +468,47 @@ D                         = require './main'
         handler null, phrase
       handler null, null
   #.........................................................................................................
-  transform_main = ( glyph, encoding, handler ) ->
-    push = @push.bind @
-    push [ glyph, 'start', ]
-    read_one_phrase glyph, ( error, phrase ) =>
-      return handler error if error?
-      return handler null, [ glyph, 'stop', ] unless phrase?
-      push phrase
+  $retrieve_data_from_db = ( S ) =>
+    #.......................................................................................................
+    main = ( glyph, encoding, handler ) ->
+      push = @push.bind @
+      push [ glyph, 'start', ]
+      read_one_phrase glyph, ( error, phrase ) =>
+        return handler error if error?
+        return handler null, [ glyph, 'stop', ] unless phrase?
+        push phrase
+    #.......................................................................................................
+    flush = ( done ) ->
+      push = @push.bind @
+      delay 'flush', =>
+        push [ 'message', "ok", ]
+        push [ 'message', "we're done", ]
+        done()
+    #.......................................................................................................
+    return through2.obj t2_settings, main, flush
   #.........................................................................................................
-  transform_flush = ( done ) ->
-    push = @push.bind @
-    delay 'flush', =>
-      push [ 'message', "ok", ]
-      push [ 'message', "we're done", ]
-      done()
+  $collect = ( S ) =>
+    matchers  = new Set ( JSON.stringify phrase for phrase in db )
+    collector = []
+    #.......................................................................................................
+    main = ( phrase, _, handler ) ->
+      probe = JSON.stringify phrase
+      [ sbj, prd, obj, ] = phrase
+      unless ( prd in [ 'start', 'stop', ] ) or ( sbj is 'message' )
+        T.ok matchers.has probe
+        matchers.delete probe
+      handler null, phrase
+    #.......................................................................................................
+    flush = ( handler ) ->
+      debug '4325'
+      T.eq matchers.size, 0
+      handler()
+    #.......................................................................................................
+    return through2.obj t2_settings, main, flush
   #.........................................................................................................
   S.input
-    .pipe through2.obj t2_settings, transform_main, transform_flush
+    .pipe $retrieve_data_from_db  S
+    .pipe $collect                S
     .pipe D.$show()
     .pipe D.$on_end => T_done()
   #.........................................................................................................
@@ -621,7 +645,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 #-----------------------------------------------------------------------------------------------------------
 @_main = ->
-  test @, 'timeout': 30000
+  test @, 'timeout': 3000
 
 
 ############################################################################################################
