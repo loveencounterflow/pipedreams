@@ -27,7 +27,7 @@
     - [Through2](#through2)
       - [Stream-Combiner2](#stream-combiner2)
   - [Notes on the PipeDreams v4 API](#notes-on-the-pipedreams-v4-api)
-    - [`remit` (aka `$`) and `remit_async` (aka `$async`)](#remit-aka--and-remit_async-aka-async)
+    - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -597,7 +597,26 @@ result:
 
 ## Notes on the PipeDreams v4 API 
 
-### `remit` (aka `$`) and `remit_async` (aka `$async`)
+### remit (aka $) and remit_async (aka $async)
+
+`remit` is very much the centerpiee of the PipeDreams API(*).
+
+> (*) The name of the *remit* method is probably be best understood as an arbitrary piece
+> of terminology. According to the 
+> [American Heritage Dictionary](https://ahdictionary.com/word/search.html?q=remit&submit.x=0&submit.y=0) 
+> it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*; 
+> *to refer (a case) to another court for further consideration or action*; *to refer 
+> (a matter) to a committee or authority for decision*, and also *to transmit (money in payment)*.
+> Somehow PipeDreams' `remit` does a bit of all of these things. 
+
+> `remit` itself refrains from doing anything with the business data that we build that 
+> pipeline of stream transforms for; instead, that data is remitted to the function
+> that `remit` accepts as argument. `remit` helps to transmit (not money in payment but)
+> business data from source to sink. Transform functions built with `remit` are not meant
+> to be used—called with business data—directly; rather, they are like factory functions
+> in that they accept a number of configurational settings and return another, possibly
+> stateful, function to do the transformation work, according to settings and current state.
+
 
 
 
