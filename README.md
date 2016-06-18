@@ -599,9 +599,9 @@ result:
 
 ### remit (aka $) and remit_async (aka $async)
 
-`remit` is very much the centerpiee of the PipeDreams API(*).
+`remit` is very much the centerpiee of the PipeDreams API¹.
 
-> (*) The name of the *remit* method is probably be best understood as an arbitrary piece
+> ¹) The name of the *remit* method is probably be best understood as an arbitrary piece
 > of terminology. According to the 
 > [American Heritage Dictionary](https://ahdictionary.com/word/search.html?q=remit&submit.x=0&submit.y=0) 
 > it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*; 
