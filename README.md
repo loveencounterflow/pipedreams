@@ -633,7 +633,7 @@ D             = require 'pipedreams'
 #### The Remit Method
 
 An **Observer** gets to see all the data, but can't modify any; when
-`data` is `null` ( or `undefined`), the stream has ended:
+`data` is `null` (or `undefined`), the stream has ended:
 
 ```coffee
 my_observer = $ ( data ) -> ...
@@ -648,11 +648,11 @@ rely on `data` to never be `null`:
 my_sync_transform = $ ( data, send ) -> ...
 ```
 
-A **Synchronous Transform with End Detection**: `end` is undefined
-except when the last item of the stream is about to end; in that case,
-it is a function that when called will end the stream (i.o.w. normally
-when you have `end` in your signature you *must* call it when defined,
-otherwise the stream will not end). This method is suited for cases
+A **Synchronous Transform with End Detection** will be called once for each
+`data` item and once when the stream is ended. `end` is undefined except when
+the the stream is about to end; in that case, it is a function that when called
+will end the stream. When you have `end` in your signature you *must* call it
+when defined, otherwise the stream will not end. This method is suited for cases
 where you want to aggregate data across the entire stream:
 
 ```coffee
@@ -668,13 +668,16 @@ finished—otherwise the pipeline will hang on indefinitely:
 my_async_transform = $async ( data, send ) -> ...
 ```
 
-An **Asynchronous Transform with End Detection**:
+An **Asynchronous Transform with End Detection** will be called
+once for each `data` item and once when the stream is ended, so again,
+be prepared for an empty stream where it is called once with `data` being
+`null`:
 
 ```coffee
 my_async_transform = $async ( data, send, end ) -> ...
 ```
 
-```
+
 
 
 
