@@ -22,6 +22,9 @@ combine                   = require 'stream-combiner'
 # ### https://github.com/substack/stream-combiner2 ###
 # combine                   = require 'stream-combiner2'
 #...........................................................................................................
+### https://github.com/rvagg/through2 ###
+through2                  = require 'through2'
+#...........................................................................................................
 ### http://stringjs.com ###
 S                         = require 'string'
 
@@ -29,7 +32,7 @@ S                         = require 'string'
 # STREAM CREATION
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( settings ) ->
-  return @create_throughstream() if ( not settings? ) or ( keys = Object.keys ).length is 0
+  return through2.obj() if ( not settings? ) or ( keys = Object.keys ).length is 0
   return @new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
   return @new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
   return @new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
@@ -53,7 +56,7 @@ pluck = ( x, key ) ->
   the stream and the stream will be ended. In theory, one could argue that `stream_from_text` should send
   the text in a piecemeal fashion like `fs.createReadStream` does, but since the text has to reside in
   memory already when passed to this method anyhow, nothing would be gained by that. ###
-  R = @create_throughstream()
+  R = @new_stream()
   R.pause()
   R.on 'resume', =>
     R.write text
@@ -82,6 +85,15 @@ pluck = ( x, key ) ->
 # TRANSFORM CREATION
 #-----------------------------------------------------------------------------------------------------------
 @remit = @$ = ( method ) ->
+  if ( arity = method.length ) is 1
+    return @$ ( data, send, end ) =>
+      if data?
+        method data
+        send   data
+      if end?
+        method null
+        end()
+  #.........................................................................................................
   send      = null
   on_end    = null
   #.........................................................................................................
@@ -95,39 +107,35 @@ pluck = ( x, key ) ->
     # R[ '%self' ]  = self
     R.stream      = self
     return R
-  #.....................................................................................................
+  #.........................................................................................................
   on_data = ( data ) ->
     send = get_send @ unless send?
     method data, send
   #.........................................................................................................
-  switch arity = method.length
-    when 2
-      null
-    #.......................................................................................................
-    when 3
-      on_end = ->
-        send  = get_send @ unless send?
-        end   = => @emit 'end'
-        method undefined, send, end
-    #.......................................................................................................
-    else
-      throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
+  if arity is 3
+    on_end = ->
+      send  = get_send @ unless send?
+      end   = => @emit 'end'
+      method undefined, send, end
+  #.........................................................................................................
+  else if arity isnt 2
+    throw new Error "expected a method with an arity of 1, 2, or 3, got one with an arity of #{arity}"
   #.........................................................................................................
   return ES.through on_data, on_end
 
-#-----------------------------------------------------------------------------------------------------------
-@$async_v4 = ( method ) ->
-  unless 2 <= ( arity = method.length ) <= 3
-    throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
-  #.........................................................................................................
-  # Z                 = []
-  has_end_argument  = arity is 3
-  _send_end         = null
-  _stream_end       = null
-  #.........................................................................................................
+# #-----------------------------------------------------------------------------------------------------------
+# @$async_v4 = ( method ) ->
+#   unless 2 <= ( arity = method.length ) <= 3
+#     throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
+#   #.........................................................................................................
+#   # Z                 = []
+#   has_end_argument  = arity is 3
+#   _send_end         = null
+#   _stream_end       = null
+#   #.........................................................................................................
 
-  #.........................................................................................................
-  retun @new_stream_from_pipeline []
+#   #.........................................................................................................
+#   return @new_stream_from_pipeline []
 
 #-----------------------------------------------------------------------------------------------------------
 @_$async_single = ( method ) ->
@@ -145,8 +153,8 @@ pluck = ( x, key ) ->
   #.........................................................................................................
   Z                 = []
   has_end_argument  = arity is 3
-  input             = @create_throughstream()
-  output            = @create_throughstream()
+  input             = @new_stream()
+  output            = @new_stream()
   _send_end         = null
   _stream_end       = null
   #.........................................................................................................
@@ -190,15 +198,6 @@ pluck = ( x, key ) ->
   #.........................................................................................................
   return @new_stream pipeline: [ input, output, ]
 
-
-
-
-  return $map ( input_data, handler ) =>
-    ### TAINT should add `done.end`, `done.pause` and so on ###
-    done        = ( output_data ) => if output_data? then handler null, output_data else handler()
-    done.error  = ( error )       => handler error
-    method input_data, done
-
 #-----------------------------------------------------------------------------------------------------------
 @$async_OLD = ( method ) ->
   unless ( arity = method.length ) is 2
@@ -209,7 +208,21 @@ pluck = ( x, key ) ->
     done.error  = ( error )       => handler error
     method input_data, done
 
-
+#-----------------------------------------------------------------------------------------------------------
+@$bridge = ( stream ) ->
+  throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
+  throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
+  throw new Error "expected a writable stream"                      if not stream.writable
+  throw new Error "expected a writable, non-readable stream"        if     stream.readable
+  #.........................................................................................................
+  return @$ ( data, send, end ) =>
+    if data?
+      stream.write data
+      send data
+    if end?
+      stream.end() unless stream is process.stdout
+      # throw error unless ( message = error[ 'message' ] )? and message.endsWith "cannot be closed."
+      end()
 
 #===========================================================================================================
 # SPLITTING & JOINING
@@ -245,8 +258,8 @@ pluck = ( x, key ) ->
 
 # #-----------------------------------------------------------------------------------------------------------
 # @$link = ( transforms... ) ->
-#   return @create_throughstream() if transforms.length is 0
-#   source  = sink = @create_throughstream()
+#   return @new_stream() if transforms.length is 0
+#   source  = sink = @new_stream()
 #   sink    = sink.pipe transform for transform in LODASH.flatten transforms
 #   _send   = null
 #   sink.on 'data', ( data ) => _send data
@@ -288,8 +301,8 @@ pluck = ( x, key ) ->
 
 # #-----------------------------------------------------------------------------------------------------------
 # @TEE._from_confluence = ( confluence, settings ) =>
-#   input       = settings[ 'input'  ] ? @create_throughstream()
-#   output      = settings[ 'output' ] ? @create_throughstream()
+#   input       = settings[ 'input'  ] ? @new_stream()
+#   output      = settings[ 'output' ] ? @new_stream()
 #   #.........................................................................................................
 #   input
 #     .pipe confluence
@@ -392,29 +405,29 @@ pluck = ( x, key ) ->
 #===========================================================================================================
 # SPECIALIZED STREAMS
 #-----------------------------------------------------------------------------------------------------------
-@create_throughstream = ( P... ) ->
-  # R           = through2.obj P...
-  ### TAINT `end` events passed through synchronously even when `write` happens asynchronously ###
-  R           = ES.through P...
-  write       = R.write.bind R
-  end         = R.end.bind R
-  #.........................................................................................................
-  R.write = ( data, handler ) ->
-    if handler?
-      setImmediate ->
-        handler null, write data
-    else
-      return write data
-  #.........................................................................................................
-  R.end = ( handler ) ->
-    if handler?
-      setImmediate ->
-        handler null, end()
-    else
-      return end()
-  #.........................................................................................................
-  R.setMaxListeners 0
-  return R
+# @create_throughstream = ( P... ) ->
+#   # R           = through2.obj P...
+#   ### TAINT `end` events passed through synchronously even when `write` happens asynchronously ###
+#   R           = ES.through P...
+#   write       = R.write.bind R
+#   end         = R.end.bind R
+#   #.........................................................................................................
+#   R.write = ( data, handler ) ->
+#     if handler?
+#       setImmediate ->
+#         handler null, write data
+#     else
+#       return write data
+#   #.........................................................................................................
+#   R.end = ( handler ) ->
+#     if handler?
+#       setImmediate ->
+#         handler null, end()
+#     else
+#       return end()
+#   #.........................................................................................................
+#   R.setMaxListeners 0
+#   return R
 
 # #-----------------------------------------------------------------------------------------------------------
 # @spawn_and_read = ( P... ) ->
@@ -442,7 +455,7 @@ pluck = ( x, key ) ->
 # #-----------------------------------------------------------------------------------------------------------
 # @spawn_and_read_lines = ( P... ) ->
 #   last_line = null
-#   R         = @create_throughstream()
+#   R         = @new_stream()
 #   input     = @spawn_and_read P...
 #   #.........................................................................................................
 #   input
@@ -467,35 +480,35 @@ pluck = ( x, key ) ->
 @$pass_through = -> @$ ( data, send ) -> send data
 
 
-#===========================================================================================================
-# SUB-STREAMS
-#-----------------------------------------------------------------------------------------------------------
-@$sub = ( sub_transformer ) ->
-  #.........................................................................................................
-  _send   = null
-  # _end    = null
-  cache   = undefined
-  #.........................................................................................................
-  source        = @create_throughstream()
-  sink          = @create_throughstream()
-  state         = {}
-  source.ended  = false
-  sub_transformer source, sink, state
-  #.........................................................................................................
-  sink.on   'data', ( data )  => _send data
-  sink.on   'end',            => _send.end()
-  #.........................................................................................................
-  return @$ ( data, send, end ) =>
-    if data?
-      _send = send
-      if cache is undefined
-        cache = data
-      else
-        source.write cache
-        cache = data
-    if end?
-      source.ended = true
-      source.write cache unless cache is undefined
+# #===========================================================================================================
+# # SUB-STREAMS
+# #-----------------------------------------------------------------------------------------------------------
+# @$sub = ( sub_transformer ) ->
+#   #.........................................................................................................
+#   _send   = null
+#   # _end    = null
+#   cache   = undefined
+#   #.........................................................................................................
+#   source        = @new_stream()
+#   sink          = @new_stream()
+#   state         = {}
+#   source.ended  = false
+#   sub_transformer source, sink, state
+#   #.........................................................................................................
+#   sink.on   'data', ( data )  => _send data
+#   sink.on   'end',            => _send.end()
+#   #.........................................................................................................
+#   return @$ ( data, send, end ) =>
+#     if data?
+#       _send = send
+#       if cache is undefined
+#         cache = data
+#       else
+#         source.write cache
+#         cache = data
+#     if end?
+#       source.ended = true
+#       source.write cache unless cache is undefined
 
 
 #===========================================================================================================
