@@ -1,7 +1,7 @@
 {
   "name": "pipedreams",
-  "version": "3.0.9",
-  "description": "Common operations for piped NodeJS streams.",
+  "version": "4.0.0-alpha",
+  "description": "Piping NodeJS streams made rad easy, no subclassing man",
   "main": "lib/main.js",
   "scripts": {
     "build": "coffee --map -o lib -c src",
