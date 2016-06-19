@@ -43,6 +43,8 @@ Common operations for piped NodeJS streams.
 
 `npm install --save pipedreams2`
 
+![Der Pfeifenraucher](https://github.com/loveencounterflow/pipedreams/raw/v4/art/Der%20Frosch%20und%20die%20beiden%20Enten_0015.png)
+
 **Caveat** Below examples are all written in CoffeeScript.
 
 
@@ -489,13 +491,13 @@ data items have been encountered in a stream.
 
 ## Base Libraries
 
-**Abstract**: PipeDreams was previously based on 
-[github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream) 
+**Abstract**: PipeDreams was previously based on
+[github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream)
 and did so largely successfully, but problems with aysnchronous streams did surface in some
-places. 
+places.
 
 Unfortunately, *event-stream* is pegged to NodeJS streams v1 (as used in
-NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v5.x) 
+NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v5.x)
 
 > For more details, see Dominic Tarr's [rundown of NodeJS Streams
 > History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
@@ -509,19 +511,19 @@ NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v
 > > sometimes decisions get inadvertently made that have negative implications,
 > > but that isn’t apparent until it’s too late.
 
-> How very true. People should keep this in mind when they berate JavaScript as 
-> a 'language with virtual no standard library at all'. 
+> How very true. People should keep this in mind when they berate JavaScript as
+> a 'language with virtual no standard library at all'.
 
 My best guess at this time (June 2016) is that
 [github.com/rvagg/*through2*](https://github.com/rvagg/through2) and
 [github.com/substack/*stream-combiner2*](https://github.com/substack/stream-combiner2)
-provide the best available future-proof path for basing a NodeJS Stream 
-library on. 
+provide the best available future-proof path for basing a NodeJS Stream
+library on.
 
 ### Through2
 
 So, [Through2](https://github.com/rvagg/through2) it is. Let's have a look
-at the docs: 
+at the docs:
 
 > ```js
 > var through2 = require('through2');
@@ -554,8 +556,8 @@ result:
   t2_settings = {}
   input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
   #.........................................................................................................
-  ### Set an arbitrary timeout for a function, report it, and execute after a while; used to 
-  simulate some kind of asynchronous DB or network retrieval stuff: ### 
+  ### Set an arbitrary timeout for a function, report it, and execute after a while; used to
+  simulate some kind of asynchronous DB or network retrieval stuff: ###
   delay = ( name, f ) =>
     dt = CND.random_integer 1, 1500
     # dt = 1
@@ -574,7 +576,7 @@ result:
       handler null, [ 'text', line, ]
   #.........................................................................................................
   ### The 'flush' transform is called once, right before the stream has ended; the callback must be called
-  exactly once, and it's possible to put additional 'last-minute' data into the stream by calling `@push`. 
+  exactly once, and it's possible to put additional 'last-minute' data into the stream by calling `@push`.
   Because we have to access `this`/`@`, the method must again be free and not bound, but of course we
   can set up an alias for `@push`: ###
   transform_flush = ( done ) ->
@@ -593,28 +595,28 @@ result:
 
 #### Stream-Combiner2
 
-[github.com/substack/*stream-combiner2*](https://github.com/substack/stream-combiner2) 
+[github.com/substack/*stream-combiner2*](https://github.com/substack/stream-combiner2)
 
-## Notes on the PipeDreams v4 API 
+## Notes on the PipeDreams v4 API
 
 ### remit (aka $) and remit_async (aka $async)
 
 `remit` is very much the centerpiee of the PipeDreams API¹.
 
 > ¹) The name of the *remit* method is probably be best understood as an arbitrary piece
-> of terminology. According to the 
-> [American Heritage Dictionary](https://ahdictionary.com/word/search.html?q=remit&submit.x=0&submit.y=0) 
-> it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*; 
-> *to refer (a case) to another court for further consideration or action*; *to refer 
+> of terminology. According to the
+> [American Heritage Dictionary](https://ahdictionary.com/word/search.html?q=remit&submit.x=0&submit.y=0)
+> it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*;
+> *to refer (a case) to another court for further consideration or action*; *to refer
 > (a matter) to a committee or authority for decision*, and also *to transmit (money in payment)*.
-> Somehow PipeDreams' `remit` does a bit of all of these things. 
+> Somehow PipeDreams' `remit` does a bit of all of these things.
 
-> `remit` itself 'refrains' from doing anything with the business data that we build that 
+> `remit` itself 'refrains' from doing anything with the business data that we build that
 > pipeline of stream transforms for; instead, that data is 'remitted' (referred) to the function
 > that `remit` accepts as argument. `remit` helps to 'transmit' (not money in payment but
 > business data from source to sink). Transform functions built with `remit` are not meant
 > to be used—called with business data—directly; rather, like factory functions
-> they accept an optional configuration and return another (possibly stateful) function 
+> they accept an optional configuration and return another (possibly stateful) function
 > to do the transformation work.
 
 
