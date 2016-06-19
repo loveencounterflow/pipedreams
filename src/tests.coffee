@@ -579,28 +579,90 @@ collect_and_check = ( T, key, first_idx, input, max_buffer_size = null ) ->
   input.resume()
 
 # #-----------------------------------------------------------------------------------------------------------
-# @[ "stream_from_text" ] = ( T, done ) ->
-#   text = """
-#     Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
-#     codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
-#     as five characters. Dictionaries will list 馬马 as 'one character with two variants’
-#     and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
-#     here.
-#     """
-#   input = D.stream_from_text text
+# @[ "$async with stream end detection" ] = ( T, T_done ) ->
+#   ###
+#   input   = D.create_throughstream()
+#   #.........................................................................................................
+#   D.remit_async_v2 = ( method ) ->
+#     pipeline = [
+#       ]
+#   $async_v2 = D.remit_async_v2.bind D
+#   #.........................................................................................................
 #   input
-#     .pipe D.$split()
-#     .pipe D.$join '--\n'
-#     .pipe D.$observe ( data ) -> urge data
-#   input.resume()
+#     .pipe $async_v2 ( n, done, end ) =>
+#       if n?
+#         return "item ##{n}" if ( n / 2 ) is parseInt ( n / 2 ), 10
+#       if end?
+#         send "That's all, folks"
+#         setTimeout ( => end() ), 200
+#     .pipe D.$show()
+#     .pipe D.$on_end => T_done()
+#   #.........................................................................................................
+#   for n in [ 0 .. 10 ]
+#     input.write n
+#   input.end()
+#   #.........................................................................................................
+#   return null
+#   ###
+#   delay   = ( t, f ) => setTimeout f, t
+#   input   = D.create_throughstream()
+#   #.........................................................................................................
+#   input
+#     .pipe D.remit_async_spread ( n, send ) =>
+#       return send.done "item ##{n}" if ( n / 2 ) is parseInt ( n / 2 ), 10
+#       delay 200, =>
+#         send "an odd number: #{n}"
+#         send.done "item ##{n}"
+#     .pipe D.$show()
+#     .pipe D.$on_end => T_done()
+#   #.........................................................................................................
+#   for n in [ 0 .. 10 ]
+#     input.write n
+#   input.end()
+#   #.........................................................................................................
+#   return null
 
+
+#===========================================================================================================
+#
+#-----------------------------------------------------------------------------------------------------------
+@_prune = ->
+  for name, value of @
+    continue if name.startsWith '_'
+    delete @[ name ] unless name in include
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@_main = ->
+  test @, 'timeout': 2500
 
 ############################################################################################################
-@_main = ->
-  settings = 'timeout': 2500
-  test @, settings
+unless module.parent?
+  include = [
+    "densort 0"
+    "densort 1"
+    "densort 2"
+    "densort 3"
+    "densort 4"
+    "densort 5"
+    "densort 6"
+    "densort 7"
+    "TEE.from_pipeline accepts missing settings argument"
+    "TEE.from_pipeline reflects extra settings"
+    "TEE.from_pipeline 1"
+    "TEE.from_pipeline 2"
+    "D.combine produces new stream from existing ones 1"
+    "D.combine produces new stream from existing ones 2"
+    "TEE.from_readwritestreams 1"
+    "TEE.from_readwritestreams 2"
+    "stream_from_text"
+    "synchronous collect"
+    "asynchronous collect"
+    # "$async with stream end detection"
+    ]
+  # @_prune()
+  @_main()
 
-@_main() unless module.parent?
 
 
 

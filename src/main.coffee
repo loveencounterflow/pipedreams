@@ -25,7 +25,6 @@ combine                   = require 'stream-combiner'
 #...........................................................................................................
 @new_densort              = ( DS = require './densort' ).new_densort.bind DS
 PIPEDREAMS                = @
-LODASH                    = CND.LODASH
 #...........................................................................................................
 ### http://stringjs.com ###
 S                         = require 'string'
@@ -112,7 +111,7 @@ $map                          = ES.map                                .bind ES
 #-----------------------------------------------------------------------------------------------------------
 @remit_async_spread = ( method ) ->
   ### Like `remit_async`, but allows the transform to send an arbitrary number of responses per incoming
-  event by using `send data`. cCompletion of the transform step is signalled by `send.done data` or
+  event by using `send data`. Completion of the transform step is signalled by `send.done data` or
   `send.done()`. ###
   unless ( arity = method.length ) is 2
     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
@@ -248,8 +247,8 @@ $async_spread = @remit_async_spread.bind @
     '~isa':       'PIPEDREAMS/tee'
     input:        input
     output:       output
-    inputs:       if settings[ 'inputs'  ]? then LODASH.clone settings[ 'inputs'  ] else {}
-    outputs:      if settings[ 'outputs' ]? then LODASH.clone settings[ 'outputs' ] else {}
+    inputs:       Object.assign {}, settings[ 'inputs'  ] ? null
+    outputs:      Object.assign {}, settings[ 'outputs' ] ? null
   #.........................................................................................................
   for key, value of settings
     continue if key in [ 'input', 'inputs', 'output', 'outputs', ]
