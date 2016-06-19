@@ -1,7 +1,7 @@
 {
   "version": 3,
   "file": "tests.js",
-  "sourceRoot": "../../pipedreams",
+  "sourceRoot": "..",
   "sources": [
     "src/tests.coffee"
   ],
