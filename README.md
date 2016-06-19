@@ -619,7 +619,7 @@ result:
 > they accept an optional configuration and return another (possibly stateful) function
 > to do the transformation work.
 
-#### Usage of the Remit Method
+#### Require Statement
 
 Suggested way to `require` the PipeDreams library itself, and to factor out the most important
 methods for convenience:
@@ -629,6 +629,8 @@ D             = require 'pipedreams'
 { $
   $async }    = D
 ```
+
+#### The Remit Method
 
 An **Observer** gets to see all the data, but can't modify any; when
 `data` is `null` ( or `undefined`), the stream has ended:
