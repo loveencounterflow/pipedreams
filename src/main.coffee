@@ -57,8 +57,9 @@ pluck = ( x, key ) ->
   the text in a piecemeal fashion like `fs.createReadStream` does, but since the text has to reside in
   memory already when passed to this method anyhow, nothing would be gained by that. ###
   R = @new_stream()
-  R.pause()
+  # R.pause()
   R.on 'resume', =>
+    debug '3377', rpr text
     R.write text
     R.end()
   return R

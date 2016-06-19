@@ -143,10 +143,18 @@ D                         = require './main'
     and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
     here.
     """
-  input   = D.new_stream_from_text text
+  # input   = D.new_stream_from_text text
+  input   = D.new_stream()
   input   = input.pipe D.$split()
+  input   = input.pipe D.$show()
   result  = D.collect input
+  input.on 'data', ( data ) -> urge data
+  input.on 'resume', -> urge 'resume'
+  input.on 'end', -> urge 'end'
+  input.write 'xxx'
   input.resume()
+  input.end()
+  debug '4439', rpr result
   T.eq result, text.split '\n'
   done()
 
@@ -209,12 +217,24 @@ D                         = require './main'
         end()
 
   #.........................................................................................................
+  $verify = ( title ) ->
+    collector = []
+    return $ ( data, send, end ) =>
+      if data?
+        send data
+        collector.push ( JSON.stringify data )
+      if end?
+        T.eq collector, [ '"line: 4\\n"', '"line: 7\\n"', '"line: 9\\n"', '"line: 3\\n"', '"line: 5\\n"', '"line: 6\\n"' ]
+        end()
+
+  #.........................................................................................................
   input = D.new_stream()  # returns a `through2` stream
   input
     .pipe $observe()
     .pipe $summarize "position #1:"
     .pipe $as_text_line()
     .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
+    .pipe $verify()
     .pipe $ ( data ) => done() unless data?
     .pipe $summarize "position #2:"
 
@@ -455,15 +475,15 @@ unless module.parent?
     # "(v4) new_stream_from_pipeline (3)"
     # "(v4) new_stream_from_pipeline using existing streams"
     # "(v4) new_stream_from_text"
-    # "(v4) synchronous collect"
-    # "(v4) asynchronous collect"
     # "(v4) D.new_stream"
     # "(v4) D.new_stream_from_pipeline"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) $async with stream end detection"
-    # # "(v4) $async with arbitrary number of results"
-    "(v4) README demo (1)"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) stream / transform construction with through2 (2)"
+    # # # "(v4) $async with stream end detection"
+    # # # "(v4) $async with arbitrary number of results"
+    # "(v4) README demo (1)"
+    "(v4) synchronous collect"
+    # "(v4) asynchronous collect"
     ]
   @_prune()
   @_main()
