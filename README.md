@@ -619,10 +619,10 @@ result:
 > they accept an optional configuration and return another (possibly stateful) function
 > to do the transformation work.
 
-Usage:
+#### Usage of the Remit Method
 
-Suggested way to `require`: library itself with the mst important methods factored out
-for convenience:
+Suggested way to `require` the PipeDreams library itself, and to factor out the most important
+methods for convenience:
 
 ```coffee
 D             = require 'pipedreams'
@@ -630,14 +630,18 @@ D             = require 'pipedreams'
   $async }    = D
 ```
 
-**i)** An observer gets to see all the data, but can't modify any; when
+##### i
+
+An observer gets to see all the data, but can't modify any; when
 `data` is `null` ( or `undefined`), the stream has ended:
 
 ```coffee
 my_observer = $ ( data ) -> ...
 ```
 
-**iia)** A synchronous transform receives data and may send on as many
+##### iia
+
+A synchronous transform receives data and may send on as many
 data items as it wants, zero or a thousand. The stream will flow on as
 soon as the transform exits, whether it has called `send` or not. You can
 rely on `data` to never be `null`:
@@ -646,7 +650,9 @@ rely on `data` to never be `null`:
 my_sync_transform = $ ( data, send ) -> ...
 ```
 
-**iib)** A synchronous transform with end detection. `end` is undefined
+##### iib
+
+A synchronous transform with end detection. `end` is undefined
 except when the last item of the stream is about to end; in that case,
 it is a function that when called will end the stream (i.o.w. normally
 when you have `end` in your signature you *must* call it when defined,
@@ -657,7 +663,9 @@ where you want to aggregate data across the entire stream:
 my_sync_transform = $ ( data, send, end ) -> ...
 ```
 
-**iiia)** An asynchronous transform, suitable for intermittent file and
+##### iiia
+
+An asynchronous transform, suitable for intermittent file and
 network reads. You can call `send data` as often as you like to, but
 you **must** call `send.done()` (or `send.done data`) whenever you're
 finished—otherwise the pipeline will hang on indefinitely:
@@ -666,7 +674,9 @@ finished—otherwise the pipeline will hang on indefinitely:
 my_async_transform = $async ( data, send ) -> ...
 ```
 
-**iiib)** An asynchronous transform with end detection:
+##### iiib
+
+An asynchronous transform with end detection:
 
 ```coffee
 my_async_transform = $async ( data, send, end ) -> ...
