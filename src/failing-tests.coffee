@@ -277,6 +277,88 @@ D                         = require './main'
   #.........................................................................................................
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) synchronous collect" ] = ( T, done ) ->
+  text = """
+    Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
+    codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
+    as five characters. Dictionaries will list 馬马 as 'one character with two variants’
+    and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
+    here.
+    """
+  f = ( text ) ->
+  through2  = require 'through2'
+  split2    = require 'split2'
+  input     = through2()
+  output    = through2.obj()
+  input
+    # .pipe $ ( data ) -> if data? then urge rpr data.toString 'utf-8' else warn '1—stream ended'
+    .pipe do =>
+      last_is_nl = no
+      return $ ( data, send, end ) ->
+        if data?
+          if CND.isa_text data then last_is_nl = data[ data.length - 1 ] is 0x0a
+          else                      last_is_nl = data[ data.length - 1 ] is '\n'
+          send data
+        if end?
+          debug '4431', last_is_nl
+          send '\n' unless last_is_nl
+          end()
+    .pipe split2()
+    .pipe $ ( data ) -> if data? then help rpr data #.toString 'utf-8'
+    .pipe output
+  output
+    .pipe do =>
+      # collector = []
+      return $ ( data, send, end ) ->
+        collector.push data if data?
+        if end?
+          info collector
+          end()
+  # input.resume()
+  input.on 'end', -> warn '2—stream ended'
+  output.on 'end', -> warn '3—stream ended'
+  #.........................................................................................................
+  # input.pause()
+  # input.write text
+  # input.end()
+  collector = []
+  input.push text + if text.endsWith '\n' then '' else '\n'
+  input.push null
+  debug collector
+  # info '4432', result  = D.collect output
+  # input.resume()
+  # T.eq result, text.split '\n'
+  setTimeout done, 500
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) asynchronous collect" ] = ( T, T_done ) ->
+  text = """
+    Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
+    codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
+    as five characters. Dictionaries will list 馬马 as 'one character with two variants’
+    and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
+    here.
+    """
+  input   = D.new_stream_from_text text
+  stream  = input
+    .pipe D.$split()
+    .pipe $async ( line, send, end ) =>
+      debug '1121', ( CND.truth line? ), ( CND.truth send.end? ), ( CND.truth end? )
+      if line?
+        setTimeout ( => send line ), 200
+      if end?
+        urge 'text completed'
+        send.done "\ntext completed."
+        end()
+  #.........................................................................................................
+  D.collect stream, ( error, result ) =>
+    T.eq result, ( text.split '\n' ) + "\ntext completed."
+    debug '©4D8tA', 'T_done'
+    T_done()
+  #.........................................................................................................
+  input.resume()
+
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------

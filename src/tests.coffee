@@ -44,14 +44,88 @@ D                         = require './main'
         output_results.push data
         send data
       #.....................................................................................................
-      # .pipe D.$show()
+      .pipe D.$show()
       #.....................................................................................................
-      output.on 'end', =>
+      .pipe D.$on_end =>
         T.eq output_results, output_matchers
         done()
     #.......................................................................................................
     input.write n for n in probes
     input.end()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_stream_from_pipeline (1a)" ] = ( T, done ) ->
+  through2                  = require 'through2'
+  combine                   = require 'stream-combiner2'
+  #.........................................................................................................
+  create_frob_tee = ( settings ) ->
+    multiply        = $ ( data, send ) => whisper 'multiply', data; send data *  2
+    add             = $ ( data, send ) => whisper 'add',      data; send data +  2
+    square          = $ ( data, send ) => whisper 'square',   data; send data ** 2
+    unsquared       = through2.obj()
+    #.....................................................................................................
+    ### For some reason we need an additional 'starter' stream in the pipeline, otherwise the
+    first transform never gets called: ###
+    pipeline        = [ multiply, add, unsquared, square, ]
+    receiver        = through2.obj()
+    R               = combine receiver, pipeline...
+    outputs         = { unsquared, }
+    R[ 'input'    ] = receiver
+    R[ 'output'   ] = pipeline[ pipeline.length - 1 ]
+    R[ 'outputs'  ] = outputs
+    return R
+  #.........................................................................................................
+  do ->
+    probes              = [ 1 ... 10 ]
+    # probes              = [ 5, 6, ]
+    # probes              = [ 5, 6, 7, 8, ]
+    output_matchers     = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
+    output_results      = []
+    frob                = create_frob_tee()
+    { input, output, }  = frob
+    #.......................................................................................................
+    output
+      #.....................................................................................................
+      .pipe $ ( data )        =>            help 'show #1', data
+      .pipe $ ( data, send )  => send data; help 'show #2', data
+      #.....................................................................................................
+      .pipe $ ( data, send, end ) =>
+        debug '4453', data?, end?
+        send data if data?
+        if end?
+          warn "pausing for a second"
+          setTimeout end, 1000
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        output_results.push data
+        send data
+      #.....................................................................................................
+      .pipe $ ( data, send, end ) =>
+        send data if data?
+        if end?
+          help "output_results", output_results
+          T.eq output_results, output_matchers
+          end()
+          done()
+    #.......................................................................................................
+    write_data_using_write = ->
+      for n in probes
+        urge 'write', n
+        input.write n
+      input.end()
+    #.......................................................................................................
+    write_data_using_push = ->
+      for n in probes
+        urge 'push', n
+        input.push n
+      input.push null
+    #.......................................................................................................
+    write_data_using_write()
+    # write_data_using_push()
+    #.......................................................................................................
+    return null
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new_stream_from_pipeline (3)" ] = ( T, done ) ->
@@ -134,57 +208,6 @@ D                         = require './main'
         done()
   input.resume()
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) synchronous collect" ] = ( T, done ) ->
-  text = """
-    Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
-    codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
-    as five characters. Dictionaries will list 馬马 as 'one character with two variants’
-    and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
-    here.
-    """
-  # input   = D.new_stream_from_text text
-  input   = D.new_stream()
-  input   = input.pipe D.$split()
-  input   = input.pipe D.$show()
-  result  = D.collect input
-  input.on 'data', ( data ) -> urge data
-  input.on 'resume', -> urge 'resume'
-  input.on 'end', -> urge 'end'
-  input.write 'xxx'
-  input.resume()
-  input.end()
-  debug '4439', rpr result
-  T.eq result, text.split '\n'
-  done()
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) asynchronous collect" ] = ( T, T_done ) ->
-  text = """
-    Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
-    codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
-    as five characters. Dictionaries will list 馬马 as 'one character with two variants’
-    and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
-    here.
-    """
-  input   = D.new_stream_from_text text
-  stream  = input
-    .pipe D.$split()
-    .pipe $async ( line, send, end ) =>
-      debug '1121', ( CND.truth line? ), ( CND.truth send.end? ), ( CND.truth end? )
-      if line?
-        setTimeout ( => send line ), 200
-      if end?
-        urge 'text completed'
-        send.done "\ntext completed."
-        end()
-  #.........................................................................................................
-  D.collect stream, ( error, result ) =>
-    T.eq result, ( text.split '\n' ) + "\ntext completed."
-    debug '©4D8tA', 'T_done'
-    T_done()
-  #.........................................................................................................
-  input.resume()
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -471,6 +494,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
+    "(v4) new_stream_from_pipeline (1a)"
     # "(v4) new_stream_from_pipeline (1)"
     # "(v4) new_stream_from_pipeline (3)"
     # "(v4) new_stream_from_pipeline using existing streams"
@@ -482,8 +506,6 @@ unless module.parent?
     # # # "(v4) $async with stream end detection"
     # # # "(v4) $async with arbitrary number of results"
     # "(v4) README demo (1)"
-    "(v4) synchronous collect"
-    # "(v4) asynchronous collect"
     ]
   @_prune()
   @_main()

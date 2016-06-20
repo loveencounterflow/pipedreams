@@ -678,10 +678,12 @@ arguments).—Now for the details.
 #### (Synchronous) Stream Observer 
 
 When calling `$` with a function that takes **a single argument**, you get
-back an **Observer**, that is, a transform that gets to see all the data
-events, but can't modify any; in a manner of speaking, an observer is a
-'transformation-less transform'. The observer will be called once more with
-`data` set  to `null` when the stream is about to end:
+back an **Observer**, that is, a transform that gets all the data events
+passed in, but can't send any; in a manner of speaking, an observer is a
+'transformation-less transform' (note, however, that in case events are
+implemented as a mutable object, such as a list or a plain old object, an
+observer can still mutate that event). The observer will be called once more
+with `data` set to `null` when the stream is about to end:
 
 ```coffee
 $ ( data ) -> 
@@ -700,7 +702,7 @@ input
   .pipe output
 ```
 
-However, for any but the most once-off, simple purposes, you'll probably want
+However, for any but the most one-off, simple purposes, you'll probably want
 a named function; it is customary to write the transform as a factory function
 that must get called once when being entered into the pipeline. 
 
