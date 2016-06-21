@@ -209,16 +209,39 @@ D                         = require './main'
 
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "(v4) observer transform called with data `null` on stream end" ] = ( T, done ) ->
+  received_null = no
+  collector     = []
+  input = D.new_stream()
+  input
+    .pipe $ ( data ) =>
+        if data?
+          collector.push data
+        else
+          if data is null
+            T.fail "received null, shouldn't happen" if received_null
+            received_null = yes
+          else
+            T.fail "received #{rpr data}, shouldn't happen"
+    .pipe D.$on_end =>
+      T.fail "expected to receive null in observer transform" unless received_null
+      T.eq collector, [ "helo", "world", ]
+      done()
+  input.write "helo"
+  input.write "world"
+  input.end()
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) README demo (1)" ] = ( T, done ) ->
   #.........................................................................................................
-  $observe = ->
+  $comment = ->
     count = 0
     return $ ( data ) =>
       if data?
         count += +1
-        console.log "received event:", data
+        info "received event:", data
       else
-        console.log "stream has ended; read #{count} events"
+        warn "stream has ended; read #{count} events"
 
   #.........................................................................................................
   $as_text_line = ->
@@ -251,13 +274,14 @@ D                         = require './main'
   #.........................................................................................................
   input = D.new_stream()  # returns a `through2` stream
   input
-    .pipe $observe()
+    .pipe $comment()
+    .pipe $ ( data ) => log CND.truth data?
     .pipe $summarize "position #1:"
     .pipe $as_text_line()
     .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
     .pipe $verify()
-    .pipe $ ( data ) => done() unless data?
     .pipe $summarize "position #2:"
+    .pipe D.$on_end => done()
 
   #.........................................................................................................
   for n in [ 4, 7, 9, 3, 5, 6, ]
@@ -492,19 +516,20 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) new_stream_from_pipeline (1a)"
-    # "(v4) new_stream_from_pipeline (3)"
-    # "(v4) new_stream_from_pipeline (4)"
-    # "(v4) D.new_stream"
-    # "(v4) D.new_stream_from_pipeline"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) stream / transform construction with through2 (2)"
-    # # # "(v4) $async with stream end detection"
-    # # # "(v4) $async with arbitrary number of results"
-    # "(v4) README demo (1)"
+    "(v4) new_stream_from_pipeline (1a)"
+    "(v4) new_stream_from_pipeline (3)"
+    "(v4) new_stream_from_pipeline (4)"
+    "(v4) D.new_stream"
+    "(v4) D.new_stream_from_pipeline"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) stream / transform construction with through2 (2)"
+    # # "(v4) $async with stream end detection"
+    # # "(v4) $async with arbitrary number of results"
     "(v4) new_stream_from_text"
     "(v4) new_stream_from_text doesn't work synchronously"
     "(v4) new_stream_from_text (2)"
+    "(v4) README demo (1)"
+    "(v4) observer transform called with data `null` on stream end"
     ]
   @_prune()
   @_main()

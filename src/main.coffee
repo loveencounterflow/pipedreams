@@ -92,7 +92,10 @@ pluck = ( x, key ) ->
     main = ( chunk, encoding, callback ) ->
       method chunk
       callback null, chunk
-    return MSP.through.obj main
+    flush = ( callback ) ->
+      method null
+      callback()
+    return MSP.through.obj main, flush
   #.........................................................................................................
   if arity is 3
     flush = ( callback ) ->
