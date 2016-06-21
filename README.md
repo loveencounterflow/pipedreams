@@ -26,6 +26,7 @@ Install as `npm install --save pipedreams2`.
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
+- [Backmatter](#backmatter)
   - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
     - [Through2](#through2)
 
@@ -69,20 +70,6 @@ equivalent to event-stream's  `through on_data, on_end`, except you can handle
 both the `on_data` and `on_end` parts in a single function `f`, and `remit_async f`
 is roughly equivalent to event-stream's `map f`.
 
-> ¹) The name of the *remit* method is probably be best understood as an arbitrary piece
-> of terminology. According to the
-> [American Heritage Dictionary](https://ahdictionary.com/word/search.html?q=remit&submit.x=0&submit.y=0)
-> it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*;
-> *to refer (a case) to another court for further consideration or action*; *to refer
-> (a matter) to a committee or authority for decision*, and also *to transmit (money in payment)*.
-> Somehow PipeDreams' `remit` does a bit of all of these things:
-> `remit` itself 'refrains' from doing anything with the business data that we build that
-> pipeline of stream transforms for; instead, that data is 'remitted' (re-sent) to the function
-> that `remit` accepts as argument. `remit` helps to 'transmit' (not money in payment but
-> business data from source to sink). Transform functions built with `remit` are not meant
-> to be used—called with business data—directly; rather, like factory functions
-> they accept an optional configuration and return another (possibly stateful) function
-> to do the transformation work.
 
 ## Never Assume Your Streams to be Synchronous
 
@@ -320,7 +307,7 @@ be prepared for an empty stream where it is called once with `data` being
 $async ( data, send, end ) -> ...
 ```
 
-
+# Backmatter
 
 ## Under the Hood: Base Libraries
 
@@ -426,4 +413,20 @@ I'm using Through2 via the
 brings a number of up-to-date and (hopefully) mutually compatible stream
 modules together in a neat bundle.
 
+> ## What's in a Name?
+
+> ¹) The name of the *remit* method is probably be best understood as an arbitrary piece
+> of terminology. According to the
+> [American Heritage Dictionary](https://ahdictionary.com/word/search.html?q=remit&submit.x=0&submit.y=0)
+> it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*;
+> *to refer (a case) to another court for further consideration or action*; *to refer
+> (a matter) to a committee or authority for decision*, and also *to transmit (money in payment)*.
+> Somehow PipeDreams' `remit` does a bit of all of these things:
+> `remit` itself 'refrains' from doing anything with the business data that we build that
+> pipeline of stream transforms for; instead, that data is 'remitted' (re-sent) to the function
+> that `remit` accepts as argument. `remit` helps to 'transmit' (not money in payment but
+> business data from source to sink). Transform functions built with `remit` are not meant
+> to be used—called with business data—directly; rather, like factory functions
+> they accept an optional configuration and return another (possibly stateful) function
+> to do the transformation work.
 

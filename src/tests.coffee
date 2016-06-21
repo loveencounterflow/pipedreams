@@ -515,10 +515,11 @@ D                         = require './main'
     whisper "delay for #{rpr name}: #{dt}ms"
     setTimeout f, dt
   #.........................................................................................................
-  $calculate = $async ( n, send ) =>
-    delay "$calculate", =>
+  $calculate = => $async ( n, send ) =>
+    # delay "$calculate", =>
       send n + 4
       send n - 1
+      debug '3321'
       send.done()
   #.........................................................................................................
   input = D.new_stream()
@@ -527,6 +528,11 @@ D                         = require './main'
     .pipe $calculate()
     .pipe D.$show()
     .pipe D.$on_end => done()
+  #.........................................................................................................
+  D.send input, 5
+  D.send input, 8
+  D.send input, 13
+  D.done input
   #.........................................................................................................
   return null
 
@@ -574,9 +580,9 @@ unless module.parent?
     # "(v4) new_stream_from_text (2)"
     # "(v4) README demo (1)"
     # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) $async with stream end detection"
+    # # "(v4) stream / transform construction with through2 (2)"
     # # "(v4) $async with arbitrary number of results"
+    # # "(v4) $async with stream end detection"
     "(v4) $async (1)"
     ]
   @_prune()

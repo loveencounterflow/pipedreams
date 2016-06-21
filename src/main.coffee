@@ -79,149 +79,114 @@ pluck = ( x, key ) ->
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
 @isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
+
 #===========================================================================================================
 # TRANSFORM CREATION
 #-----------------------------------------------------------------------------------------------------------
-@remit = @$ = ( method ) ->
+@remit        = @$      = ( method ) -> @_new_remit  'sync', method
+@remit_async  = @$async = ( method ) -> @_new_remit 'async', method
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_remit = ( mode, method ) ->
   arity       = method.length
   throw new Error "method with #{arity} arguments not supported" unless arity in [ 1, 2, 3, ]
+  throw new Error "unknown mode #{rpr mode}" unless mode in [ 'sync', 'async', ]
   has_error   = no
   flush       = null
-  #.........................................................................................................
-  if arity is 1
-    main = ( chunk, encoding, callback ) ->
-      method chunk
-      callback null, chunk
-    flush = ( callback ) ->
-      method null
-      callback()
-    return MSP.through.obj main, flush
-  #.........................................................................................................
-  if arity is 3
-    flush = ( callback ) ->
-      send = get_send @, callback
-      end  = ->
-        callback() unless has_error
+  ### ???????????????????????????????????????????????????????????????????? ###
+  if mode is 'sync'
+    #.........................................................................................................
+    if arity is 1
+      main = ( chunk, encoding, callback ) ->
+        method chunk
+        callback null, chunk
+      flush = ( callback ) ->
+        method null
+        callback()
+      return MSP.through.obj main, flush
+    #.........................................................................................................
+    if arity is 3
+      flush = ( callback ) ->
+        ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
+        send = get_send @, callback
+        end  = ->
+          callback() unless has_error
+          return null
+        method null, send, end
         return null
-      method null, send, end
+    #.........................................................................................................
+    get_send = ( self, callback ) ->
+      #.......................................................................................................
+      R = ( data ) ->
+        self.push data # if data?
+      #.......................................................................................................
+      R.error = ( error ) ->
+        has_error = yes
+        callback error
+      #.......................................................................................................
+      R.end = ->
+        self.push null
+      #.......................................................................................................
+      return R
+    #.........................................................................................................
+    main = ( chunk, encoding, callback ) ->
+      ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
+      send = get_send @, callback
+      method chunk, send
+      callback() unless has_error
       return null
-  #.........................................................................................................
-  get_send = ( self, callback ) ->
-    ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
-    #.......................................................................................................
-    R = ( data ) ->
-      self.push data # if data?
-    #.......................................................................................................
-    R.error = ( error ) ->
-      has_error = yes
-      callback error
-    #.......................................................................................................
-    R.end = ->
-      self.push null
-    #.......................................................................................................
-    return R
-  #.........................................................................................................
-  main = ( chunk, encoding, callback ) ->
-    send = get_send @, callback
-    method chunk, send
-    callback() unless has_error
-    return null
-  #.....................................................................................................
-  return MSP.through.obj main, flush
+    #.....................................................................................................
+    return MSP.through.obj main, flush
+
+    ### ???????????????????????????????????????????????????????????????????? ###
+  else if mode is 'async'
+    throw new Error "not implemented: arity #{arity}" unless arity is 2
+
+    #.........................................................................................................
+    get_send = ( self, callback ) ->
+      ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
+      #.......................................................................................................
+      R = ( data ) ->
+        self.push data # if data?
+      #.......................................................................................................
+      R.error = ( error ) ->
+        has_error = yes
+        callback error
+      #.......................................................................................................
+      R.end = ->
+        self.push null
+      #.......................................................................................................
+      return R
+    #.........................................................................................................
+    main = ( chunk, encoding, callback ) ->
+      send = get_send @, callback
+      method chunk, send
+      callback() unless has_error
+      return null
+    #.....................................................................................................
+    return MSP.through.obj main, flush
+
+
+#===========================================================================================================
+# SENDING DATA
+#-----------------------------------------------------------------------------------------------------------
+@send = ( me, data ) ->
+  me.write data
+  return me
 
 #-----------------------------------------------------------------------------------------------------------
-@$async_v4 = ( method ) ->
+@done = ( me, data ) ->
+  me.write null
+  return me
 
 
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$async_v4 = ( method ) ->
-#   unless 2 <= ( arity = method.length ) <= 3
-#     throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
-#   #.........................................................................................................
-#   # Z                 = []
-#   has_end_argument  = arity is 3
-#   _send_end         = null
-#   _stream_end       = null
-#   #.........................................................................................................
-
-#   #.........................................................................................................
-#   return @new_stream_from_pipeline []
-
-# #-----------------------------------------------------------------------------------------------------------
-# @_$async_single = ( method ) ->
-#   unless ( arity = method.length ) is 2
-#     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
-#   return $map ( input_data, handler ) =>
-#     done        = ( output_data ) => if output_data? then handler null, output_data else handler()
-#     done.error  = ( error )       => handler error
-#     method input_data, done
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$async = ( method ) ->
-#   unless 2 <= ( arity = method.length ) <= 3
-#     throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
-#   #.........................................................................................................
-#   Z                 = []
-#   has_end_argument  = arity is 3
-#   input             = @new_stream()
-#   output            = @new_stream()
-#   _send_end         = null
-#   _stream_end       = null
-#   #.........................................................................................................
-#   $wait_for_stream_end = =>
-#     return @$ ( data, send, end ) =>
-#       send data if data?
-#       # debug '7765', ( CND.truth CND.isa_function send.end )
-#       _send_end = send.end
-#       if end?
-#         if has_end_argument then  _stream_end = end
-#         else                      end()
-#   #.........................................................................................................
-#   $call = =>
-#     return @_$async_single ( event, done ) =>
-#       #.....................................................................................................
-#       _send = ( data ) =>
-#         Z.push data
-#         return null
-#       #.....................................................................................................
-#       _send.done = ( data ) =>
-#         _send data if data?
-#         done Object.assign [], Z
-#         Z.length = 0
-#       #.....................................................................................................
-#       _send.end = _send_end
-#       #.....................................................................................................
-#       method event, _send, _stream_end
-#       return null
-#   #.........................................................................................................
-#   $spread = =>
-#     return @$ ( collection, send, end ) =>
-#       send event for event in collection
-#       if end?
-#         end()
-#   #.........................................................................................................
-#   input
-#     .pipe $wait_for_stream_end()
-#     .pipe $call()
-#     .pipe $spread()
-#     .pipe output
-#   #.........................................................................................................
-#   return @new_stream pipeline: [ input, output, ]
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$async_OLD = ( method ) ->
-#   unless ( arity = method.length ) is 2
-#     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
-#   return $map ( input_data, handler ) =>
-#     ### TAINT should add `done.end`, `done.pause` and so on ###
-#     done        = ( output_data ) => if output_data? then handler null, output_data else handler()
-#     done.error  = ( error )       => handler error
-#     method input_data, done
-
+#===========================================================================================================
+# BRIDGING
 #-----------------------------------------------------------------------------------------------------------
 @$bridge = ( stream ) ->
-  ### Make it so that the pieline may be continued even below a writable but not readable stream. ###
+  ### Make it so that the pipeline may be continued even below a writable but not readable stream.
+  Conceivably, this method could have be named `tunnel` as well. Something to get you across, you get the
+  meaning. ###
   throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not stream.writable
