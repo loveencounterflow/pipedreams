@@ -17,16 +17,15 @@ Install as `npm install --save pipedreams2`.
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Roadmap to Pipedreams Version 4](#roadmap-to-pipedreams-version-4)
 - [PipeDreams v4 API](#pipedreams-v4-api)
+  - [Require Statement](#require-statement)
   - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
-    - [Require Statement](#require-statement)
-    - [Never Assume Your Streams to be Synchronous](#never-assume-your-streams-to-be-synchronous)
-    - [The Remit and Remit-Async Methods](#the-remit-and-remit-async-methods)
-      - [(Synchronous) Stream Observer](#synchronous-stream-observer)
-      - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
-      - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
-      - [Asynchronous Transform, No Stream End Detection](#asynchronous-transform-no-stream-end-detection)
+  - [Never Assume Your Streams to be Synchronous](#never-assume-your-streams-to-be-synchronous)
+  - [The Remit and Remit-Async Methods](#the-remit-and-remit-async-methods)
+    - [(Synchronous) Stream Observer](#synchronous-stream-observer)
+    - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
+    - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
+    - [Asynchronous Transforms](#asynchronous-transforms)
   - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
     - [Through2](#through2)
 
@@ -35,9 +34,29 @@ Install as `npm install --save pipedreams2`.
 **Caveat** Below examples are all written in CoffeeScript.
 
 
-# Roadmap to Pipedreams Version 4
-
 # PipeDreams v4 API
+
+## Require Statement
+
+The suggested way to `require` the PipeDreams library itself and to factor
+out the most important methods for convenience is as follows:
+
+```coffee
+D               = require 'pipedreams'
+{ $
+  $async }      = D
+```
+
+If you don't like dollar signs in your code or `$` is already used for something
+else, you can either use `D.$` or `D.remit` or, alternatively,
+
+```coffee
+D               = require 'pipedreams'
+{ remit
+  remit_async } = D
+```
+
+In the below, I will assume you `require`d PipeDreams the first way, above.
 
 ## remit (aka $) and remit_async (aka $async)
 
@@ -66,29 +85,7 @@ is roughly equivalent to event-stream's `map f`.
 > they accept an optional configuration and return another (possibly stateful) function
 > to do the transformation work.
 
-### Require Statement
-
-The suggested way to `require` the PipeDreams library itself and to factor
-out the most important methods for convenience is as follows:
-
-```coffee
-D               = require 'pipedreams'
-{ $
-  $async }      = D
-```
-
-If you don't like dollar signs in your code or `$` is already used for something
-else, you can either use `D.$` or `D.remit` or, alternatively,
-
-```coffee
-D               = require 'pipedreams'
-{ remit
-  remit_async } = D
-```
-
-In the below, I will assume you `require`d PipeDreams the first way, above.
-
-### Never Assume Your Streams to be Synchronous
+## Never Assume Your Streams to be Synchronous
 
 As a general note that users should keep in mind, please observe that no
 guarantee is made that any given stream works in a synchronous manner. More
@@ -138,7 +135,7 @@ or `D.$on_end`:
   input.end()
 ```
 
-### The Remit and Remit-Async Methods
+## The Remit and Remit-Async Methods
 
 The behavior of the stream transform—the return value of calling `remit` or
 `remit_async` with a transformation function—is governed by the arity (the number of
@@ -164,7 +161,7 @@ should be ended. `send` is used as `send some_data`; it always has a member
 `end()`, where used and when defined, must always be called (without any
 arguments).—Now for the details.
 
-#### (Synchronous) Stream Observer 
+### (Synchronous) Stream Observer 
 
 When calling `$` with a function that takes **a single argument**, you get
 back an **Observer**, that is, a transform that gets all the data events
@@ -235,7 +232,7 @@ read property 'on' of undefined`. Just try to remember that this symptom is
 (often) caused by an omitted `remit` / `$`.**
 
 
-#### Synchronous Transform, No Stream End Detection
+### Synchronous Transform, No Stream End Detection
 
 When calling `$` with a function that takes **two arguments**, you get back a
 **Synchronous Transform**. A synchronous transform receives data events and
@@ -250,7 +247,7 @@ $ ( data, send ) -> ...
 
 An example for this form is shown in the upcoming section.
 
-#### Synchronous Transform With Stream End Detection
+### Synchronous Transform With Stream End Detection
 
 A **Synchronous Transform with End Detection** will be called once for each
 `data` item and once when the stream is about to end. It is returned by `$`
@@ -292,12 +289,23 @@ for n in [ 4, 7, 9, 3, 5, 6, ]
 input.end()
 ```
 
-#### Asynchronous Transform, No Stream End Detection
+### Asynchronous Transforms
 
-An **Asynchronous Transform**, suitable for intermittent file and
-network reads. You can call `send data` as often as you like to, but
-you **must** call `send.done()` (or `send.done data`) whenever you're
-finished—otherwise the pipeline will hang on indefinitely:
+**Asynchronous Transforms** are constructed in a very similar fashion to their
+synchronous counterparts, except you use `$async` (or, `remit_async`) in place
+of `$` (or, `remit`); furthermore, there is no counterpart to the 'observer'
+call signature, so `$async` has to be called with a stream transformation that
+accepts eiter two or three arguments.
+
+**Asynchronous Transforms** are suited for intermittent file and network
+reads. Since those can happen at an arbitrary time in the future, async
+stream transforms must always notify the pipeline when they've finished;
+to do this, there's a callback method tacked unto the `send` argument called
+`send.done`. 
+
+You can call `send data` as often as you like to, but you **must** call
+`send.done()` (or `send.done data`) whenever you're finished—otherwise the
+pipeline will hang on indefinitely:
 
 ```coffee
 $async ( data, send ) -> ...

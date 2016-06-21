@@ -507,6 +507,31 @@ D                         = require './main'
   # T.ok isa_stream D.new_file_writestream()
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $async (1)" ] = ( T, done ) ->
+  #.........................................................................................................
+  delay = ( name, f ) =>
+    dt = CND.random_integer 100, 500
+    # dt = 1
+    whisper "delay for #{rpr name}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  $calculate = $async ( n, send ) =>
+    delay "$calculate", =>
+      send n + 4
+      send n - 1
+      send.done()
+  #.........................................................................................................
+  input = D.new_stream()
+  #.........................................................................................................
+  input
+    .pipe $calculate()
+    .pipe D.$show()
+    .pipe D.$on_end => done()
+  #.........................................................................................................
+  return null
+
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $async with stream end detection" ] = ( T, done ) ->
   throw new Error "not implemented"
 
@@ -538,20 +563,21 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    "(v4) new_stream_from_pipeline (1a)"
-    "(v4) new_stream_from_pipeline (3)"
-    "(v4) new_stream_from_pipeline (4)"
-    "(v4) D.new_stream"
-    "(v4) D.new_stream_from_pipeline"
-    "(v4) stream / transform construction with through2 (1)"
-    # # "(v4) $async with stream end detection"
+    # "(v4) new_stream_from_pipeline (1a)"
+    # "(v4) new_stream_from_pipeline (3)"
+    # "(v4) new_stream_from_pipeline (4)"
+    # "(v4) D.new_stream"
+    # "(v4) D.new_stream_from_pipeline"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) new_stream_from_text"
+    # "(v4) new_stream_from_text doesn't work synchronously"
+    # "(v4) new_stream_from_text (2)"
+    # "(v4) README demo (1)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) $async with stream end detection"
     # # "(v4) $async with arbitrary number of results"
-    "(v4) new_stream_from_text"
-    "(v4) new_stream_from_text doesn't work synchronously"
-    "(v4) new_stream_from_text (2)"
-    "(v4) README demo (1)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) stream / transform construction with through2 (2)"
+    "(v4) $async (1)"
     ]
   @_prune()
   @_main()

@@ -129,6 +129,11 @@ pluck = ( x, key ) ->
   #.....................................................................................................
   return MSP.through.obj main, flush
 
+#-----------------------------------------------------------------------------------------------------------
+@$async_v4 = ( method ) ->
+
+
+
 # #-----------------------------------------------------------------------------------------------------------
 # @$async_v4 = ( method ) ->
 #   unless 2 <= ( arity = method.length ) <= 3
@@ -143,76 +148,76 @@ pluck = ( x, key ) ->
 #   #.........................................................................................................
 #   return @new_stream_from_pipeline []
 
-#-----------------------------------------------------------------------------------------------------------
-@_$async_single = ( method ) ->
-  unless ( arity = method.length ) is 2
-    throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
-  return $map ( input_data, handler ) =>
-    done        = ( output_data ) => if output_data? then handler null, output_data else handler()
-    done.error  = ( error )       => handler error
-    method input_data, done
+# #-----------------------------------------------------------------------------------------------------------
+# @_$async_single = ( method ) ->
+#   unless ( arity = method.length ) is 2
+#     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
+#   return $map ( input_data, handler ) =>
+#     done        = ( output_data ) => if output_data? then handler null, output_data else handler()
+#     done.error  = ( error )       => handler error
+#     method input_data, done
 
-#-----------------------------------------------------------------------------------------------------------
-@$async = ( method ) ->
-  unless 2 <= ( arity = method.length ) <= 3
-    throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
-  #.........................................................................................................
-  Z                 = []
-  has_end_argument  = arity is 3
-  input             = @new_stream()
-  output            = @new_stream()
-  _send_end         = null
-  _stream_end       = null
-  #.........................................................................................................
-  $wait_for_stream_end = =>
-    return @$ ( data, send, end ) =>
-      send data if data?
-      # debug '7765', ( CND.truth CND.isa_function send.end )
-      _send_end = send.end
-      if end?
-        if has_end_argument then  _stream_end = end
-        else                      end()
-  #.........................................................................................................
-  $call = =>
-    return @_$async_single ( event, done ) =>
-      #.....................................................................................................
-      _send = ( data ) =>
-        Z.push data
-        return null
-      #.....................................................................................................
-      _send.done = ( data ) =>
-        _send data if data?
-        done Object.assign [], Z
-        Z.length = 0
-      #.....................................................................................................
-      _send.end = _send_end
-      #.....................................................................................................
-      method event, _send, _stream_end
-      return null
-  #.........................................................................................................
-  $spread = =>
-    return @$ ( collection, send, end ) =>
-      send event for event in collection
-      if end?
-        end()
-  #.........................................................................................................
-  input
-    .pipe $wait_for_stream_end()
-    .pipe $call()
-    .pipe $spread()
-    .pipe output
-  #.........................................................................................................
-  return @new_stream pipeline: [ input, output, ]
+# #-----------------------------------------------------------------------------------------------------------
+# @$async = ( method ) ->
+#   unless 2 <= ( arity = method.length ) <= 3
+#     throw new Error "expected a method with an arity of 2 or 3, got one with an arity of #{arity}"
+#   #.........................................................................................................
+#   Z                 = []
+#   has_end_argument  = arity is 3
+#   input             = @new_stream()
+#   output            = @new_stream()
+#   _send_end         = null
+#   _stream_end       = null
+#   #.........................................................................................................
+#   $wait_for_stream_end = =>
+#     return @$ ( data, send, end ) =>
+#       send data if data?
+#       # debug '7765', ( CND.truth CND.isa_function send.end )
+#       _send_end = send.end
+#       if end?
+#         if has_end_argument then  _stream_end = end
+#         else                      end()
+#   #.........................................................................................................
+#   $call = =>
+#     return @_$async_single ( event, done ) =>
+#       #.....................................................................................................
+#       _send = ( data ) =>
+#         Z.push data
+#         return null
+#       #.....................................................................................................
+#       _send.done = ( data ) =>
+#         _send data if data?
+#         done Object.assign [], Z
+#         Z.length = 0
+#       #.....................................................................................................
+#       _send.end = _send_end
+#       #.....................................................................................................
+#       method event, _send, _stream_end
+#       return null
+#   #.........................................................................................................
+#   $spread = =>
+#     return @$ ( collection, send, end ) =>
+#       send event for event in collection
+#       if end?
+#         end()
+#   #.........................................................................................................
+#   input
+#     .pipe $wait_for_stream_end()
+#     .pipe $call()
+#     .pipe $spread()
+#     .pipe output
+#   #.........................................................................................................
+#   return @new_stream pipeline: [ input, output, ]
 
-#-----------------------------------------------------------------------------------------------------------
-@$async_OLD = ( method ) ->
-  unless ( arity = method.length ) is 2
-    throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
-  return $map ( input_data, handler ) =>
-    ### TAINT should add `done.end`, `done.pause` and so on ###
-    done        = ( output_data ) => if output_data? then handler null, output_data else handler()
-    done.error  = ( error )       => handler error
-    method input_data, done
+# #-----------------------------------------------------------------------------------------------------------
+# @$async_OLD = ( method ) ->
+#   unless ( arity = method.length ) is 2
+#     throw new Error "expected a method with an arity of 2, got one with an arity of #{arity}"
+#   return $map ( input_data, handler ) =>
+#     ### TAINT should add `done.end`, `done.pause` and so on ###
+#     done        = ( output_data ) => if output_data? then handler null, output_data else handler()
+#     done.error  = ( error )       => handler error
+#     method input_data, done
 
 #-----------------------------------------------------------------------------------------------------------
 @$bridge = ( stream ) ->
