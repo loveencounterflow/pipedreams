@@ -3,28 +3,7 @@
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [PipeDreams](#pipedreams)
-- [Stream and Transform Construction](#stream-and-transform-construction)
-  - [remit()](#remit)
-  - [create_throughstream()](#create_throughstream)
-  - [Error Handling](#error-handling)
-  - ['Retroactive' Sub-Streams: $sub()](#retroactive-sub-streams-sub)
-  - [$link()](#link)
-  - [$continue()](#continue)
-  - [Creating 'Fittings' (Higher-Order Streams)](#creating-fittings-higher-order-streams)
-    - [Motivation](#motivation)
-    - [Usage](#usage)
-      - [**`@create_fitting_from_pipeline = ( transforms, settings ) ->`**](#@create_fitting_from_pipeline---transforms-settings---)
-      - [**`@create_fitting_from_readwritestreams = ( readstream, writestream, settings ) ->`**](#@create_fitting_from_readwritestreams---readstream-writestream-settings---)
-    - [Example](#example)
-- [Aggregation](#aggregation)
-  - [$aggregate = ( aggregator, on_end = null ) ->](#aggregate---aggregator-on_end--null---)
-  - [$collect(), $count()](#collect-count)
-- [Strings](#strings)
-  - [$split()](#split)
-- [Sorting](#sorting)
 - [Roadmap to Pipedreams Version 4](#roadmap-to-pipedreams-version-4)
-  - [Base Libraries](#base-libraries)
-    - [Through2](#through2)
 - [PipeDreams v4 API](#pipedreams-v4-api)
   - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
     - [Require Statement](#require-statement)
@@ -34,6 +13,8 @@
       - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
       - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
       - [Asynchronous Transform, No Stream End Detection](#asynchronous-transform-no-stream-end-detection)
+  - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
+    - [Through2](#through2)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
