@@ -26,6 +26,10 @@ Install as `npm install --save pipedreams2`.
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
+- [Backmatter](#backmatter)
+  - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
+    - [Through2](#through2)
+  - [What's in a Name?](#whats-in-a-name)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -304,10 +308,10 @@ be prepared for an empty stream where it is called once with `data` being
 $async ( data, send, end ) -> ...
 ```
 
-> # Backmatter
-> 
-> ## Under the Hood: Base Libraries
-> 
+# Backmatter
+
+## Under the Hood: Base Libraries
+
 > **Abstract**: PipeDreams was previously based on
 > [github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream)
 > and did so largely successfully, but problems with aysnchronous streams did surface in some
@@ -332,7 +336,7 @@ $async ( data, send, end ) -> ...
 > > a 'language with virtual no standard library at all'.
 > 
 > 
-> ### Through2
+### Through2
 > 
 > [Through2](https://github.com/rvagg/through2) provides a fairly manageable
 > interface to build stream transforms on:
@@ -410,7 +414,8 @@ $async ( data, send, end ) -> ...
 > brings a number of up-to-date and (hopefully) mutually compatible stream
 > modules together in a neat bundle.
 > 
-> ## What's in a Name?
+
+## What's in a Name?
 
 > ¹) The name of the *remit* method is probably be best understood as an arbitrary piece
 > of terminology. According to the
