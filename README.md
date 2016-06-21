@@ -1,8 +1,22 @@
+
+
+
+# PipeDreams
+
+![stability-experimental-red](https://img.shields.io/badge/stability-experimental-red.svg)
+![npm-0.2.5-yellowgreen](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)
+![motivation-字面明快排字機-yellow](https://img.shields.io/badge/motivation-字面明快排字機-yellow.svg)
+
+A library to make creating NodeJS streams and transforms sort-of simple.
+
+Install as `npm install --save pipedreams2`.
+
+![Der Pfeifenraucher](https://github.com/loveencounterflow/pipedreams/raw/v4/art/Der%20Frosch%20und%20die%20beiden%20Enten_0015.png)
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [PipeDreams](#pipedreams)
 - [Roadmap to Pipedreams Version 4](#roadmap-to-pipedreams-version-4)
 - [PipeDreams v4 API](#pipedreams-v4-api)
   - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
@@ -17,20 +31,6 @@
     - [Through2](#through2)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-
-
-# PipeDreams
-
-![stability-experimental-red](https://img.shields.io/badge/stability-experimental-red.svg)
-![npm-0.2.5-yellowgreen](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)
-![motivation-字面明快排字機-yellow](https://img.shields.io/badge/motivation-字面明快排字機-yellow.svg)
-
-Common operations for piped NodeJS streams.
-
-`npm install --save pipedreams2`
-
-![Der Pfeifenraucher](https://github.com/loveencounterflow/pipedreams/raw/v4/art/Der%20Frosch%20und%20die%20beiden%20Enten_0015.png)
 
 **Caveat** Below examples are all written in CoffeeScript.
 
