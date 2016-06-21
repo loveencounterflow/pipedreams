@@ -507,49 +507,88 @@ D                         = require './main'
   # T.ok isa_stream D.new_file_writestream()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $async (1)" ] = ( T, done ) ->
-  #.........................................................................................................
-  delay = ( name, f ) =>
-    dt = CND.random_integer 100, 500
-    # dt = 1
-    whisper "delay for #{rpr name}: #{dt}ms"
-    setTimeout f, dt
+@[ "(v4) $async with method arity 2" ] = ( T, done ) ->
   #.........................................................................................................
   $calculate = => $async ( n, send ) =>
-    # delay "$calculate", =>
-      send n + 4
+    delay "$calculate", =>
       send n - 1
-      debug '3321'
+      send n
+      send n + 1
       send.done()
   #.........................................................................................................
   input = D.new_stream()
+  # MSP   = require 'mississippi'
   #.........................................................................................................
   input
+    # .pipe MSP.through.obj ( ( d, _, cb ) => help "data"; cb null, d ), ( ( cb ) => warn "over"; cb() )
     .pipe $calculate()
     .pipe D.$show()
+    .pipe D.$collect()
+    .pipe $ ( data ) -> T.eq data, [ 4, 5, 6, 14, 15, 16, 24, 25, 26, ] if data?
     .pipe D.$on_end => done()
   #.........................................................................................................
   D.send input, 5
-  D.send input, 8
-  D.send input, 13
-  D.done input
+  D.send input, 15
+  D.send input, 25
+  D.end input
   #.........................................................................................................
   return null
 
-
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $async with stream end detection" ] = ( T, done ) ->
-  throw new Error "not implemented"
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $async with arbitrary number of results" ] = ( T, done ) ->
-  throw new Error "not implemented"
+@[ "(v4) $async with method arity 3" ] = ( T, done ) ->
+  #.........................................................................................................
+  $calculate = => $async ( n, send ) =>
+    delay "$calculate", =>
+      send n - 1
+      send n
+      send n + 1
+      send.done()
+  #.........................................................................................................
+  $group = =>
+    last_n        = null
+    current_group = null
+    return $async ( n, send, end ) =>
+      delay "$group", =>
+        if n?
+          if last_n? and ( Math.abs n - last_n ) is 1
+            current_group.push n
+          else
+            send current_group if current_group?
+            current_group = [ n, ]
+          last_n = n
+        if end?
+          send current_group if current_group?
+          end()
+        send.done()
+  #.........................................................................................................
+  input = D.new_stream()
+  # MSP   = require 'mississippi'
+  #.........................................................................................................
+  input
+    # .pipe MSP.through.obj ( ( d, _, cb ) => help "data"; cb null, d ), ( ( cb ) => warn "over"; cb() )
+    .pipe $calculate()
+    .pipe $group()
+    .pipe D.$show()
+    .pipe D.$collect()
+    .pipe $ ( data ) -> T.eq data, [ [ 4, 5, 6, ], [ 14, 15, 16, ], [ 24, 25, 26, ], ] if data?
+    .pipe D.$on_end => done()
+  #.........................................................................................................
+  D.send input, 5
+  D.send input, 15
+  D.send input, 25
+  D.end input
+  #.........................................................................................................
+  return null
 
 
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
-get_index = ( element, key ) -> if ( CND.isa_function key ) then key element else element[ key ]
+delay = ( name, f ) =>
+  dt = CND.random_integer 10, 200
+  # dt = 1
+  whisper "delay for #{rpr name}: #{dt}ms"
+  setTimeout f, dt
 
 #-----------------------------------------------------------------------------------------------------------
 isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
@@ -569,25 +608,23 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) new_stream_from_pipeline (1a)"
-    # "(v4) new_stream_from_pipeline (3)"
-    # "(v4) new_stream_from_pipeline (4)"
-    # "(v4) D.new_stream"
-    # "(v4) D.new_stream_from_pipeline"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) new_stream_from_text"
-    # "(v4) new_stream_from_text doesn't work synchronously"
-    # "(v4) new_stream_from_text (2)"
-    # "(v4) README demo (1)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # # "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) $async with arbitrary number of results"
-    # # "(v4) $async with stream end detection"
-    "(v4) $async (1)"
+    # "(v4) stream / transform construction with through2 (2)"
+    "(v4) new_stream_from_pipeline (1a)"
+    "(v4) new_stream_from_pipeline (3)"
+    "(v4) new_stream_from_pipeline (4)"
+    "(v4) D.new_stream"
+    "(v4) D.new_stream_from_pipeline"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) new_stream_from_text"
+    "(v4) new_stream_from_text doesn't work synchronously"
+    "(v4) new_stream_from_text (2)"
+    "(v4) README demo (1)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
     ]
   @_prune()
   @_main()
-
 
 
 

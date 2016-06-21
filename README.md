@@ -62,14 +62,14 @@ In the below, I will assume you `require`d PipeDreams the first way, above.
 
 ## remit (aka $) and remit_async (aka $async)
 
-`remit` is very much the centerpiece of the PipeDreams API¹. The `remit`
-method (as well as its asynchronous companion, `remit_async`) accepts a
-function (call it a 'transformation') and returns a stream transform. In case
-you're  familiar with the [*event-stream*](https://github.com/dominictarr/event-stream)
-way of doing things, then PipeDreams' `remit f` is roughly
-equivalent to event-stream's  `through on_data, on_end`, except you can handle
-both the `on_data` and `on_end` parts in a single function `f`, and `remit_async f`
-is roughly equivalent to event-stream's `map f`.
+The `remit` method (as well as its asynchronous companion, `remit_async`)  is
+very much the centerpiece of the PipeDreams API¹. It accepts a function (call
+it a 'transformation') and returns a stream transform. In case you're
+familiar with the [*event-stream*](https://github.com/dominictarr/event-stream) 
+way of doing things, then PipeDreams' `remit f` is roughly equivalent
+to event-stream's  `through on_data, on_end`, except you can handle both the
+`on_data` and `on_end` parts in a single function `f`. `remit_async f` is
+roughly equivalent to event-stream's `map f`.
 
 
 ## Never Assume Your Streams to be Synchronous
@@ -414,10 +414,10 @@ $async ( data, send, end ) -> ...
 > brings a number of up-to-date and (hopefully) mutually compatible stream
 > modules together in a neat bundle.
 > 
-
+>
 ## What's in a Name?
-
-> ¹) The name of the *remit* method is probably be best understood as an arbitrary piece
+>
+> The name of the *remit* method is probably be best understood as an arbitrary piece
 > of terminology. According to the
 > [American Heritage Dictionary](https://ahdictionary.com/word/search.html?q=remit&submit.x=0&submit.y=0)
 > it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*;

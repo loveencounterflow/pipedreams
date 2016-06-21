@@ -93,78 +93,57 @@ pluck = ( x, key ) ->
   throw new Error "unknown mode #{rpr mode}" unless mode in [ 'sync', 'async', ]
   has_error   = no
   flush       = null
-  ### ???????????????????????????????????????????????????????????????????? ###
-  if mode is 'sync'
-    #.........................................................................................................
-    if arity is 1
-      main = ( chunk, encoding, callback ) ->
-        method chunk
-        callback null, chunk
-      flush = ( callback ) ->
-        method null
-        callback()
-      return MSP.through.obj main, flush
-    #.........................................................................................................
-    if arity is 3
-      flush = ( callback ) ->
-        ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
-        send = get_send @, callback
-        end  = ->
-          callback() unless has_error
-          return null
-        method null, send, end
+  #.........................................................................................................
+  if arity is 1
+    throw new Error "method with #{arity} arguments not supported for async transforms" if mode is 'async'
+    #.......................................................................................................
+    main = ( chunk, encoding, callback ) ->
+      method chunk
+      callback null, chunk
+    #.......................................................................................................
+    flush = ( callback ) ->
+      method null
+      callback()
+    #.......................................................................................................
+    return MSP.through.obj main, flush
+  #.........................................................................................................
+  if arity is 3
+    flush = ( callback ) ->
+      ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
+      send = get_send @, callback
+      end  = ->
+        callback() unless has_error
         return null
-    #.........................................................................................................
-    get_send = ( self, callback ) ->
-      #.......................................................................................................
-      R = ( data ) ->
-        self.push data # if data?
-      #.......................................................................................................
-      R.error = ( error ) ->
-        has_error = yes
-        callback error
-      #.......................................................................................................
-      R.end = ->
-        self.push null
-      #.......................................................................................................
-      return R
-    #.........................................................................................................
-    main = ( chunk, encoding, callback ) ->
-      ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
-      send = get_send @, callback
-      method chunk, send
-      callback() unless has_error
+      method null, send, end
       return null
-    #.....................................................................................................
-    return MSP.through.obj main, flush
-
-    ### ???????????????????????????????????????????????????????????????????? ###
-  else if mode is 'async'
-    throw new Error "not implemented: arity #{arity}" unless arity is 2
-
-    #.........................................................................................................
-    get_send = ( self, callback ) ->
-      ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
-      #.......................................................................................................
-      R = ( data ) ->
-        self.push data # if data?
-      #.......................................................................................................
-      R.error = ( error ) ->
-        has_error = yes
-        callback error
-      #.......................................................................................................
-      R.end = ->
-        self.push null
-      #.......................................................................................................
-      return R
-    #.........................................................................................................
-    main = ( chunk, encoding, callback ) ->
-      send = get_send @, callback
-      method chunk, send
+  #.........................................................................................................
+  get_send = ( self, callback ) ->
+    #.......................................................................................................
+    R = ( data ) ->
+      self.push data # if data?
+    #.......................................................................................................
+    R.error = ( error ) ->
+      has_error = yes
+      callback error
+    #.......................................................................................................
+    R.end = ->
+      self.push null
+    #.......................................................................................................
+    if mode is 'async'
+      R.done = ( data ) ->
+        if data is undefined then callback() else callback null, data
+    #.......................................................................................................
+    return R
+  #.........................................................................................................
+  main = ( chunk, encoding, callback ) ->
+    ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
+    send = get_send @, callback
+    method chunk, send
+    if mode is 'sync'
       callback() unless has_error
-      return null
-    #.....................................................................................................
-    return MSP.through.obj main, flush
+    return null
+  #.....................................................................................................
+  return MSP.through.obj main, flush
 
 
 #===========================================================================================================
@@ -175,8 +154,8 @@ pluck = ( x, key ) ->
   return me
 
 #-----------------------------------------------------------------------------------------------------------
-@done = ( me, data ) ->
-  me.write null
+@end = ( me ) ->
+  me.end()
   return me
 
 
@@ -462,7 +441,7 @@ pluck = ( x, key ) ->
 @$collect = ( on_end = null ) ->
   collector = []
   #.........................................................................................................
-  return $ ( data, send, end ) ->
+  return @$ ( data, send, end ) ->
     collector.push data if data?
     if end?
       send collector
