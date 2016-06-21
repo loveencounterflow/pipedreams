@@ -307,11 +307,11 @@ be prepared for an empty stream where it is called once with `data` being
 ```coffee
 $async ( data, send, end ) -> ...
 ```
-
+>
 # Backmatter
-
+>
 ## Under the Hood: Base Libraries
-
+>
 > **Abstract**: PipeDreams was previously based on
 > [github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream)
 > and did so largely successfully, but problems with aysnchronous streams did surface in some
