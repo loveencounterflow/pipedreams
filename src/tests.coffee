@@ -380,12 +380,12 @@ D                         = require './main'
     ]
   #.........................................................................................................
   delay = ( name, f ) =>
-    dt = CND.random_integer 100, 500
+    dt = CND.random_integer 1, 100
     # dt = 1
     whisper "delay for #{rpr name}: #{dt}ms"
     setTimeout f, dt
   #.........................................................................................................
-  read_one_phrase = ( glyph, handler ) =>
+  read_phrases = ( glyph, handler ) =>
     delay glyph, =>
       for phrase in db
         [ sbj, prd, obj, ] = phrase
@@ -395,38 +395,53 @@ D                         = require './main'
   #.........................................................................................................
   $retrieve_data_from_db = ( S ) =>
     #.......................................................................................................
-    main = ( glyph, encoding, handler ) ->
+    main = ( glyph, encoding, callback ) ->
       push = @push.bind @
       push [ glyph, 'start', ]
-      read_one_phrase glyph, ( error, phrase ) =>
-        return handler error if error?
-        return handler null, [ glyph, 'stop', ] unless phrase?
-        push phrase
+      is_finished = no
+      read_phrases glyph, ( error, phrase ) =>
+        return callback error if error?
+        return push phrase if phrase?
+        push [ glyph, 'stop', ]
+        callback() unless is_finished
+        is_finished = yes
+      return null
     #.......................................................................................................
-    flush = ( done ) ->
+    flush = ( callback ) ->
       push = @push.bind @
-      delay 'flush', =>
-        push [ 'message', "ok", ]
-        push [ 'message', "we're done", ]
-        done()
+      # delay 'flush', =>
+      push [ 'message', "ok", ]
+      push [ 'message', "we're done", ]
+      callback()
     #.......................................................................................................
-    return MSP.through.obj t2_settings, main, flush
+    return MSP.through.obj t2_settings, main #, flush
   #.........................................................................................................
   $collect = ( S ) =>
     matchers  = new Set ( JSON.stringify phrase for phrase in db )
     collector = []
     #.......................................................................................................
-    main = ( phrase, _, handler ) ->
+    main = ( phrase, _, callback ) ->
       probe = JSON.stringify phrase
       [ sbj, prd, obj, ] = phrase
       unless ( prd in [ 'start', 'stop', ] ) or ( sbj is 'message' )
         T.ok matchers.has probe
         matchers.delete probe
-      handler null, phrase
+      callback null, phrase
     #.......................................................................................................
-    flush = ( handler ) ->
+    flush = ( callback ) ->
       T.eq matchers.size, 0
-      handler()
+      callback()
+    #.......................................................................................................
+    return MSP.through.obj t2_settings, main, flush
+  #.........................................................................................................
+  $finalize = ( S ) =>
+    #.......................................................................................................
+    main = null
+    #.......................................................................................................
+    flush = ( callback ) ->
+      help "that’s all"
+      T_done()
+      callback()
     #.......................................................................................................
     return MSP.through.obj t2_settings, main, flush
   #.........................................................................................................
@@ -434,7 +449,14 @@ D                         = require './main'
     .pipe $retrieve_data_from_db  S
     .pipe $collect                S
     .pipe D.$show()
-    .pipe D.$on_end => T_done()
+    .pipe $finalize               S
+    # .pipe D.$on_end => T_done()
+  #.........................................................................................................
+  ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ###
+  ### TAINT this test causes a timeout for unknown reasons; postponing ###
+  T.fail "test fails with timeout for unknown reasons"
+  return T_done()
+  ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ###
   #.........................................................................................................
   for glyph in Array.from '千仟韆'
     S.input.write glyph
@@ -522,7 +544,6 @@ unless module.parent?
     "(v4) D.new_stream"
     "(v4) D.new_stream_from_pipeline"
     "(v4) stream / transform construction with through2 (1)"
-    "(v4) stream / transform construction with through2 (2)"
     # # "(v4) $async with stream end detection"
     # # "(v4) $async with arbitrary number of results"
     "(v4) new_stream_from_text"
@@ -530,16 +551,10 @@ unless module.parent?
     "(v4) new_stream_from_text (2)"
     "(v4) README demo (1)"
     "(v4) observer transform called with data `null` on stream end"
+    "(v4) stream / transform construction with through2 (2)"
     ]
-  # @_prune()
-  # @_main()
-
-  stream = D.new_stream()
-  info stream.end
-  info stream.close
-  info stream.finish
-  info stream.destroy
-
+  @_prune()
+  @_main()
 
 
 
