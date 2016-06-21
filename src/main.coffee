@@ -21,6 +21,10 @@ MSP                       = require 'mississippi'
 #...........................................................................................................
 ### http://stringjs.com ###
 stringfoo                 = require 'string'
+#...........................................................................................................
+### https://github.com/mcollina/split2 ###
+split2                    = require 'split2'
+
 
 #===========================================================================================================
 # STREAM CREATION
@@ -33,6 +37,9 @@ stringfoo                 = require 'string'
   expected  = ( rpr key for key in @new_stream.keys ).join ', '
   got       = ( rpr key for key in             keys ).join ', '
   throw new Error "expected one of #{expected}, got #{got}"
+
+#-----------------------------------------------------------------------------------------------------------
+@$pass_through = -> MSP.through.obj()
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream.keys = [
@@ -180,6 +187,7 @@ pluck = ( x, key ) ->
       # throw error unless ( message = error[ 'message' ] )? and message.endsWith "cannot be closed."
       end()
 
+
 #===========================================================================================================
 # SPLITTING & JOINING
 #-----------------------------------------------------------------------------------------------------------
@@ -187,21 +195,12 @@ pluck = ( x, key ) ->
   ### Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
   of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
   well. ###
-  return @combine [
+  return @new_stream pipeline: [
+    @$ ( x ) => throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of x ) is 'text'
     @$collect()
-    @$ ( collection, send ) =>
-      send collection.join joiner
+    @$ ( collection, send ) => send collection.join joiner
     ]
   return null
-
-
-#===========================================================================================================
-# COMBINING STREAM TRANSFORMS
-#-----------------------------------------------------------------------------------------------------------
-@combine = ( transforms... ) ->
-  warn message = "combine is deprecated; use new_stream_from_pipeline instead"
-  throw new Error message
-  return combine transforms...
 
 
 #===========================================================================================================
@@ -319,12 +318,6 @@ pluck = ( x, key ) ->
 #         end()
 #   #.........................................................................................................
 #   return R
-
-
-#===========================================================================================================
-# NO-OP
-#-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> @$ ( data, send ) -> send data
 
 
 #===========================================================================================================
@@ -500,6 +493,7 @@ pluck = ( x, key ) ->
 #-----------------------------------------------------------------------------------------------------------
 @$filter = ( method ) -> @$ ( data, send ) => send data if method data
 
+
 #===========================================================================================================
 # REPORTING
 #-----------------------------------------------------------------------------------------------------------
@@ -590,6 +584,41 @@ pluck = ( x, key ) ->
 
 
 #===========================================================================================================
+#
+#-----------------------------------------------------------------------------------------------------------
+@$split = ( matcher, mapper, settings ) -> split2 matcher, mapper, settings
+
+#-----------------------------------------------------------------------------------------------------------
+@$sort = ( sorter, settings ) ->
+  switch arity = arguments.length
+    when 0, 2
+      null
+    when 1
+      unless CND.isa_function sorter
+        settings  = sorter
+        sorter    = null
+    else throw new Error "expected 0 to 2 arguments, got #{arity}"
+  #.........................................................................................................
+  collector = []
+  collect   = settings?[ 'collect' ] ? no
+  sorter ?= ( a, b ) =>
+    return +1 if a > b
+    return -1 if a < b
+    return  0
+  #.........................................................................................................
+  return @$ ( data, send, end ) =>
+    collector.push data if data?
+    if end?
+      collector.sort sorter
+      if collect
+        send collector
+      else
+        send x for x in collector
+        collector.length = 0
+      end()
+
+
+#===========================================================================================================
 # CSV
 #-----------------------------------------------------------------------------------------------------------
 @$parse_csv = ( options ) ->
@@ -643,11 +672,4 @@ do ( PIPEDREAMS = @ ) ->
     else
       PIPEDREAMS[ key ] = value
 
-
-#===========================================================================================================
-# GENERIC METHODS
-#-----------------------------------------------------------------------------------------------------------
-### https://github.com/dominictarr/sort-stream ###
-@$sort                        = require 'sort-stream'
-@$split                       = require 'split2'
 

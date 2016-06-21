@@ -534,6 +534,31 @@ D                         = require './main'
   #.........................................................................................................
   return null
 
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $sort 1" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$sort()
+    .pipe D.$show()
+    .pipe D.$collect()
+    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
+    .pipe D.$on_end => done()
+  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
+  D.end input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $sort 2" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$sort()
+    .pipe D.$show()
+    .pipe D.$collect collect: yes
+    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
+    .pipe D.$on_end => done()
+  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
+  D.end input
+
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $async with method arity 3" ] = ( T, done ) ->
   #.........................................................................................................
@@ -622,6 +647,8 @@ unless module.parent?
     "(v4) observer transform called with data `null` on stream end"
     "(v4) $async with method arity 2"
     "(v4) $async with method arity 3"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
     ]
   @_prune()
   @_main()
