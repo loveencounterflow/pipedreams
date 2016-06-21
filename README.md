@@ -75,10 +75,9 @@ is roughly equivalent to event-stream's `map f`.
 > it means, inter alia, *to refrain from exacting (a tax or penalty, for example); cancel*;
 > *to refer (a case) to another court for further consideration or action*; *to refer
 > (a matter) to a committee or authority for decision*, and also *to transmit (money in payment)*.
-> Somehow PipeDreams' `remit` does a bit of all of these things.
-
+> Somehow PipeDreams' `remit` does a bit of all of these things:
 > `remit` itself 'refrains' from doing anything with the business data that we build that
-> pipeline of stream transforms for; instead, that data is 'remitted' (referred) to the function
+> pipeline of stream transforms for; instead, that data is 'remitted' (re-sent) to the function
 > that `remit` accepts as argument. `remit` helps to 'transmit' (not money in payment but
 > business data from source to sink). Transform functions built with `remit` are not meant
 > to be used—called with business data—directly; rather, like factory functions
@@ -89,8 +88,9 @@ is roughly equivalent to event-stream's `map f`.
 
 As a general note that users should keep in mind, please observe that no
 guarantee is made that any given stream works in a synchronous manner. More
-specifically and with regard to the most typical usage pattern: never handle
-data 'right below' the pipeline definition. 
+specifically and with regard to the most typical usage pattern: never deal
+with pipelined data 'right below' the pipeline definition, always do that
+from inside a stream transform.  
 
 Here's an example from `src/tests.coffee`: we create a stream, define a
 pipeline to split the text into lines and collect those lines into a list;
