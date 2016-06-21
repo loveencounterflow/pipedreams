@@ -26,9 +26,6 @@ Install as `npm install --save pipedreams2`.
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
-- [Backmatter](#backmatter)
-  - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
-    - [Through2](#through2)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -307,112 +304,112 @@ be prepared for an empty stream where it is called once with `data` being
 $async ( data, send, end ) -> ...
 ```
 
-# Backmatter
-
-## Under the Hood: Base Libraries
-
-**Abstract**: PipeDreams was previously based on
-[github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream)
-and did so largely successfully, but problems with aysnchronous streams did surface in some
-places.
-
-Unfortunately, *event-stream* is pegged to NodeJS streams v1 (as used in
-NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v5.x)
-
-> For more details, see Dominic Tarr's [rundown of NodeJS Streams
-> History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
-
-> > If node streams teach us anything, it’s that it’s very difficult to develop
-> > something as fundamental as streams inside a “core”[. Y]ou can’t change core
-> > without breaking things, because things simply assume core and never declare
-> > what aspects of core they depend on. Hence a very strong incentive occurs to
-> > simply make core always be backwards compatible, and to focus only on
-> > performance improvements. This is still a pretty good thing, except
-> > sometimes decisions get inadvertently made that have negative implications,
-> > but that isn’t apparent until it’s too late.
-
-> How very true. People should keep this in mind when they berate JavaScript as
-> a 'language with virtual no standard library at all'.
-
-
-### Through2
-
-[Through2](https://github.com/rvagg/through2) provides a fairly manageable
-interface to build stream transforms on:
-
-> ```js
-> var through2 = require('through2');
-> var transform = through2([ options, ] [ transformFunction ] [, flushFunction ])
+> # Backmatter
+> 
+> ## Under the Hood: Base Libraries
+> 
+> **Abstract**: PipeDreams was previously based on
+> [github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream)
+> and did so largely successfully, but problems with aysnchronous streams did surface in some
+> places.
+> 
+> Unfortunately, *event-stream* is pegged to NodeJS streams v1 (as used in
+> NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v5.x)
+> 
+> > For more details, see Dominic Tarr's [rundown of NodeJS Streams
+> > History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
+> 
+> > > If node streams teach us anything, it’s that it’s very difficult to develop
+> > > something as fundamental as streams inside a “core”[. Y]ou can’t change core
+> > > without breaking things, because things simply assume core and never declare
+> > > what aspects of core they depend on. Hence a very strong incentive occurs to
+> > > simply make core always be backwards compatible, and to focus only on
+> > > performance improvements. This is still a pretty good thing, except
+> > > sometimes decisions get inadvertently made that have negative implications,
+> > > but that isn’t apparent until it’s too late.
+> 
+> > How very true. People should keep this in mind when they berate JavaScript as
+> > a 'language with virtual no standard library at all'.
+> 
+> 
+> ### Through2
+> 
+> [Through2](https://github.com/rvagg/through2) provides a fairly manageable
+> interface to build stream transforms on:
+> 
+> > ```js
+> > var through2 = require('through2');
+> > var transform = through2([ options, ] [ transformFunction ] [, flushFunction ])
+> > ```
+> 
+> > To queue a new chunk, call `this.push(chunk)`—this can be called as many
+> > times as required before the `callback()` if you have multiple pieces to
+> > send on.
+> 
+> > Alternatively, you may use `callback(err, chunk)` as shorthand for emitting
+> > a single chunk or an error.
+> 
+> > The optional `flushFunction` is provided as the last argument (2nd or 3rd,
+> > depending on whether you've supplied `options`) is called just prior to the
+> > stream ending. Can be used to finish up any processing that may be in
+> > progress.
+> 
+> So I wrote this simple 'demo test' (i.e. a tentative implementation as a proof
+> of concept) to see whether things work out the way I need them to have. Below
+> I will give the (much shorter) PipeDreams version for achieving the same
+> result:
+> 
+> ```coffee
+> #-----------------------------------------------------------------------------------------------------------
+> @[ "(v4) stream / transform construction with through2" ] = ( T, T_done ) ->
+>   FS          = require 'fs'
+>   PATH        = require 'path'
+>   through2    = require 'through2'
+>   t2_settings = {}
+>   input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
+>   #.........................................................................................................
+>   ### Set an arbitrary timeout for a function, report it, and execute after a while; used to
+>   simulate some kind of asynchronous DB or network retrieval stuff: ###
+>   delay = ( name, f ) =>
+>     dt = CND.random_integer 1, 1500
+>     # dt = 1
+>     whisper "delay for #{rpr name}: #{dt}ms"
+>     setTimeout f, dt
+>   #.........................................................................................................
+>   ### The main transform method accepts a line, takes it out of the stream unless it matches
+>   either `"name"` or `"version"`, trims it, and emits two events (formatted as lists) per remaining
+>   line. This method must be free (a.k.a. bound, using a slim arrow) so we can use `@push`. ###
+>   transform_main = ( line, encoding, handler ) ->
+>     throw new Error "unknown encoding #{rpr encoding}" unless encoding is 'utf8'
+>     return handler() unless ( /"(name|version)"/ ).test line
+>     line = line.trim()
+>     delay line, =>
+>       @push [ 'first-chr', ( Array.from line )[ 0 ], ]
+>       handler null, [ 'text', line, ]
+>   #.........................................................................................................
+>   ### The 'flush' transform is called once, right before the stream has ended; the callback must be called
+>   exactly once, and it's possible to put additional 'last-minute' data into the stream by calling `@push`.
+>   Because we have to access `this`/`@`, the method must again be free and not bound, but of course we
+>   can set up an alias for `@push`: ###
+>   transform_flush = ( done ) ->
+>     push = @push.bind @
+>     delay 'flush', =>
+>       push [ 'message', "ok", ]
+>       push [ 'message', "we're done", ]
+>       done()
+>   #.........................................................................................................
+>   input
+>     .pipe D.$split()
+>     .pipe through2.obj t2_settings, transform_main, transform_flush
+>     .pipe D.$show()
+>     .pipe D.$on_end => T_done()
 > ```
-
-> To queue a new chunk, call `this.push(chunk)`—this can be called as many
-> times as required before the `callback()` if you have multiple pieces to
-> send on.
-
-> Alternatively, you may use `callback(err, chunk)` as shorthand for emitting
-> a single chunk or an error.
-
-> The optional `flushFunction` is provided as the last argument (2nd or 3rd,
-> depending on whether you've supplied `options`) is called just prior to the
-> stream ending. Can be used to finish up any processing that may be in
-> progress.
-
-So I wrote this simple 'demo test' (i.e. a tentative implementation as a proof
-of concept) to see whether things work out the way I need them to have. Below
-I will give the (much shorter) PipeDreams version for achieving the same
-result:
-
-```coffee
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) stream / transform construction with through2" ] = ( T, T_done ) ->
-  FS          = require 'fs'
-  PATH        = require 'path'
-  through2    = require 'through2'
-  t2_settings = {}
-  input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
-  #.........................................................................................................
-  ### Set an arbitrary timeout for a function, report it, and execute after a while; used to
-  simulate some kind of asynchronous DB or network retrieval stuff: ###
-  delay = ( name, f ) =>
-    dt = CND.random_integer 1, 1500
-    # dt = 1
-    whisper "delay for #{rpr name}: #{dt}ms"
-    setTimeout f, dt
-  #.........................................................................................................
-  ### The main transform method accepts a line, takes it out of the stream unless it matches
-  either `"name"` or `"version"`, trims it, and emits two events (formatted as lists) per remaining
-  line. This method must be free (a.k.a. bound, using a slim arrow) so we can use `@push`. ###
-  transform_main = ( line, encoding, handler ) ->
-    throw new Error "unknown encoding #{rpr encoding}" unless encoding is 'utf8'
-    return handler() unless ( /"(name|version)"/ ).test line
-    line = line.trim()
-    delay line, =>
-      @push [ 'first-chr', ( Array.from line )[ 0 ], ]
-      handler null, [ 'text', line, ]
-  #.........................................................................................................
-  ### The 'flush' transform is called once, right before the stream has ended; the callback must be called
-  exactly once, and it's possible to put additional 'last-minute' data into the stream by calling `@push`.
-  Because we have to access `this`/`@`, the method must again be free and not bound, but of course we
-  can set up an alias for `@push`: ###
-  transform_flush = ( done ) ->
-    push = @push.bind @
-    delay 'flush', =>
-      push [ 'message', "ok", ]
-      push [ 'message', "we're done", ]
-      done()
-  #.........................................................................................................
-  input
-    .pipe D.$split()
-    .pipe through2.obj t2_settings, transform_main, transform_flush
-    .pipe D.$show()
-    .pipe D.$on_end => T_done()
-```
-
-I'm using Through2 via the
-[mississippi](https://github.com/maxogden/mississippi) collection, which
-brings a number of up-to-date and (hopefully) mutually compatible stream
-modules together in a neat bundle.
-
+> 
+> I'm using Through2 via the
+> [mississippi](https://github.com/maxogden/mississippi) collection, which
+> brings a number of up-to-date and (hopefully) mutually compatible stream
+> modules together in a neat bundle.
+> 
 > ## What's in a Name?
 
 > ¹) The name of the *remit* method is probably be best understood as an arbitrary piece
