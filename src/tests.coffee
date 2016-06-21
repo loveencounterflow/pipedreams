@@ -531,9 +531,14 @@ unless module.parent?
     "(v4) README demo (1)"
     "(v4) observer transform called with data `null` on stream end"
     ]
-  @_prune()
-  @_main()
+  # @_prune()
+  # @_main()
 
+  stream = D.new_stream()
+  info stream.end
+  info stream.close
+  info stream.finish
+  info stream.destroy
 
 
 
