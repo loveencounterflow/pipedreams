@@ -14,12 +14,6 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-### https://github.com/dominictarr/event-stream ###
-ES                        = @_ES = require 'event-stream'
-#...........................................................................................................
-### https://github.com/substack/stream-combiner2 ###
-combine                   = require 'stream-combiner2'
-#...........................................................................................................
 ### https://github.com/rvagg/through2 ###
 through2                  = require 'through2'
 #...........................................................................................................
@@ -58,11 +52,18 @@ pluck = ( x, key ) ->
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream_from_pipeline = ( pipeline, settings ) ->
-  input         = pipeline[ 0 ]
-  output        = pipeline[ pipeline.length - 1 ]
-  R             = combine pipeline
-  R[ 'input' ]  = input
-  R[ 'output' ] = output
+  throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
+  ### For some reason we need an additional 'starter' stream in the pipeline, otherwise the
+  first transform never gets called: ###
+  # receiver        = through2.obj()
+  # R               = combine receiver, pipeline...
+  # R[ 'input' ]    = receiver
+  # R[ 'output' ]   = if ( idx = pipeline.length - 1 ) >= 0 then pipeline[ idx ] else receiver
+  R       = through2.obj()
+  source  = R
+  for transform, idx in pipeline
+    R = R.pipe transform
+  R[ 'source' ] = source
   return R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -242,6 +243,8 @@ pluck = ( x, key ) ->
 # COMBINING STREAM TRANSFORMS
 #-----------------------------------------------------------------------------------------------------------
 @combine = ( transforms... ) ->
+  warn message = "combine is deprecated; use new_stream_from_pipeline instead"
+  throw new Error message
   return combine transforms...
 
 
@@ -519,10 +522,7 @@ pluck = ( x, key ) ->
 # STREAM START & END DETECTION
 #-----------------------------------------------------------------------------------------------------------
 @$on_end = ( method ) ->
-  ### TAINT use `$map` to turn this into an async method? ###
-  switch arity = method.length
-    when 0, 1 then null
-    else throw new Error "expected method with one optional parameter, got one with arity #{arity}"
+  throw new Error "expected 0 or 1 argument, got #{arity}" unless 0 <= ( arity = method.length ) <= 1
   return @$ ( data, send, end ) ->
     send data if data?
     if end?
@@ -693,7 +693,5 @@ do ( PIPEDREAMS = @ ) ->
 #-----------------------------------------------------------------------------------------------------------
 ### https://github.com/dominictarr/sort-stream ###
 @$sort                        = require 'sort-stream'
-#...........................................................................................................
 @$split                       = require 'split2'
-$map                          = ES.map      .bind ES
 

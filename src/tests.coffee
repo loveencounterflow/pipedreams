@@ -57,40 +57,39 @@ D                         = require './main'
 @[ "(v4) new_stream_from_pipeline (1a)" ] = ( T, done ) ->
   through2                  = require 'through2'
   combine                   = require 'stream-combiner2'
+  create_frob_tee           = null
   #.........................................................................................................
-  create_frob_tee = ( settings ) ->
-    multiply        = $ ( data, send ) => whisper 'multiply', data; send data *  2
-    add             = $ ( data, send ) => whisper 'add',      data; send data +  2
-    square          = $ ( data, send ) => whisper 'square',   data; send data ** 2
-    unsquared       = through2.obj()
-    #.....................................................................................................
-    ### For some reason we need an additional 'starter' stream in the pipeline, otherwise the
-    first transform never gets called: ###
-    pipeline        = [ multiply, add, unsquared, square, ]
-    receiver        = through2.obj()
-    R               = combine receiver, pipeline...
-    outputs         = { unsquared, }
-    R[ 'input'    ] = receiver
-    R[ 'output'   ] = pipeline[ pipeline.length - 1 ]
-    R[ 'outputs'  ] = outputs
-    return R
+  do ->
+    create_frob_tee = ( settings ) ->
+      multiply        = $ ( data, send ) => whisper 'multiply', data; send data *  2
+      add             = $ ( data, send ) => whisper 'add',      data; send data +  2
+      square          = $ ( data, send ) => whisper 'square',   data; send data ** 2
+      unsquared       = through2.obj()
+      #.....................................................................................................
+      R               = source = through2.obj()
+      source          = R
+      sink            = R
+      R               = R.pipe multiply
+      R               = R.pipe add
+      R               = R.pipe unsquared
+      R               = R.pipe square
+      R[ 'source' ]   = source
+      R[ 'sink'   ]   = R # square
+      return R
   #.........................................................................................................
   do ->
     probes              = [ 1 ... 10 ]
-    # probes              = [ 5, 6, ]
-    # probes              = [ 5, 6, 7, 8, ]
     output_matchers     = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
     output_results      = []
     frob                = create_frob_tee()
-    { input, output, }  = frob
+    { source, sink, }   = frob
     #.......................................................................................................
-    output
+    sink
       #.....................................................................................................
       .pipe $ ( data )        =>            help 'show #1', data
       .pipe $ ( data, send )  => send data; help 'show #2', data
       #.....................................................................................................
       .pipe $ ( data, send, end ) =>
-        debug '4453', data?, end?
         send data if data?
         if end?
           warn "pausing for a second"
@@ -111,17 +110,17 @@ D                         = require './main'
     write_data_using_write = ->
       for n in probes
         urge 'write', n
-        input.write n
-      input.end()
+        source.write n
+      source.end()
     #.......................................................................................................
     write_data_using_push = ->
       for n in probes
         urge 'push', n
-        input.push n
-      input.push null
+        source.push n
+      source.push null
     #.......................................................................................................
-    write_data_using_write()
-    # write_data_using_push()
+    # write_data_using_write()
+    write_data_using_push()
     #.......................................................................................................
     return null
   #.........................................................................................................
@@ -129,7 +128,8 @@ D                         = require './main'
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new_stream_from_pipeline (3)" ] = ( T, done ) ->
-  create_frob_tee = null
+  through2                  = require 'through2'
+  create_frob_tee           = null
   #.........................................................................................................
   do ->
     create_frob_tee = ( settings ) ->
@@ -138,35 +138,33 @@ D                         = require './main'
       square        = $ ( data, send ) => send data ** 2
       unsquared     = D.new_stream()
       #.....................................................................................................
-      return D.new_stream_from_pipeline [ multiply, add, unsquared, square, ]
+      return D.new_stream pipeline: [ multiply, add, unsquared, square, ]
   #.........................................................................................................
   do ->
     probes              = [ 1 ... 10 ]
     matchers            = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
     results             = []
-    frob                = create_frob_tee()
-    input               = D.new_stream()
-    output              = D.new_stream()
+    sink                = create_frob_tee()
+    { source, }         = sink
     #.......................................................................................................
-    input
-      .pipe frob
+    sink
+      .pipe D.$show()
       #.....................................................................................................
       .pipe $ ( data, send ) =>
         results.push data
         send data
       #.....................................................................................................
-      # .pipe D.$show()
-      .pipe output
-      #.....................................................................................................
       .pipe D.$on_end =>
         T.eq results, matchers
         done()
     #.......................................................................................................
-    input.write n for n in probes
-    input.end()
+    source.write n for n in probes
+    source.end()
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_pipeline using existing streams" ] = ( T, done ) ->
+@[ "(v4) new_stream_from_pipeline (4)" ] = ( T, done ) ->
   probes      = [ 10 .. 20 ]
   matchers    = [20,22,24,26,28,30,32,34,36,38,40]
   results     = []
@@ -177,14 +175,16 @@ D                         = require './main'
     ]
   confluence  = D.new_stream pipeline: [ input, transforms..., ]
   confluence
+    .pipe D.$show()
     .pipe $ ( data, send ) => results.push data; send data
-    # .pipe D.$show()
   for n in probes
     input.write n
   input.end()
-  # debug '©ΧΞΩΞΒ', JSON.stringify results
+  # debug '7372', results
   T.eq results, matchers
   done()
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new_stream_from_text" ] = ( T, done ) ->
@@ -496,8 +496,8 @@ unless module.parent?
   include = [
     "(v4) new_stream_from_pipeline (1a)"
     # "(v4) new_stream_from_pipeline (1)"
-    # "(v4) new_stream_from_pipeline (3)"
-    # "(v4) new_stream_from_pipeline using existing streams"
+    "(v4) new_stream_from_pipeline (3)"
+    # "(v4) new_stream_from_pipeline (4)"
     # "(v4) new_stream_from_text"
     # "(v4) D.new_stream"
     # "(v4) D.new_stream_from_pipeline"
