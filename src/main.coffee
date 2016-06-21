@@ -14,23 +14,27 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
-### https://github.com/rvagg/through2 ###
-through2                  = require 'through2'
+# ### https://github.com/rvagg/through2 ###
+# through2                  = require 'through2'
+### https://github.com/maxogden/mississippi ###
+MSP                       = require 'mississippi'
 #...........................................................................................................
 ### http://stringjs.com ###
-S                         = require 'string'
+stringfoo                 = require 'string'
 
 #===========================================================================================================
 # STREAM CREATION
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( settings ) ->
-  return through2.obj() if ( not settings? ) or ( keys = Object.keys ).length is 0
+  return MSP.through.obj() if ( not settings? ) or ( keys = Object.keys ).length is 0
   return @new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
   return @new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
   return @new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
   expected  = ( rpr key for key in @new_stream.keys ).join ', '
   got       = ( rpr key for key in             keys ).join ', '
   throw new Error "expected one of #{expected}, got #{got}"
+
+#-----------------------------------------------------------------------------------------------------------
 @new_stream.keys = [
   'file'
   'text'
@@ -44,27 +48,27 @@ pluck = ( x, key ) ->
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream_from_text = ( text, settings ) ->
-  ### Given a text, return a paused stream; when `stream.resume()` is called, `text` will be written to
-  the stream and the stream will be ended. In theory, one could argue that `stream_from_text` should send
-  the text in a piecemeal fashion like `fs.createReadStream` does, but since the text has to reside in
-  memory already when passed to this method anyhow, nothing would be gained by that. ###
-  throw new Error "@new_stream_from_text currently on hold"
+  ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
+  other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
+  returned stream will not have to been resumed explicitly. ###
+  R = @new_stream()
+  R.write text
+  R.end()
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream_from_pipeline = ( pipeline, settings ) ->
+  ### Given a list of transforms (a.k.a. a 'pipeline'), return a stream that has all the transforms
+  successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
+  reading from the stream will read from the last transform. If the pipeline is an empty list,
+  a simple `through2` stream is returned. ###
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
-  ### For some reason we need an additional 'starter' stream in the pipeline, otherwise the
-  first transform never gets called: ###
-  # receiver        = through2.obj()
-  # R               = combine receiver, pipeline...
-  # R[ 'input' ]    = receiver
-  # R[ 'output' ]   = if ( idx = pipeline.length - 1 ) >= 0 then pipeline[ idx ] else receiver
-  R       = through2.obj()
-  source  = R
+  source  = MSP.through.obj()
+  return source if pipeline.length is 0
+  sink    = source
   for transform, idx in pipeline
-    R = R.pipe transform
-  R[ 'source' ] = source
-  return R
+    sink = sink.pipe transform
+  return MSP.duplex source, sink, objectMode: true
 
 #-----------------------------------------------------------------------------------------------------------
 @new_file_readstream = ->          throw new Error "new_file_readstream not implemented"
@@ -88,7 +92,7 @@ pluck = ( x, key ) ->
     main = ( chunk, encoding, callback ) ->
       method chunk
       callback null, chunk
-    return through2.obj main
+    return MSP.through.obj main
   #.........................................................................................................
   if arity is 3
     flush = ( callback ) ->
@@ -120,7 +124,7 @@ pluck = ( x, key ) ->
     callback() unless has_error
     return null
   #.....................................................................................................
-  return through2.obj main, flush
+  return MSP.through.obj main, flush
 
 # #-----------------------------------------------------------------------------------------------------------
 # @$async_v4 = ( method ) ->
@@ -645,7 +649,7 @@ pluck = ( x, key ) ->
   #.........................................................................................................
   return @$ ( record, send ) =>
     if record?
-      values = ( S record ).parseCSV delimiter, qualifier, '\\'
+      values = ( stringfoo record ).parseCSV delimiter, qualifier, '\\'
       if headers
         if field_names is null
           field_names = values

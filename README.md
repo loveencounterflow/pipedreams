@@ -25,9 +25,15 @@
 - [Roadmap to Pipedreams Version 4](#roadmap-to-pipedreams-version-4)
   - [Base Libraries](#base-libraries)
     - [Through2](#through2)
-      - [Stream-Combiner2](#stream-combiner2)
-  - [Notes on the PipeDreams v4 API](#notes-on-the-pipedreams-v4-api)
-    - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
+- [PipeDreams v4 API](#pipedreams-v4-api)
+  - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
+    - [Require Statement](#require-statement)
+    - [Never Assume Your Streams to be Synchronous](#never-assume-your-streams-to-be-synchronous)
+    - [The Remit and Remit-Async Methods](#the-remit-and-remit-async-methods)
+      - [(Synchronous) Stream Observer](#synchronous-stream-observer)
+      - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
+      - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
+      - [Asynchronous Transform, No Stream End Detection](#asynchronous-transform-no-stream-end-detection)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -593,9 +599,11 @@ result:
     .pipe D.$on_end => T_done()
 ```
 
-#### Stream-Combiner2
+I'm using Through2 via the
+[mississippi](https://github.com/maxogden/mississippi) collection, which
+brings a number of up-to-date and (hopefully) mutually compatible stream
+modules together in a neat bundle.
 
-[github.com/substack/*stream-combiner2*](https://github.com/substack/stream-combiner2)
 
 # PipeDreams v4 API
 
@@ -648,6 +656,55 @@ D               = require 'pipedreams'
 
 In the below, I will assume you `require`d PipeDreams the first way, above.
 
+### Never Assume Your Streams to be Synchronous
+
+As a general note that users should keep in mind, please observe that no
+guarantee is made that any given stream works in a synchronous manner. More
+specifically and with regard to the most typical usage pattern: never handle
+data 'right below' the pipeline definition. 
+
+Here's an example from `src/tests.coffee`: we create a stream, define a
+pipeline to split the text into lines and collect those lines into a list;
+then, we write a multi-line string to it and end the stream. When we now look
+at what's ended up in the collector, we find that the last line is  missing.
+This may come as a surprise, since nothing in the code suggests that the thing
+should not work in a simple top-down manner:
+
+```coffee
+@[ "(v4) new_stream_from_text doesn't work synchronously" ] = ( T, done ) ->
+  collector = []
+  input     = D.new_stream()
+  input
+    .pipe D.$split()
+    .pipe $ ( line, send ) =>
+      send line
+      collector.push line
+  input.write "first line\nsecond line"
+  input.end()
+  T.eq collector, [ "first line", ] # <-- we're missing the last line here
+  done()
+```
+
+In order for the code to meet expectations, remember to always grab
+your results from within a stream transform; commonly, this is either
+done by using a [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection),
+or `D.$on_end`:
+
+```coffee
+@[ "(v4) new_stream_from_text (2)" ] = ( T, done ) ->
+  collector = []
+  input     = D.new_stream()
+  input
+    .pipe D.$split()
+    .pipe $ ( line, send ) =>
+      send line
+      collector.push line
+    .pipe D.$on_end =>
+      T.eq collector, [ "first line", "second line", ]
+      done()
+  input.write "first line\nsecond line"
+  input.end()
+```
 
 ### The Remit and Remit-Async Methods
 

@@ -22,40 +22,8 @@ D                         = require './main'
 #===========================================================================================================
 # TESTS
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_pipeline (1)" ] = ( T, done ) ->
-  #.........................................................................................................
-  create_frob_tee = ( settings ) ->
-    multiply      = $ ( data, send ) => send data * 2
-    add           = $ ( data, send ) => send data + 2
-    square        = $ ( data, send ) => send data ** 2
-    unsquared     = D.new_stream()
-    #.....................................................................................................
-    return D.new_stream_from_pipeline [ multiply, add, unsquared, square, ]
-  #.........................................................................................................
-  do ->
-    probes              = [ 1 ... 10 ]
-    output_matchers     = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
-    output_results      = []
-    frob                = create_frob_tee()
-    { input, output, }  = frob
-    #.......................................................................................................
-    output
-      .pipe $ ( data, send ) =>
-        output_results.push data
-        send data
-      #.....................................................................................................
-      .pipe D.$show()
-      #.....................................................................................................
-      .pipe D.$on_end =>
-        T.eq output_results, output_matchers
-        done()
-    #.......................................................................................................
-    input.write n for n in probes
-    input.end()
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new_stream_from_pipeline (1a)" ] = ( T, done ) ->
-  through2                  = require 'through2'
+  MSP                       = require 'mississippi'
   combine                   = require 'stream-combiner2'
   create_frob_tee           = null
   #.........................................................................................................
@@ -64,9 +32,9 @@ D                         = require './main'
       multiply        = $ ( data, send ) => whisper 'multiply', data; send data *  2
       add             = $ ( data, send ) => whisper 'add',      data; send data +  2
       square          = $ ( data, send ) => whisper 'square',   data; send data ** 2
-      unsquared       = through2.obj()
+      unsquared       = MSP.through.obj()
       #.....................................................................................................
-      R               = source = through2.obj()
+      R               = source = MSP.through.obj()
       source          = R
       sink            = R
       R               = R.pipe multiply
@@ -128,7 +96,7 @@ D                         = require './main'
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new_stream_from_pipeline (3)" ] = ( T, done ) ->
-  through2                  = require 'through2'
+  MSP                       = require 'mississippi'
   create_frob_tee           = null
   #.........................................................................................................
   do ->
@@ -144,10 +112,9 @@ D                         = require './main'
     probes              = [ 1 ... 10 ]
     matchers            = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
     results             = []
-    sink                = create_frob_tee()
-    { source, }         = sink
+    frob                = create_frob_tee()
     #.......................................................................................................
-    sink
+    frob
       .pipe D.$show()
       #.....................................................................................................
       .pipe $ ( data, send ) =>
@@ -158,8 +125,8 @@ D                         = require './main'
         T.eq results, matchers
         done()
     #.......................................................................................................
-    source.write n for n in probes
-    source.end()
+    frob.write n for n in probes
+    frob.end()
   #.........................................................................................................
   return null
 
@@ -168,21 +135,24 @@ D                         = require './main'
   probes      = [ 10 .. 20 ]
   matchers    = [20,22,24,26,28,30,32,34,36,38,40]
   results     = []
-  input       = D.new_stream()
-  transforms = [
+  pipeline    = [
     ( $ ( data, send ) => send n + 2 )
     ( $ ( data, send ) => send n * 2 )
     ]
-  confluence  = D.new_stream pipeline: [ input, transforms..., ]
+  confluence  = D.new_stream pipeline: pipeline
   confluence
     .pipe D.$show()
-    .pipe $ ( data, send ) => results.push data; send data
+    .pipe $ ( data, send, end ) =>
+      if data?
+        send data
+        results.push data
+      if end?
+        T.eq results, matchers
+        end()
+        done()
   for n in probes
-    input.write n
-  input.end()
-  # debug '7372', results
-  T.eq results, matchers
-  done()
+    confluence.write n
+  confluence.end()
   #.........................................................................................................
   return null
 
@@ -206,8 +176,36 @@ D                         = require './main'
         T.eq count, 1
         end()
         done()
-  input.resume()
+  return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_stream_from_text doesn't work synchronously" ] = ( T, done ) ->
+  collector = []
+  input     = D.new_stream()
+  input
+    .pipe D.$split()
+    .pipe $ ( line, send ) =>
+      send line
+      collector.push line
+  input.write "first line\nsecond line"
+  input.end()
+  T.eq collector, [ "first line", ]
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_stream_from_text (2)" ] = ( T, done ) ->
+  collector = []
+  input     = D.new_stream()
+  input
+    .pipe D.$split()
+    .pipe $ ( line, send ) =>
+      send line
+      collector.push line
+    .pipe D.$on_end =>
+      T.eq collector, [ "first line", "second line", ]
+      done()
+  input.write "first line\nsecond line"
+  input.end()
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -291,7 +289,7 @@ D                         = require './main'
 @[ "(v4) stream / transform construction with through2 (1)" ] = ( T, T_done ) ->
   FS          = require 'fs'
   PATH        = require 'path'
-  through2    = require 'through2'
+  MSP         = require 'mississippi'
   t2_settings = {}
   input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
   #.........................................................................................................
@@ -326,7 +324,7 @@ D                         = require './main'
   input
     .pipe D.$split()
     # .pipe D.$observe ( line ) => whisper rpr line
-    .pipe through2.obj t2_settings, transform_main, transform_flush
+    .pipe MSP.through.obj t2_settings, transform_main, transform_flush
     .pipe D.$show()
     .pipe D.$on_end => T_done()
   #.........................................................................................................
@@ -334,10 +332,10 @@ D                         = require './main'
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) stream / transform construction with through2 (2)" ] = ( T, T_done ) ->
-  through2    = require 'through2'
+  MSP         = require 'mississippi'
   t2_settings = {}
   S           = {}
-  S.input     = through2.obj()
+  S.input     = MSP.through.obj()
   #.........................................................................................................
   db = CND.shuffle [
     [ '千', 'variant',     '仟',                         ]
@@ -388,7 +386,7 @@ D                         = require './main'
         push [ 'message', "we're done", ]
         done()
     #.......................................................................................................
-    return through2.obj t2_settings, main, flush
+    return MSP.through.obj t2_settings, main, flush
   #.........................................................................................................
   $collect = ( S ) =>
     matchers  = new Set ( JSON.stringify phrase for phrase in db )
@@ -406,7 +404,7 @@ D                         = require './main'
       T.eq matchers.size, 0
       handler()
     #.......................................................................................................
-    return through2.obj t2_settings, main, flush
+    return MSP.through.obj t2_settings, main, flush
   #.........................................................................................................
   S.input
     .pipe $retrieve_data_from_db  S
@@ -494,11 +492,9 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    "(v4) new_stream_from_pipeline (1a)"
-    # "(v4) new_stream_from_pipeline (1)"
-    "(v4) new_stream_from_pipeline (3)"
+    # "(v4) new_stream_from_pipeline (1a)"
+    # "(v4) new_stream_from_pipeline (3)"
     # "(v4) new_stream_from_pipeline (4)"
-    # "(v4) new_stream_from_text"
     # "(v4) D.new_stream"
     # "(v4) D.new_stream_from_pipeline"
     # "(v4) stream / transform construction with through2 (1)"
@@ -506,8 +502,19 @@ unless module.parent?
     # # # "(v4) $async with stream end detection"
     # # # "(v4) $async with arbitrary number of results"
     # "(v4) README demo (1)"
+    "(v4) new_stream_from_text"
+    "(v4) new_stream_from_text doesn't work synchronously"
+    "(v4) new_stream_from_text (2)"
     ]
   @_prune()
   @_main()
+
+
+
+
+
+
+
+
 
 
