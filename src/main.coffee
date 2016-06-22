@@ -81,26 +81,6 @@ pluck = ( x, key ) ->
   return MSP.duplex source, sink, objectMode: true
 
 #-----------------------------------------------------------------------------------------------------------
-@new_file_readstream = ( P... ) -> ( require 'fs' ).createReadStream P...
-
-#-----------------------------------------------------------------------------------------------------------
-@new_file_readlinestream = ( P... ) ->
-  return @new_stream pipeline: [
-    ( @new_file_readstream P... )
-    ( @$split()                 )
-    ]
-
-#-----------------------------------------------------------------------------------------------------------
-@new_sink = ->
-  return @new_stream pipeline: [
-    # ( @$as_text()                                             )
-    ( @$bridge ( require 'fs' ).createWriteStream '/dev/null' )
-    ]
-
-#-----------------------------------------------------------------------------------------------------------
-@new_file_writestream = -> throw new Error "new_file_writestream not implemented"
-
-#-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
 @isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
@@ -185,27 +165,6 @@ pluck = ( x, key ) ->
 
 
 #===========================================================================================================
-# BRIDGING
-#-----------------------------------------------------------------------------------------------------------
-@$bridge = ( stream ) ->
-  ### Make it so that the pipeline may be continued even below a writable but not readable stream.
-  Conceivably, this method could have be named `tunnel` as well. Something to get you across, you get the
-  meaning. ###
-  throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
-  throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
-  throw new Error "expected a writable stream"                      if not stream.writable
-  throw new Error "expected a writable, non-readable stream"        if     stream.readable
-  #.........................................................................................................
-  return @$ ( data, send, end ) =>
-    stream.write data if data?
-    send data
-    if end?
-      stream.end() unless stream is process.stdout
-      # throw error unless ( message = error[ 'message' ] )? and message.endsWith "cannot be closed."
-      end()
-
-
-#===========================================================================================================
 # SPLITTING, JOINING, SORTING
 #-----------------------------------------------------------------------------------------------------------
 @$join = ( joiner = '\n' ) ->
@@ -256,11 +215,57 @@ pluck = ( x, key ) ->
       end()
 
 #-----------------------------------------------------------------------------------------------------------
-@$as_text = ->
+@$as_text = ( stringify ) ->
+  ### Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings
+  in the data stream is passed through unaffected. Observe that buffers in the stream will very probably not
+  come out the way you'd expect them; this is because there's no way to know for the method what kind of
+  data they represent.
+
+  This method is handy to put as a safeguard right in front of a `.pipe output_file` clause to avoid
+  `illegal non-buffer` issues. ###
+  stringify ?= JSON.stringify
   return @$ ( data, send ) ->
     return send null if data is null
-    return send rpr data unless CND.isa_text data
+    return send stringify data unless CND.isa_text data
     send data
+
+#-----------------------------------------------------------------------------------------------------------
+@$parse_csv = ( options ) ->
+  field_names = null
+  options    ?= {}
+  headers     = options[ 'headers'    ] ? true
+  delimiter   = options[ 'delimiter'  ] ? ','
+  qualifier   = options[ 'qualifier'  ] ? '"'
+  ### http://stringjs.com ###
+  stringfoo   = require 'string'
+  #.........................................................................................................
+  return @$ ( record, send ) =>
+    if record?
+      values = ( stringfoo record ).parseCSV delimiter, qualifier, '\\'
+      if headers
+        if field_names is null
+          field_names = values
+        else
+          record = {}
+          record[ field_names[ idx ] ] = value for value, idx in values
+          send record
+      else
+        send values
+
+#-----------------------------------------------------------------------------------------------------------
+@$split_each_line = ( settings ) ->
+  splitter        = settings?[ 'splitter'   ] ? '\t'
+  keep_empty      = settings?[ 'empty'      ] ? no
+  comment_matcher = settings?[ 'comments'   ] ? no
+  #.........................................................................................................
+  $split_line = =>
+    return @$ ( data, send ) =>
+      send data.split splitter
+  #.........................................................................................................
+  return @new_stream pipeline: [
+    @$split()
+    $split_line()
+    ]
 
 
 #===========================================================================================================
@@ -282,6 +287,9 @@ pluck = ( x, key ) ->
   argument.
   ###
   #.........................................................................................................
+  ### TAINT re-write in a less low-level fashion ###
+  ### TAINT re-write to avoid buffering both streams ###
+  #.........................................................................................................
   fallback  = settings?[ 'fallback' ]
   idx_1     = 0
   idx_2     = 0
@@ -290,6 +298,7 @@ pluck = ( x, key ) ->
   _send     = null
   _end_1    = null
   _end_2    = null
+  has_ended = false
   #.........................................................................................................
   flush = =>
     #.......................................................................................................
@@ -317,6 +326,10 @@ pluck = ( x, key ) ->
   input.on 'data', ( data_2 ) =>
     buffer_2.push data_2
     flush()
+  # input.on 'readable', =>
+  #   data_2 = input.read()
+  #   buffer_2.push data_2
+  #   flush()
   #.........................................................................................................
   input.pipe @$on_end ( end ) =>
     _end_2 = end
@@ -333,51 +346,6 @@ pluck = ( x, key ) ->
       _end_1 = end
       flush()
 
-#===========================================================================================================
-# SPECIALIZED STREAMS
-# #-----------------------------------------------------------------------------------------------------------
-# @spawn_and_read = ( P... ) ->
-#   ### from https://github.com/alessioalex/spawn-to-readstream:
-
-#   Make child process spawn behave like a read stream (buffer the error, don't emit end if error emitted).
-
-#   ```js
-#   var toReadStream = require('spawn-to-readstream'),
-#       spawn        = require('child_process').spawn;
-
-#   toReadStream(spawn('ls', ['-lah'])).on('error', function(err) {
-#     throw err;
-#   }).on('end', function() {
-#     console.log('~~~ DONE ~~~');
-#   }).on('data', function(data) {
-#     console.log('ls data :::', data.toString());
-#   });
-#   ```
-#   ###
-#   readstream_from_spawn     = require 'spawn-to-readstream'
-#   spawn                     = ( require 'child_process' ).spawn
-#   return readstream_from_spawn spawn P...
-
-# #-----------------------------------------------------------------------------------------------------------
-# @spawn_and_read_lines = ( P... ) ->
-#   last_line = null
-#   R         = @new_stream()
-#   input     = @spawn_and_read P...
-#   #.........................................................................................................
-#   input
-#     .pipe @$split()
-#     .pipe @$ ( line, send, end ) =>
-#       #.....................................................................................................
-#       if line?
-#         R.write last_line if last_line?
-#         last_line = line
-#       #.....................................................................................................
-#       if end?
-#         R.write last_line if last_line? and last_line.length > 0
-#         R.end()
-#         end()
-#   #.........................................................................................................
-#   return R
 
 
 #===========================================================================================================
@@ -445,40 +413,6 @@ pluck = ( x, key ) ->
 #===========================================================================================================
 # AGGREGATION & DISSEMINATION
 #-----------------------------------------------------------------------------------------------------------
-@$aggregate = ( initial_value, on_data, on_end = null ) ->
-  ### `$aggregate` allows to compose stream transformers that act on the entire stream. Aggregators may
-
-  * replace all data items with a single item;
-  * observe the entire stream and either add or print out summary values.
-
-  `$aggregate` should be called with two or three arguments:
-  * `initial_value` is the base value that represents the value of the aggregator when it never
-    gets to see any data; for a count or a sum that would be `0`, for a list of all data items, that would
-    be an empty list, and so on.
-  * `on_data` is the handler for each data items. It will be called as `on_data data, send`. Whatever
-    value the data handler returns becomes the next value of the aggregator. If you want to *keep* data
-    ittems in the stream, you must call `send data`; if you want to *omit* data items (and maybe later on
-    replace them with the aggregate), do not call `send data`.
-  * `on_end`, when given, will be called as `on_end current_value, send` after the last data item has come
-    down the stream, but before `end` is emitted on the stream. It gives you the chance to perform some
-    data transformation on your aggregate. If `on_end` is not given, the default operation is to just send
-    on the current value of the aggregate.
-
-  See `$count` and `$collect` for examples of aggregators.
-
-  Note that unlike `Array::reduce`, handlers will not be given much context; it is your obligation to do
-  all the bookkeeping—which should be a simple and flexible thing to implement using JS closures.
-  ###
-  throw new Error "$aggregate temporarily on hold"
-  current_value = initial_value
-  return @$ ( data, send, end ) =>
-    if data?
-      current_value = on_data data, send
-    if end?
-      if on_end? then on_end current_value, send else send current_value
-      end()
-
-#-----------------------------------------------------------------------------------------------------------
 @$count = ( on_end = null ) ->
   count = 0
   #.........................................................................................................
@@ -503,13 +437,14 @@ pluck = ( x, key ) ->
 #-----------------------------------------------------------------------------------------------------------
 @$spread = ( settings ) ->
   indexed   = settings?[ 'indexed'  ] ? no
-  end       = settings?[ 'end'      ] ? no
+  # end       = settings?[ 'end'      ] ? no
   return @$ ( data, send ) =>
     unless type = ( CND.type_of data ) is 'list'
       return send.error new Error "expected a list, got a #{rpr type}"
     for value, idx in data
       send if indexed then [ idx, value, ] else value
-    send null if end
+    # send null if end
+    return null
 
 #-----------------------------------------------------------------------------------------------------------
 @$batch = ( batch_size = 1000 ) ->
@@ -567,24 +502,6 @@ pluck = ( x, key ) ->
     send record
 
 #-----------------------------------------------------------------------------------------------------------
-@$observe = ( method ) ->
-  ### Call `method` for each piece of data; when `method` has returned with whatever result, send data on.
-  ###
-  # return @$filter ( data ) -> method data; return true
-  switch arity = method.length
-    when 1
-      return @$ ( data ) => method data
-    when 2
-      return @$ ( data, send, end ) =>
-        if data?
-          method data, false
-          send data
-        if end?
-          method null, true
-          end()
-  throw new Error "expected method with arity 1 or 2, got one with arity #{arity}"
-
-#-----------------------------------------------------------------------------------------------------------
 @$stop_time = ( badge_or_handler ) ->
   t0 = null
   return @$observe ( data, is_last ) =>
@@ -605,8 +522,7 @@ pluck = ( x, key ) ->
 # THROUGHPUT LIMITING
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_bytes = ( bytes_per_second ) ->
-  Throttle = require 'throttle'
-  return new Throttle bytes_per_second
+  return new ( require 'throttle' ) bytes_per_second
 
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_items = ( items_per_second ) ->
@@ -644,32 +560,6 @@ pluck = ( x, key ) ->
     #.......................................................................................................
     if end?
       has_ended = yes
-
-
-#===========================================================================================================
-# CSV
-#-----------------------------------------------------------------------------------------------------------
-@$parse_csv = ( options ) ->
-  field_names = null
-  options    ?= {}
-  headers     = options[ 'headers'    ] ? true
-  delimiter   = options[ 'delimiter'  ] ? ','
-  qualifier   = options[ 'qualifier'  ] ? '"'
-  ### http://stringjs.com ###
-  stringfoo   = require 'string'
-  #.........................................................................................................
-  return @$ ( record, send ) =>
-    if record?
-      values = ( stringfoo record ).parseCSV delimiter, qualifier, '\\'
-      if headers
-        if field_names is null
-          field_names = values
-        else
-          record = {}
-          record[ field_names[ idx ] ] = value for value, idx in values
-          send record
-      else
-        send values
 
 
 #===========================================================================================================

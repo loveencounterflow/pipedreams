@@ -277,7 +277,7 @@ D                         = require './main'
     .pipe $ ( data ) => log CND.truth data?
     .pipe $summarize "position #1:"
     .pipe $as_text_line()
-    .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
+    # .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
     .pipe $verify()
     .pipe $summarize "position #2:"
     .pipe D.$on_end => done()
@@ -637,62 +637,141 @@ D                         = require './main'
   D.end input
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $bridge" ] = ( T, done ) ->
-  # input   = D.new_file_readstream ( require 'path' ).resolve __dirname, '../package.json'
-  MSP       = require 'mississippi'
-  has_url   = no
-  has_ended = no
-  output    = ( require 'fs' ).createWriteStream '/tmp/foo'
-  D.$bridge = ( stream ) ->
-    output.on 'close',  => urge 'close'
-    output.on 'finish', => urge 'finish'
-  input = ( require 'fs' ).createReadStream ( require 'path' ).resolve __dirname, '../package.json'
-  input
-    .pipe D.$split()
-    # .pipe D.$show()
-    .pipe $ ( line ) =>
-      has_url = has_url or ( /// "homepage" .* "https:\/\/github .* \/pipedreams" /// ).test line
-    # .pipe D.$bridge ( require 'fs' ).createWriteStream '/tmp/foo'
-    # .pipe MSP.duplex ( ( require 'fs' ).createWriteStream '/tmp/foo' ), D.new_stream()
-    .pipe output
-    # .pipe D.$on_end =>
-    #   if has_url then T.ok yes
-    #   else            T.fail "expected to find a URL"
-    #   has_ended = yes
-    #   done()
-  report_failure = =>
-    return if has_ended
-    T.fail ".pipe D.$on_end was not called"
-    done()
-  setTimeout report_failure, 2000
+@[ "(v4) $lockstep 1" ] = ( T, done ) ->
+  input_1 = D.new_stream()
+  input_2 = D.new_stream()
+  input_1
+    .pipe D.$lockstep input_2
+    .pipe D.$collect()
+    .pipe D.$show()
+    .pipe $ ( data ) -> T.eq data, matcher if data?
+    .pipe D.$on_end => done()
+  # D.send input_1, word for word in "do re mi fa so la ti".split /\s+/
+  matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
+              [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], ]
+  D.send input_1, word for word in "以 呂 波 耳 本 部 止".split /\s+/
+  D.send input_2, word for word in "i ro ha ni ho he to".split /\s+/
+  D.end input_1
+  D.end input_2
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_file_readstream" ] = ( T, done ) ->
-  # input   = D.new_file_readstream ( require 'path' ).resolve __dirname, '../package.json'
-  input   = ( require 'fs' ).createReadStream ( require 'path' ).resolve __dirname, '../package.json'
-  has_url = no
-  input
-    .pipe D.$split()
-    .pipe D.$show()
-    .pipe $ ( line ) =>
-      has_url = has_url or ( /// "homepage" .* "https:\/\/github .* \/pipedreams" /// ).test line
-    .pipe D.$bridge ( require 'fs' ).createWriteStream '/tmp/foo'
-    .pipe D.$on_end =>
-      if has_url then T.ok yes
-      else            T.fail "expected to find a URL"
-      done()
-    # .pipe ( require 'fs' ).createWriteStream '/dev/null'
-  input.resume()
+@[ "(v4) $lockstep fails on streams of unequal lengths without fallback" ] = ( T, done ) ->
+  f = =>
+    input_1 = D.new_stream()
+    input_2 = D.new_stream()
+    input_1
+      .pipe D.$lockstep input_2
+      .pipe D.$collect()
+      # .pipe D.$show()
+    #   .pipe $ ( data ) -> T.eq data, matcher if data?
+    #   .pipe D.$on_end => done()
+    # # D.send input_1, word for word in "do re mi fa so la ti".split /\s+/
+    # matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
+    #             [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ] ]
+    D.send input_1, word for word in "以 呂 波 耳 本 部 止 千".split /\s+/
+    D.send input_2, word for word in "i ro ha ni ho he to".split /\s+/
+    D.end input_1
+    D.end input_2
+  D.run f, ( error ) =>
+    T.eq error[ 'message' ], "streams of unequal lengths and no fallback value given"
+    done()
+  return null
 
-# #-----------------------------------------------------------------------------------------------------------
-# @[ "(v4) new_file_readlinestream" ] = ( T, done ) ->
-#   input = D.new_file_readlinestream ( require 'path' ).resolve __dirname, '../package.json'
-#   input
-#     .pipe D.$show()
-#     .pipe D.new_sink()
-#     .pipe D.$on_end => done()
-#   # done()
-#   input.resume()
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $lockstep succeeds on streams of unequal lengths with fallback" ] = ( T, done ) ->
+  input_1 = D.new_stream()
+  input_2 = D.new_stream()
+  input_1
+    .pipe D.$lockstep input_2, fallback: null
+    .pipe D.$collect()
+    .pipe D.$show()
+    .pipe $ ( data ) -> T.eq data, matcher if data?
+    .pipe D.$on_end => done()
+  matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
+              [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], [ '千', null ], ]
+  D.send input_1, word for word in "以 呂 波 耳 本 部 止 千".split /\s+/
+  D.send input_2, word for word in "i ro ha ni ho he to".split /\s+/
+  D.end input_1
+  D.end input_2
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $batch and $spread" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$batch 3
+    .pipe D.$spread indexed: yes
+    .pipe D.$collect()
+    .pipe D.$show()
+    .pipe $ ( data ) -> T.eq data, matcher if data?
+    .pipe D.$on_end => done()
+  matcher = [ [ 0, '以' ], [ 1, '呂' ], [ 2, '波' ], [ 0, '耳' ], [ 1, '本' ], [ 2, '部' ], [ 0, '止' ] ]
+  D.send input, word for word in "以 呂 波 耳 本 部 止".split /\s+/
+  D.end input
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $split_each_line plain" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$split_each_line()
+    .pipe D.$collect()
+    .pipe D.$show()
+    .pipe $ ( data ) -> T.eq data, matcher if data?
+    .pipe D.$on_end => done()
+  matcher = [
+    [ 'a', 'text' ],
+    [ 'with', 'a number' ],
+    [ 'of', 'lines' ],
+    [ 'u-cjk/9e1f', '鸟', '⿴乌丶' ],
+    [ 'u-cjk/9e20', '鸠', '⿰九鸟' ],
+    [ 'u-cjk/9e21', '鸡', '⿰又鸟' ],
+    [ 'u-cjk/9e22', '鸢', '⿱弋鸟' ],
+    [ 'u-cjk/9e23', '鸣', '⿰口鸟' ] ]
+  D.send input, """
+    a\ttext
+    with\ta number
+    of\tlines\n"""
+  D.send input, """
+    u-cjk/9e1f\t鸟\t⿴乌丶
+    u-cjk/9e20\t鸠\t⿰九鸟
+    u-cjk/9e21\t鸡\t⿰又鸟
+    u-cjk/9e22\t鸢\t⿱弋鸟
+    u-cjk/9e23\t鸣\t⿰口鸟"""
+  D.end input
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $split_each_line with comments, empty lines" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$split_each_line()
+    .pipe D.$collect()
+    .pipe D.$show()
+    .pipe $ ( data ) -> T.eq data, matcher if data?
+    .pipe D.$on_end => done()
+  matcher = [
+    [ 'a', 'text' ],
+    [ 'with', 'a number' ],
+    [ 'of', 'lines' ],
+    [ 'u-cjk/9e1f', '鸟', '⿴乌丶' ],
+    [ 'u-cjk/9e20', '鸠', '⿰九鸟' ],
+    [ 'u-cjk/9e21', '鸡', '⿰又鸟' ],
+    [ 'u-cjk/9e22', '鸢', '⿱弋鸟' ],
+    [ 'u-cjk/9e23', '鸣', '⿰口鸟' ] ]
+  D.send input, """
+    a\ttext
+    with\ta number
+    of\tlines\n"""
+  D.send input, """
+    u-cjk/9e1f\t鸟\t⿴乌丶
+    u-cjk/9e20\t鸠\t⿰九鸟
+    u-cjk/9e21\t鸡\t⿰又鸟
+    u-cjk/9e22\t鸢\t⿱弋鸟
+    u-cjk/9e23\t鸣\t⿰口鸟"""
+  D.end input
+  return null
 
 #===========================================================================================================
 # HELPERS
@@ -725,28 +804,31 @@ unless module.parent?
     # "(v4) new_stream_from_pipeline (1a)"
     # "(v4) new_stream_from_pipeline (3)"
     # "(v4) new_stream_from_pipeline (4)"
-    # "(v4) D.new_stream"
-    # "(v4) D.new_stream_from_pipeline"
-    # "(v4) stream / transform construction with through2 (1)"
     # "(v4) new_stream_from_text"
     # "(v4) new_stream_from_text doesn't work synchronously"
     # "(v4) new_stream_from_text (2)"
-    # "(v4) README demo (1)"
     # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) README demo (1)"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D.new_stream_from_pipeline"
     # "(v4) $async with method arity 2"
     # "(v4) $async with method arity 3"
     # "(v4) $sort 1"
     # "(v4) $sort 2"
     # "(v4) $sort 3"
     # "(v4) $sort 4"
-    # "(v4) new_file_readstream"
-    # "(v4) new_file_readlinestream"
-    "(v4) $bridge"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) $split_each_line"
     ]
   @_prune()
-  @_main()
+  # @_main()
+  # debug '5562', JSON.stringify Object.keys @
 
-
+  @[ "(v4) $split_each_line" ]()
 
 
 

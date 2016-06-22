@@ -359,6 +359,79 @@ D                         = require './main'
   #.........................................................................................................
   input.resume()
 
+###
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $bridge" ] = ( T, done ) ->
+  # input   = D.new_file_readstream ( require 'path' ).resolve __dirname, '../package.json'
+  MSP         = require 'mississippi'
+  has_url     = no
+  has_ended   = no
+  input       = ( require 'fs' ).createReadStream ( require 'path' ).resolve __dirname, '../package.json'
+  # throughput  = ( require 'fs' ).createWriteStream '/tmp/foo'
+  # #.........................................................................................................
+  # D.$bridge = ( stream ) ->
+  #   stream.on 'close',  => urge 'close'
+  #   stream.on 'finish', => urge 'finish'
+  #   main  = ( data, _, callback ) ->
+  #     debug '4453', data
+  #     stream.write data
+  #     @push data
+  #     callback()
+  #   flush = ( callback ) ->
+  #     stream.close()
+  #     callback()
+  #   # return MSP.through.obj main, flush
+  #   return D.new_stream()
+  #.........................................................................................................
+  input
+    .pipe D.$split()
+    .pipe D.$show()
+    .pipe $ ( line ) =>
+      has_url = has_url or ( /// "homepage" .* "https:\/\/github .* \/pipedreams" /// ).test line
+    # .pipe D.$bridge ( require 'fs' ).createWriteStream '/tmp/foo'
+    # .pipe MSP.duplex ( ( require 'fs' ).createWriteStream '/tmp/foo' ), D.new_stream()
+    # .pipe D.$bridge process.stdout
+    .pipe D.$on_end =>
+      has_ended = yes
+      if has_url then T.ok yes
+      else            T.fail "expected to find a URL"
+      done()
+  # report_failure = =>
+  #   return if has_ended
+  #   T.fail ".pipe D.$on_end was not called"
+  #   done()
+  # setTimeout report_failure, 2000
+  return null
+###
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_file_readstream" ] = ( T, done ) ->
+  input   = D.new_file_readstream ( require 'path' ).resolve __dirname, '../package.json'
+  # input   = ( require 'fs' ).createReadStream ( require 'path' ).resolve __dirname, '../package.json'
+  has_url = no
+  input
+    .pipe D.$split()
+    .pipe D.$show()
+    .pipe $ ( line ) =>
+      has_url = has_url or ( /// "homepage" .* "https:\/\/github .* \/pipedreams" /// ).test line
+    # .pipe D.$bridge ( require 'fs' ).createWriteStream '/tmp/foo'
+    .pipe D.$on_end =>
+      if has_url then T.ok yes
+      else            T.fail "expected to find a URL"
+      done()
+    # .pipe ( require 'fs' ).createWriteStream '/dev/null'
+  input.resume()
+
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "(v4) new_file_readlinestream" ] = ( T, done ) ->
+#   input = D.new_file_readlinestream ( require 'path' ).resolve __dirname, '../package.json'
+#   input
+#     .pipe D.$show()
+#     .pipe D.new_sink()
+#     .pipe D.$on_end => done()
+#   # done()
+#   input.resume()
+
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
