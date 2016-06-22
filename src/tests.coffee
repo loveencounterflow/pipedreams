@@ -24,7 +24,6 @@ D                         = require './main'
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new_stream_from_pipeline (1a)" ] = ( T, done ) ->
   MSP                       = require 'mississippi'
-  combine                   = require 'stream-combiner2'
   create_frob_tee           = null
   #.........................................................................................................
   do ->
@@ -536,30 +535,6 @@ D                         = require './main'
 
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $sort 1" ] = ( T, done ) ->
-  input = D.new_stream()
-  input
-    .pipe D.$sort()
-    .pipe D.$show()
-    .pipe D.$collect()
-    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
-    .pipe D.$on_end => done()
-  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
-  D.end input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $sort 2" ] = ( T, done ) ->
-  input = D.new_stream()
-  input
-    .pipe D.$sort()
-    .pipe D.$show()
-    .pipe D.$collect collect: yes
-    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
-    .pipe D.$on_end => done()
-  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
-  D.end input
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $async with method arity 3" ] = ( T, done ) ->
   #.........................................................................................................
   $calculate = => $async ( n, send ) =>
@@ -606,6 +581,119 @@ D                         = require './main'
   return null
 
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $sort 1" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$sort()
+    .pipe D.$show()
+    .pipe D.$collect()
+    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
+    .pipe D.$on_end => done()
+  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
+  D.end input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $sort 2" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$sort()
+    .pipe D.$show()
+    .pipe D.$collect collect: yes
+    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
+    .pipe D.$on_end => done()
+  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
+  D.end input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $sort 3" ] = ( T, done ) ->
+  sorter = ( a, b ) =>
+    return +1 if a < b
+    return -1 if a > b
+    return  0
+  input = D.new_stream()
+  input
+    .pipe D.$sort sorter
+    .pipe D.$show()
+    .pipe D.$collect()
+    .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ] if data?
+    .pipe D.$on_end => done()
+  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
+  D.end input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $sort 4" ] = ( T, done ) ->
+  sorter = ( a, b ) =>
+    return +1 if a < b
+    return -1 if a > b
+    return  0
+  input = D.new_stream()
+  input
+    .pipe D.$sort sorter, collect: yes
+    .pipe D.$show()
+    .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ] if data?
+    .pipe D.$on_end => done()
+  D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
+  D.end input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $bridge" ] = ( T, done ) ->
+  # input   = D.new_file_readstream ( require 'path' ).resolve __dirname, '../package.json'
+  MSP       = require 'mississippi'
+  has_url   = no
+  has_ended = no
+  output    = ( require 'fs' ).createWriteStream '/tmp/foo'
+  D.$bridge = ( stream ) ->
+    output.on 'close',  => urge 'close'
+    output.on 'finish', => urge 'finish'
+  input = ( require 'fs' ).createReadStream ( require 'path' ).resolve __dirname, '../package.json'
+  input
+    .pipe D.$split()
+    # .pipe D.$show()
+    .pipe $ ( line ) =>
+      has_url = has_url or ( /// "homepage" .* "https:\/\/github .* \/pipedreams" /// ).test line
+    # .pipe D.$bridge ( require 'fs' ).createWriteStream '/tmp/foo'
+    # .pipe MSP.duplex ( ( require 'fs' ).createWriteStream '/tmp/foo' ), D.new_stream()
+    .pipe output
+    # .pipe D.$on_end =>
+    #   if has_url then T.ok yes
+    #   else            T.fail "expected to find a URL"
+    #   has_ended = yes
+    #   done()
+  report_failure = =>
+    return if has_ended
+    T.fail ".pipe D.$on_end was not called"
+    done()
+  setTimeout report_failure, 2000
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_file_readstream" ] = ( T, done ) ->
+  # input   = D.new_file_readstream ( require 'path' ).resolve __dirname, '../package.json'
+  input   = ( require 'fs' ).createReadStream ( require 'path' ).resolve __dirname, '../package.json'
+  has_url = no
+  input
+    .pipe D.$split()
+    .pipe D.$show()
+    .pipe $ ( line ) =>
+      has_url = has_url or ( /// "homepage" .* "https:\/\/github .* \/pipedreams" /// ).test line
+    .pipe D.$bridge ( require 'fs' ).createWriteStream '/tmp/foo'
+    .pipe D.$on_end =>
+      if has_url then T.ok yes
+      else            T.fail "expected to find a URL"
+      done()
+    # .pipe ( require 'fs' ).createWriteStream '/dev/null'
+  input.resume()
+
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "(v4) new_file_readlinestream" ] = ( T, done ) ->
+#   input = D.new_file_readlinestream ( require 'path' ).resolve __dirname, '../package.json'
+#   input
+#     .pipe D.$show()
+#     .pipe D.new_sink()
+#     .pipe D.$on_end => done()
+#   # done()
+#   input.resume()
+
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
@@ -633,22 +721,27 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    "(v4) new_stream_from_pipeline (1a)"
-    "(v4) new_stream_from_pipeline (3)"
-    "(v4) new_stream_from_pipeline (4)"
-    "(v4) D.new_stream"
-    "(v4) D.new_stream_from_pipeline"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) new_stream_from_text"
-    "(v4) new_stream_from_text doesn't work synchronously"
-    "(v4) new_stream_from_text (2)"
-    "(v4) README demo (1)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) $async with method arity 2"
-    "(v4) $async with method arity 3"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) new_stream_from_pipeline (1a)"
+    # "(v4) new_stream_from_pipeline (3)"
+    # "(v4) new_stream_from_pipeline (4)"
+    # "(v4) D.new_stream"
+    # "(v4) D.new_stream_from_pipeline"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) new_stream_from_text"
+    # "(v4) new_stream_from_text doesn't work synchronously"
+    # "(v4) new_stream_from_text (2)"
+    # "(v4) README demo (1)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) $async with method arity 2"
+    # "(v4) $async with method arity 3"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) new_file_readstream"
+    # "(v4) new_file_readlinestream"
+    "(v4) $bridge"
     ]
   @_prune()
   @_main()

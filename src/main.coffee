@@ -20,10 +20,13 @@ echo                      = CND.echo.bind CND
 MSP                       = require 'mississippi'
 #...........................................................................................................
 ### http://stringjs.com ###
-stringfoo                 = require 'string'
+# stringfoo                 = require 'string'
 #...........................................................................................................
 ### https://github.com/mcollina/split2 ###
-split2                    = require 'split2'
+# split2                    = require 'split2'
+#...........................................................................................................
+### https://github.com/mziccard/node-timsort ###
+# timsort                   = require 'timsort'
 
 
 #===========================================================================================================
@@ -78,9 +81,24 @@ pluck = ( x, key ) ->
   return MSP.duplex source, sink, objectMode: true
 
 #-----------------------------------------------------------------------------------------------------------
-@new_file_readstream = ->          throw new Error "new_file_readstream not implemented"
-@new_file_readlinestream = ->      throw new Error "new_file_readlinestream not implemented"
-@new_file_writestream = ->         throw new Error "new_file_writestream not implemented"
+@new_file_readstream = ( P... ) -> ( require 'fs' ).createReadStream P...
+
+#-----------------------------------------------------------------------------------------------------------
+@new_file_readlinestream = ( P... ) ->
+  return @new_stream pipeline: [
+    ( @new_file_readstream P... )
+    ( @$split()                 )
+    ]
+
+#-----------------------------------------------------------------------------------------------------------
+@new_sink = ->
+  return @new_stream pipeline: [
+    # ( @$as_text()                                             )
+    ( @$bridge ( require 'fs' ).createWriteStream '/dev/null' )
+    ]
+
+#-----------------------------------------------------------------------------------------------------------
+@new_file_writestream = -> throw new Error "new_file_writestream not implemented"
 
 #-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
@@ -179,9 +197,8 @@ pluck = ( x, key ) ->
   throw new Error "expected a writable, non-readable stream"        if     stream.readable
   #.........................................................................................................
   return @$ ( data, send, end ) =>
-    if data?
-      stream.write data
-      send data
+    stream.write data if data?
+    send data
     if end?
       stream.end() unless stream is process.stdout
       # throw error unless ( message = error[ 'message' ] )? and message.endsWith "cannot be closed."
@@ -189,7 +206,7 @@ pluck = ( x, key ) ->
 
 
 #===========================================================================================================
-# SPLITTING & JOINING
+# SPLITTING, JOINING, SORTING
 #-----------------------------------------------------------------------------------------------------------
 @$join = ( joiner = '\n' ) ->
   ### Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
@@ -201,6 +218,49 @@ pluck = ( x, key ) ->
     @$ ( collection, send ) => send collection.join joiner
     ]
   return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$split = ( matcher, mapper, settings ) ->
+  ### https://github.com/mcollina/split2 ###
+  return ( require 'split2' ) matcher, mapper, settings
+
+#-----------------------------------------------------------------------------------------------------------
+@$sort = ( sorter, settings ) ->
+  ### https://github.com/mziccard/node-timsort ###
+  TIMSORT = require 'timsort'
+  switch arity = arguments.length
+    when 0, 2
+      null
+    when 1
+      unless CND.isa_function sorter
+        settings  = sorter
+        sorter    = null
+    else throw new Error "expected 0 to 2 arguments, got #{arity}"
+  #.........................................................................................................
+  collector = []
+  collect   = settings?[ 'collect' ] ? no
+  sorter   ?= ( a, b ) =>
+    return +1 if a > b
+    return -1 if a < b
+    return  0
+  #.........................................................................................................
+  return @$ ( data, send, end ) =>
+    collector.push data if data?
+    if end?
+      TIMSORT.sort collector, sorter
+      if collect
+        send collector
+      else
+        send x for x in collector
+        collector.length = 0
+      end()
+
+#-----------------------------------------------------------------------------------------------------------
+@$as_text = ->
+  return @$ ( data, send ) ->
+    return send null if data is null
+    return send rpr data unless CND.isa_text data
+    send data
 
 
 #===========================================================================================================
@@ -471,13 +531,16 @@ pluck = ( x, key ) ->
 # STREAM START & END DETECTION
 #-----------------------------------------------------------------------------------------------------------
 @$on_end = ( method ) ->
-  throw new Error "expected 0 or 1 argument, got #{arity}" unless 0 <= ( arity = method.length ) <= 1
+  unless 0 <= ( arity = method.length ) <= 1
+    throw new Error "expected method with 0 or 1 argument, got #{arity}"
   return @$ ( data, send, end ) ->
-    send data if data?
+    send data
     if end?
-      return method end if arity is 1
-      method()
-      end()
+      if arity is 1
+        method end
+      else
+        method()
+        end()
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
@@ -584,41 +647,6 @@ pluck = ( x, key ) ->
 
 
 #===========================================================================================================
-#
-#-----------------------------------------------------------------------------------------------------------
-@$split = ( matcher, mapper, settings ) -> split2 matcher, mapper, settings
-
-#-----------------------------------------------------------------------------------------------------------
-@$sort = ( sorter, settings ) ->
-  switch arity = arguments.length
-    when 0, 2
-      null
-    when 1
-      unless CND.isa_function sorter
-        settings  = sorter
-        sorter    = null
-    else throw new Error "expected 0 to 2 arguments, got #{arity}"
-  #.........................................................................................................
-  collector = []
-  collect   = settings?[ 'collect' ] ? no
-  sorter ?= ( a, b ) =>
-    return +1 if a > b
-    return -1 if a < b
-    return  0
-  #.........................................................................................................
-  return @$ ( data, send, end ) =>
-    collector.push data if data?
-    if end?
-      collector.sort sorter
-      if collect
-        send collector
-      else
-        send x for x in collector
-        collector.length = 0
-      end()
-
-
-#===========================================================================================================
 # CSV
 #-----------------------------------------------------------------------------------------------------------
 @$parse_csv = ( options ) ->
@@ -627,6 +655,8 @@ pluck = ( x, key ) ->
   headers     = options[ 'headers'    ] ? true
   delimiter   = options[ 'delimiter'  ] ? ','
   qualifier   = options[ 'qualifier'  ] ? '"'
+  ### http://stringjs.com ###
+  stringfoo   = require 'string'
   #.........................................................................................................
   return @$ ( record, send ) =>
     if record?

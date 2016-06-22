@@ -28,14 +28,12 @@
   },
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
-    "async": "^1.5.2",
     "cnd": "^3.2.0",
     "mississippi": "^1.2.0",
-    "sort-stream": "^1.0.1",
     "split2": "^2.1.0",
-    "stream-combiner2": "^1.1.1",
     "string": "^3.3.1",
-    "throttle": "^1.0.3"
+    "throttle": "^1.0.3",
+    "timsort": "^0.2.1"
   },
   "devDependencies": {
     "guy-test": "^1.2.1"
