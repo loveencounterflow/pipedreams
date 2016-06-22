@@ -256,16 +256,37 @@ pluck = ( x, key ) ->
 @$split_each_line = ( settings ) ->
   splitter        = settings?[ 'splitter'   ] ? '\t'
   keep_empty      = settings?[ 'empty'      ] ? no
-  comment_matcher = settings?[ 'comments'   ] ? no
+  comment_matcher = settings?[ 'comments'   ] ? '#'
+  #.........................................................................................................
+  $trim = => return @$ ( line, send ) => send line.trim()
+  #.........................................................................................................
+  $skip_empty = =>
+    return @$ ( line, send ) => send line if line.length > 0
   #.........................................................................................................
   $split_line = =>
-    return @$ ( data, send ) =>
-      send data.split splitter
+    return @$ ( line, send ) =>
+      send line.split splitter
   #.........................................................................................................
-  return @new_stream pipeline: [
-    @$split()
-    $split_line()
-    ]
+  $skip_comments = =>
+    if CND.isa_text comment_matcher
+      is_comment = ( field ) -> field.startsWith comment_matcher
+    else
+      is_comment = ( field ) -> comment_matcher.test field
+    return @$ ( fields, send ) =>
+      Z = []
+      for field in fields
+        break if is_comment field
+        Z.push field
+      send Z if keep_empty or Z.length > 0
+  #.........................................................................................................
+  pipeline = []
+  pipeline.push @$split()
+  pipeline.push $trim()
+  pipeline.push $skip_empty()     unless keep_empty
+  pipeline.push $split_line()
+  pipeline.push $skip_comments()  if comment_matcher?
+  #.........................................................................................................
+  return @new_stream { pipeline, }
 
 
 #===========================================================================================================

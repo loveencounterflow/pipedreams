@@ -752,18 +752,11 @@ D                         = require './main'
     .pipe $ ( data ) -> T.eq data, matcher if data?
     .pipe D.$on_end => done()
   matcher = [
-    [ 'a', 'text' ],
-    [ 'with', 'a number' ],
-    [ 'of', 'lines' ],
     [ 'u-cjk/9e1f', '鸟', '⿴乌丶' ],
     [ 'u-cjk/9e20', '鸠', '⿰九鸟' ],
     [ 'u-cjk/9e21', '鸡', '⿰又鸟' ],
     [ 'u-cjk/9e22', '鸢', '⿱弋鸟' ],
     [ 'u-cjk/9e23', '鸣', '⿰口鸟' ] ]
-  D.send input, """
-    a\ttext
-    with\ta number
-    of\tlines\n"""
   D.send input, """
     u-cjk/9e1f\t鸟\t⿴乌丶
     u-cjk/9e20\t鸠\t⿰九鸟
@@ -822,13 +815,13 @@ unless module.parent?
     "(v4) $lockstep fails on streams of unequal lengths without fallback"
     "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
     "(v4) $batch and $spread"
-    "(v4) $split_each_line"
+    "(v4) $split_each_line plain"
+    "(v4) $split_each_line with comments, empty lines"
     ]
   @_prune()
-  # @_main()
+  @_main()
   # debug '5562', JSON.stringify Object.keys @
 
-  @[ "(v4) $split_each_line" ]()
 
 
 
