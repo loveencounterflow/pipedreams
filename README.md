@@ -44,7 +44,7 @@ Install as `npm install --save pipedreams2`.
   - [`$show`](#show)
   - [`$sort`](#sort)
   - [`@$sort = ( sorter, settings ) ->`](#@sort---sorter-settings---)
-  - [`@$split = ( matcher, mapper, settings ) ->`](#@split---matcher-mapper-settings---)
+  - [$split = ( matcher, mapper, settings ) ->](#split---matcher-mapper-settings---)
   - [`@$split_tsv = ( settings ) ->`](#@split_tsv---settings---)
   - [`$spread`](#spread)
   - [`$stop_time`](#stop_time)
@@ -373,7 +373,7 @@ This method is handy to put as a safeguard right in front of a `.pipe output_fil
 Uses [github.com/mziccard/node-timsort](https://github.com/mziccard/node-timsort) for an
 efficient, and, importantly, stable sort.
 
-## `@$split = ( matcher, mapper, settings ) ->`
+## $split = ( matcher, mapper, settings ) ->
 
 Uses [github.com/mcollina/split2](https://github.com/mcollina/split2) to split
 a stream of buffers or texts into lines (in the default setting; for details
