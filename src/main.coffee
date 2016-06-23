@@ -29,43 +29,147 @@ MSP                       = require 'mississippi'
 # timsort                   = require 'timsort'
 
 
-#===========================================================================================================
-# STREAM CREATION
+OLD = ->
+  #===========================================================================================================
+  # STREAM CREATION
+  #-----------------------------------------------------------------------------------------------------------
+  @new_stream = ( settings ) ->
+    return MSP.through.obj() if ( not settings? ) or ( kinds = Object.keys settings ).length is 0
+    # return @_new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
+    return @_new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
+    return @_new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
+    expected  = ( rpr kind for kind in @new_stream.kinds ).join ', '
+    got       = ( rpr kind for kind in             kinds ).join ', '
+    throw new Error "expected a 'kind' out of #{expected}, got #{got}"
+
+  #-----------------------------------------------------------------------------------------------------------
+  @new_stream.kinds = [
+    'file'
+    'text'
+    'pipeline' ]
+
+  #-----------------------------------------------------------------------------------------------------------
+  @_new_stream_from_text = ( text, settings ) ->
+    ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
+    other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
+    returned stream will not have to been resumed explicitly. ###
+    R = @new_stream()
+    R.write text
+    R.end()
+    return R
+
+
+### NEW ###
+### NEW ###
+### NEW ###
+### NEW ###
+### NEW ###
 #-----------------------------------------------------------------------------------------------------------
-@new_stream = ( settings ) ->
-  return MSP.through.obj() if ( not settings? ) or ( kinds = Object.keys settings ).length is 0
-  # return @_new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
-  return @_new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
-  return @_new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
-  expected  = ( rpr kind for kind in @new_stream.kinds ).join ', '
-  got       = ( rpr kind for kind in             kinds ).join ', '
-  throw new Error "expected a 'kind' out of #{expected}, got #{got}"
+@new_stream = ( P... ) ->
+  [ kind, seed, hints, settings, ] = @new_stream._read_arguments P
+  switch kind
+    when '*plain'       then return @_new_stream                seed, hints, settings
+    when 'file', 'path' then return @_new_stream_from_path      seed, hints, settings
+    when 'pipeline'     then return @_new_stream_from_pipeline  seed, hints, settings
+    when 'text'         then return @_new_stream_from_text      seed, hints, settings
+    when 'url'          then return @_new_stream_from_url       seed, hints, settings
+  throw new Error "unknown kind #{rpr kind} (shouldn't happen)"
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> MSP.through.obj()
+@new_stream._read_arguments = ( P ) =>
+  kind_and_seed = null
+  settings      = null
+  kind          = null
+  seed          = null
+  hints         = null
+  #.........................................................................................................
+  if P.length > 0
+    if P.length > 1
+      unless CND.isa_text P[ P.length - 1 ]
+        kind_and_seed = P.pop()
+    unless CND.isa_text P[ P.length - 1 ]
+      settings  = kind_and_seed
+      kind_and_seed = P.pop()
+  #.........................................................................................................
+  hints = P
+  #.........................................................................................................
+  unless kind_and_seed?
+    kind = '*plain'
+  else
+    unless ( kind_count = ( Object.keys kind_and_seed ).length ) is 1
+      throw new Error "expected 0 or 1 'kind', got #{kind_count}"
+    break for kind, seed of kind_and_seed
+  #.........................................................................................................
+  unless CND.is_subset hints, @new_stream._hints
+    expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
+    got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
+    throw new Error "expected 'hints' out of #{expected}, got #{got}"
+  #.........................................................................................................
+  unless kind in @new_stream._kinds
+    expected  = ( rpr x for x in @new_stream._kinds ).join ', '
+    got       =   rpr kind
+    throw new Error "expected a 'kind' out of #{expected}, got #{got}"
+  #.........................................................................................................
+  # urge 'kind      ', kind
+  # urge 'seed      ', seed
+  # urge 'hints     ', hints
+  # urge 'settings  ', settings
+  hints = null if hints.length is 0
+  return [ kind, seed, hints, settings, ]
+
+#...........................................................................................................
+@new_stream._kinds = [ '*plain', 'file', 'path',    'pipeline', 'text',   'url',                       ]
+@new_stream._hints = [ 'utf-8',  'utf8', 'binary',  'read',     'write',  'append',                    ]
 
 #-----------------------------------------------------------------------------------------------------------
-@new_stream.kinds = [
-  'file'
-  'text'
-  'pipeline' ]
+@_new_stream = ( seed, hints, settings ) ->
+  throw new Error "_new_stream doesn't accept 'seed', got #{rpr seed}" if seed?
+  throw new Error "_new_stream doesn't accept 'hints', got #{rpr hints}" if hints?
+  throw new Error "_new_stream doesn't accept 'settings', got #{rpr settings}" if settings?
+  return MSP.through.obj()
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream_from_text = ( text, settings ) ->
-  ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
-  other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
-  returned stream will not have to been resumed explicitly. ###
-  R = @new_stream()
-  R.write text
-  R.end()
-  return R
+@_new_stream_from_path = ( path, hints, settings ) ->
+  unless type = ( CND.type_of path ) is 'text'
+    throw new Error "expected path to be a text, got a #{type}"
+  #.........................................................................................................
+  role = 'read'
+  if hints?
+    role_count  = 0
+    if 'read' in hints
+      role        = 'read'
+      role_count += +1
+    if 'write' in hints
+      role        = 'write'
+      role_count += +1
+    if 'append' in hints
+      role        = 'append'
+      role_count += +1
+    if role_count > 1
+      throw new Error "can only specify one of `read`, `write` or `append`; got #{rpr hints}"
+  #.........................................................................................................
+  if hints.length > 1
+    warn "ignoring additional hints of #{rpr hints} for the time being"
+  #.........................................................................................................
+  switch role
+    when 'read'
+      return ( require 'fs' ).createReadStream path
+    when 'write'
+      return ( require 'fs' ).createWriteStream path
+    when 'append'
+      return ( require 'fs' ).createWriteStream path, { flags: 'a', }
+  #.........................................................................................................
+  throw new Error "unknwon role #{rpr role} (should never happen)"
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream_from_pipeline = ( pipeline, settings ) ->
+@_new_stream_from_pipeline = ( pipeline, hints, settings ) ->
   ### Given a list of transforms (a.k.a. a 'pipeline'), return a stream that has all the transforms
   successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
   reading from the stream will read from the last transform. If the pipeline is an empty list,
   a simple `through2` stream is returned. ###
+  throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}" if hints?
+  throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}" if settings?
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
   source  = MSP.through.obj()
   return source if pipeline.length is 0
@@ -75,8 +179,36 @@ MSP                       = require 'mississippi'
   return MSP.duplex source, sink, objectMode: true
 
 #-----------------------------------------------------------------------------------------------------------
+@_new_stream_from_text = ( text, hints, settings ) ->
+  ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
+  other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
+  returned stream will not have to been resumed explicitly. ###
+  throw new Error "illegal argument 'hints': #{rpr hints}"        if hints?
+  throw new Error "illegal argument 'settings': #{rpr settings}"  if settings?
+  unless ( type = CND.type_of text ) in [ 'text', 'buffer', ]
+    throw new Error "expected text or buffer, got a #{type}"
+  #.........................................................................................................
+  R = @new_stream()
+  R.write text
+  R.end()
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream_from_url = ( seed, hints, settings ) -> throw new Error "_new_stream_from_url: not implemented"
+### NEW ###
+### NEW ###
+### NEW ###
+### NEW ###
+### NEW ###
+### NEW ###
+### NEW ###
+
+#-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
 @isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
+
+#-----------------------------------------------------------------------------------------------------------
+@$pass_through = -> MSP.through.obj()
 
 
 #===========================================================================================================

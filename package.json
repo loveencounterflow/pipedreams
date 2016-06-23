@@ -33,7 +33,8 @@
     "split2": "^2.1.0",
     "string": "^3.3.1",
     "throttle": "^1.0.3",
-    "timsort": "^0.2.1"
+    "timsort": "^0.2.1",
+    "tmp": "0.0.28"
   },
   "devDependencies": {
     "guy-test": "^1.2.1"

@@ -17,7 +17,19 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 D                         = require './main'
 { $, $async, }            = D
-
+#...........................................................................................................
+### TAINT for the time being, we create one global folder and keep it beyond process termination; this
+allows to inspect folder contents after tests have terminated. It would probably be a good idea to remove
+the `keep: yes` setting at a later point in time. ###
+TMP                       = require 'tmp'
+TMP.setGracefulCleanup()
+_temp_folder              = TMP.dirSync keep: yes, prefix: 'pipedreams-'
+temp_home                 = _temp_folder[ 'name' ]
+resolve_path              = ( require 'path' ).resolve
+resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.\/]/g, '' for p in P )...
+# removeCallback
+# debug resolve_temp_path 'foo.txt'
+# debug resolve_temp_path '/foo.txt'
 
 #===========================================================================================================
 # TESTS
@@ -142,6 +154,119 @@ D                         = require './main'
   DEMO.new_stream 'omg', 'append', file: "~/some-file.txt"
   DEMO.new_stream 'write', route: "~/some-file.txt"
   done()
+
+
+
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new new_stream signature (1)" ] = ( T, done ) ->
+  #.........................................................................................................
+  new_stream_instrument = ( P... ) ->
+    message   = null
+    kind      = null
+    seed      = null
+    hints     = null
+    settings  = null
+    try
+      [ kind, seed, hints, settings, ] = D.new_stream._read_arguments P
+    catch error
+      message = error[ 'message' ]
+    return [ kind, seed, hints, settings, message, ]
+  #.........................................................................................................
+  probes = [
+    # good
+    [                                                             ]
+    [ 'utf-8',                                                    ]
+    [ 'write', 'binary', file: 'baz.doc',                         ]
+    [ 'write', pipeline: [],                                      ]
+    [ 'write', 'binary', { file: 'baz.doc', }, { mode: 0o744, },  ]
+    [ text: "make it so",                                         ]
+    # bad
+    [ 'oops', text: "make it so",                                 ]
+    [ 'text', "make it so",                                       ]
+    [ 'binary', 'append', "~/some-file.txt",                      ]
+    [ 'omg', 'append', file: "~/some-file.txt",                   ]
+    [ 'write', route: "~/some-file.txt",                          ]
+    ]
+  #.........................................................................................................
+  matchers = [
+    # good
+    ["*plain",null,null,null,null]
+    ["*plain",null,["utf-8"],null,null]
+    ["file","baz.doc",["write","binary"],null,null]
+    ["pipeline",[],["write"],null,null]
+    ["file","baz.doc",["write","binary"],{"mode":484},null]
+    ["text","make it so",null,null,null]
+    # bad
+    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got 'oops'"]
+    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got 'text', 'make it so'"]
+    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got '~/some-file.txt'"]
+    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got 'omg'"]
+    [null,null,null,null,"expected a 'kind' out of '*plain', 'file', 'path', 'pipeline', 'text', 'url', got 'route'"]
+    ]
+  #.........................................................................................................
+  for probe, probe_idx in probes
+    result = new_stream_instrument probe...
+    T.eq result, matchers[ probe_idx ]
+  #.........................................................................................................
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new new_stream signature (2)" ] = ( T, done ) ->
+  path_1 = resolve_temp_path 't-dfgh-1.txt'
+  path_2 = resolve_temp_path 't-dfgh-2.txt'
+  path_3 = resolve_temp_path 't-dfgh-3.txt'
+  #.........................................................................................................
+  probes = [
+    # good
+    [                                                             ]
+    [ pipeline: [],                                               ]
+    [ 'write', 'binary',   file: path_1,                         ]
+    [ 'write', 'binary', { file: path_2, }, { mode: 0o744, },  ]
+    [ 'binary', 'append',  file: path_3,                      ]
+    [ text: "make it so",                                         ]
+    # bad
+    [ 'utf-8',                                                    ]
+    [ 'write', pipeline: [],                                      ]
+    ]
+  #.........................................................................................................
+  matchers  = [
+    [{"stream":true},null]
+    [{"stream":true},null]
+    [{"stream":true},null]
+    [{"stream":true},null]
+    [{"stream":true},null]
+    [{"stream":true},null]
+    [null,"_new_stream doesn't accept 'hints', got [ 'utf-8' ]"]
+    [null,"_new_stream_from_pipeline doesn't accept 'hints', got [ 'write' ]"]
+    ]
+  ASTREAM   = { 'stream': yes, }
+  #.........................................................................................................
+  for probe, probe_idx in probes
+    result      = new_stream_instrument probe...
+    result[ 0 ] = ASTREAM if isa_stream result[ 0 ]
+    debug JSON.stringify result
+    T.eq result, matchers[ probe_idx ]
+  #.........................................................................................................
+  done()
+
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
+
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) _new_stream_from_pipeline (1a)" ] = ( T, done ) ->
@@ -998,13 +1123,15 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #-----------------------------------------------------------------------------------------------------------
 @_main = ->
   test @, 'timeout': 3000
-
+  info "temporary files, if any, written to #{temp_home}"
 
 ############################################################################################################
 unless module.parent?
   include = [
     # "(v4) stream / transform construction with through2 (2)"
-    "(v4) new new_stream signature (preview)"
+    # "(v4) new new_stream signature (preview)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
     # "(v4) _new_stream_from_pipeline (1a)"
     # "(v4) _new_stream_from_pipeline (3)"
     # "(v4) _new_stream_from_pipeline (4)"
