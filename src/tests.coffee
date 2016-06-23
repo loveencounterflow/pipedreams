@@ -712,59 +712,147 @@ D                         = require './main'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $split_each_line plain" ] = ( T, done ) ->
+@[ "(v4) $split_tsv (1)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe D.$split_each_line()
+    .pipe D.$split_tsv()
+    # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
-    .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
     .pipe D.$on_end => done()
   matcher = [
-    [ 'a', 'text' ],
-    [ 'with', 'a number' ],
-    [ 'of', 'lines' ],
-    [ 'u-cjk/9e1f', '鸟', '⿴乌丶' ],
-    [ 'u-cjk/9e20', '鸠', '⿰九鸟' ],
-    [ 'u-cjk/9e21', '鸡', '⿰又鸟' ],
-    [ 'u-cjk/9e22', '鸢', '⿱弋鸟' ],
-    [ 'u-cjk/9e23', '鸣', '⿰口鸟' ] ]
-  D.send input, """
-    a\ttext
-    with\ta number
-    of\tlines\n"""
-  D.send input, """
-    u-cjk/9e1f\t鸟\t⿴乌丶
-    u-cjk/9e20\t鸠\t⿰九鸟
-    u-cjk/9e21\t鸡\t⿰又鸟
-    u-cjk/9e22\t鸢\t⿱弋鸟
-    u-cjk/9e23\t鸣\t⿰口鸟"""
+    ["a","text"]
+    ["with","a number"]
+    ["of","lines"]
+    ["u-cjk/9e1f","鸟","⿴乌丶"]
+    ["u-cjk/9e20","鸠","⿰九鸟"]
+    ["u-cjk/9e21","鸡","⿰又鸟"]
+    ["u-cjk/9e22","鸢","⿱弋鸟"]
+    ["u-cjk/9e23","鸣","⿰口鸟"]
+    ["u-cjk-xa/380b","㠋","(⿱山品亏)"]
+    ["㠋","(⿱山口咢) # first field is empty"]
+    ]
+  text = []
+  text.push "a\ttext"
+  text.push "with\ta number"
+  text.push "          "
+  text.push "of\tlines\n"
+  text.push ""
+  text.push "\t\t# comment"
+  text.push "u-cjk/9e1f\t鸟\t⿴乌丶"
+  text.push "u-cjk/9e20\t鸠\t⿰九鸟"
+  text.push "u-cjk/9e21\t鸡\t⿰又鸟"
+  text.push "u-cjk/9e22\t鸢\t⿱弋鸟"
+  text.push "u-cjk/9e23\t鸣\t⿰口鸟"
+  text.push "u-cjk-xa/380b\t㠋\t(⿱山品亏)"
+  text.push "\t㠋\t(⿱山口咢) # first field is empty"
+  D.send input, text.join '\n'
   D.end input
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $split_each_line with comments, empty lines" ] = ( T, done ) ->
+@[ "(v4) $split_tsv (2)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe D.$split_each_line()
+    .pipe D.$split_tsv first: 'split'
+    # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
-    .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
     .pipe D.$on_end => done()
   matcher = [
-    [ 'u-cjk/9e1f', '鸟', '⿴乌丶' ],
-    [ 'u-cjk/9e20', '鸠', '⿰九鸟' ],
-    [ 'u-cjk/9e21', '鸡', '⿰又鸟' ],
-    [ 'u-cjk/9e22', '鸢', '⿱弋鸟' ],
-    [ 'u-cjk/9e23', '鸣', '⿰口鸟' ] ]
-  D.send input, """
-    u-cjk/9e1f\t鸟\t⿴乌丶
-    u-cjk/9e20\t鸠\t⿰九鸟
-    u-cjk/9e21\t鸡\t⿰又鸟
-    u-cjk/9e22\t鸢\t⿱弋鸟
-    u-cjk/9e23\t鸣\t⿰口鸟"""
+    ["u-cjk/9e1f","鸟","⿴乌丶"]
+    ["u-cjk/9e20","鸠","⿰九鸟"]
+    ["u-cjk/9e21","鸡","⿰又鸟 # this comment remains in output"]
+    ["u-cjk/9e22","鸢","⿱弋鸟"]
+    ["u-cjk-xa/380b","㠋","(⿱山品亏)"]
+    ["","㠋","(⿱山口咢) # first field is empty"]
+    ["u-cjk/9e23","鸣","⿰口鸟"]
+    ]
+  text = []
+  text.push "# This is a comment"
+  text.push "\t\t# two empty fields, comment"
+  text.push "u-cjk/9e1f\t鸟\t⿴乌丶"
+  text.push " "
+  text.push "u-cjk/9e20\t鸠\t⿰九鸟"
+  text.push "u-cjk/9e21\t鸡\t⿰又鸟 # this comment remains in output"
+  text.push ""
+  text.push "u-cjk/9e22\t鸢\t⿱弋鸟\t# this one will be removed"
+  text.push "u-cjk-xa/380b\t㠋\t(⿱山品亏)"
+  text.push "\t㠋\t(⿱山口咢) # first field is empty"
+  text.push "u-cjk/9e23\t鸣\t⿰口鸟"
+  D.send input, text.join '\n'
   D.end input
   return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $split_tsv (3)" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$split_tsv first: 'split', names: [ 'fncr', 'glyph', 'formula', ]
+    # .pipe $ ( data ) -> help JSON.stringify data if data?
+    .pipe D.$collect()
+    .pipe $ ( data ) -> T.eq data, matcher if data?
+    .pipe D.$on_end => done()
+  matcher = [
+    {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
+    {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
+    {"fncr":"u-cjk/9e21","glyph":"鸡","formula":"⿰又鸟 # this comment remains in output"}
+    {"fncr":"u-cjk/9e22","glyph":"鸢","formula":"⿱弋鸟"}
+    {"fncr":"u-cjk-xa/380b","glyph":"㠋","formula":"(⿱山品亏)"}
+    {"fncr":"","glyph":"㠋","formula":"(⿱山口咢) # first field is empty"}
+    {"fncr":"u-cjk/9e23","glyph":"鸣","formula":"⿰口鸟"}
+    ]
+  text = []
+  text.push "# This is a comment"
+  text.push "\t\t# two empty fields, comment"
+  text.push "u-cjk/9e1f\t鸟\t⿴乌丶"
+  text.push " "
+  text.push "u-cjk/9e20\t鸠\t⿰九鸟"
+  text.push "u-cjk/9e21\t鸡\t⿰又鸟 # this comment remains in output"
+  text.push ""
+  text.push "u-cjk/9e22\t鸢\t⿱弋鸟\t# this one will be removed"
+  text.push "u-cjk-xa/380b\t㠋\t(⿱山品亏)"
+  text.push "\t㠋\t(⿱山口咢) # first field is empty"
+  text.push "u-cjk/9e23\t鸣\t⿰口鸟"
+  D.send input, text.join '\n'
+  D.end input
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $split_tsv (4)" ] = ( T, done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$split_tsv first: 'split', names: 'inline'
+    # .pipe $ ( data ) -> help JSON.stringify data if data?
+    .pipe D.$collect()
+    .pipe $ ( data ) -> T.eq data, matcher if data?
+    .pipe D.$on_end => done()
+  matcher = [
+    {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
+    {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
+    {"fncr":"u-cjk/9e21","glyph":"鸡","formula":"⿰又鸟 # this comment remains in output"}
+    {"fncr":"u-cjk/9e22","glyph":"鸢","formula":"⿱弋鸟"}
+    {"fncr":"u-cjk-xa/380b","glyph":"㠋","formula":"(⿱山品亏)"}
+    {"fncr":"","glyph":"㠋","formula":"(⿱山口咢) # first field is empty"}
+    {"fncr":"u-cjk/9e23","glyph":"鸣","formula":"⿰口鸟"}
+    ]
+  text = []
+  text.push "# This is a comment"
+  text.push "\t\t# two empty fields, comment"
+  text.push "fncr\tglyph\tformula"
+  text.push "u-cjk/9e1f\t鸟\t⿴乌丶"
+  text.push " "
+  text.push "u-cjk/9e20\t鸠\t⿰九鸟"
+  text.push "u-cjk/9e21\t鸡\t⿰又鸟 # this comment remains in output"
+  text.push ""
+  text.push "u-cjk/9e22\t鸢\t⿱弋鸟\t# this one will be removed"
+  text.push "u-cjk-xa/380b\t㠋\t(⿱山品亏)"
+  text.push "\t㠋\t(⿱山口咢) # first field is empty"
+  text.push "u-cjk/9e23\t鸣\t⿰口鸟"
+  D.send input, text.join '\n'
+  D.end input
+  return null
+
 
 #===========================================================================================================
 # HELPERS
@@ -793,30 +881,32 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) new_stream_from_pipeline (1a)"
-    # "(v4) new_stream_from_pipeline (3)"
-    # "(v4) new_stream_from_pipeline (4)"
-    # "(v4) new_stream_from_text"
-    # "(v4) new_stream_from_text doesn't work synchronously"
-    # "(v4) new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D.new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
+    # "(v4) stream / transform construction with through2 (2)"
+    "(v4) new_stream_from_pipeline (1a)"
+    "(v4) new_stream_from_pipeline (3)"
+    "(v4) new_stream_from_pipeline (4)"
+    "(v4) new_stream_from_text"
+    "(v4) new_stream_from_text doesn't work synchronously"
+    "(v4) new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D.new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
     "(v4) $lockstep 1"
     "(v4) $lockstep fails on streams of unequal lengths without fallback"
     "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
     "(v4) $batch and $spread"
-    "(v4) $split_each_line plain"
-    "(v4) $split_each_line with comments, empty lines"
+    "(v4) $split_tsv (1)"
+    "(v4) $split_tsv (2)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
     ]
   @_prune()
   @_main()
