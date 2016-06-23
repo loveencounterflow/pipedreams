@@ -33,19 +33,19 @@ MSP                       = require 'mississippi'
 # STREAM CREATION
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( settings ) ->
-  return MSP.through.obj() if ( not settings? ) or ( keys = Object.keys ).length is 0
+  return MSP.through.obj() if ( not settings? ) or ( kinds = Object.keys settings ).length is 0
   # return @_new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
   return @_new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
   return @_new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
-  expected  = ( rpr key for key in @new_stream.keys ).join ', '
-  got       = ( rpr key for key in             keys ).join ', '
-  throw new Error "expected one of #{expected}, got #{got}"
+  expected  = ( rpr kind for kind in @new_stream.kinds ).join ', '
+  got       = ( rpr kind for kind in             kinds ).join ', '
+  throw new Error "expected a 'kind' out of #{expected}, got #{got}"
 
 #-----------------------------------------------------------------------------------------------------------
 @$pass_through = -> MSP.through.obj()
 
 #-----------------------------------------------------------------------------------------------------------
-@new_stream.keys = [
+@new_stream.kinds = [
   'file'
   'text'
   'pipeline' ]

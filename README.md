@@ -182,9 +182,44 @@ D.new_stream 'write',  url: "/tmp/foo.txt"
 D.new_stream 'append', url: "/tmp/foo.txt"
 ```
 
+
 **D.new_stream** **hints**\* { **kind** **:** **locator**, }
 
+Examples:
 
+```coffee
+source = D.new_stream()
+
+source = D.new_stream pipeline: [ $square(), ( $multiply 2 ), ]
+
+pipeline  = [ $square(), ( $multiply 2 ), ]
+source    = D.new_stream { pipeline, }
+
+path    = '../package.json'
+input   = D.new_stream { path, }
+output  = D.new_stream 'write', path: '/tmp/foo.txt'
+
+```
+
+Kinds:
+
+```coffee
+text
+pipeline
+file
+path
+url
+```
+
+Hints:
+
+```coffee
+'utf-8' / 'utf8'
+'binary'
+'read'
+'write'
+'append'
+```
 
 
 ## The Remit and Remit-Async Methods
