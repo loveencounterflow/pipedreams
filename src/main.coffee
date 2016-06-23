@@ -155,11 +155,13 @@ pluck = ( x, key ) ->
 # SENDING DATA
 #-----------------------------------------------------------------------------------------------------------
 @send = ( me, data ) ->
+  ### Given a stream and some data, send / write / push that data into the stream. ###
   me.write data
   return me
 
 #-----------------------------------------------------------------------------------------------------------
 @end = ( me ) ->
+  ### Given a stream, end it. ###
   me.end()
   return me
 

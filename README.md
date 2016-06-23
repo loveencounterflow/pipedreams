@@ -26,39 +26,39 @@ Install as `npm install --save pipedreams2`.
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
-  - [`$`](#)
-  - [`@$as_text = ( stringify ) ->`](#@as_text---stringify---)
-  - [`$async`](#async)
-  - [`$batch`](#batch)
-  - [`$collect`](#collect)
-  - [`$count`](#count)
-  - [`$filter`](#filter)
-  - [`$join`](#join)
-  - [`$lockstep`](#lockstep)
-  - [`$on_end`](#on_end)
-  - [`$on_first`](#on_first)
-  - [`$on_start`](#on_start)
-  - [`$parse_csv`](#parse_csv)
-  - [`$pass_through`](#pass_through)
-  - [`$sample`](#sample)
-  - [`$show`](#show)
-  - [`$sort`](#sort)
-  - [`@$sort = ( sorter, settings ) ->`](#@sort---sorter-settings---)
-  - [$split = ( matcher, mapper, settings ) ->](#split---matcher-mapper-settings---)
-  - [`@$split_tsv = ( settings ) ->`](#@split_tsv---settings---)
-  - [`$spread`](#spread)
-  - [`$stop_time`](#stop_time)
-  - [`$throttle_bytes`](#throttle_bytes)
-  - [`$throttle_items`](#throttle_items)
-  - [`end`](#end)
-  - [`isa_stream`](#isa_stream)
-  - [`new_stream`](#new_stream)
-  - [`new_stream_from_pipeline`](#new_stream_from_pipeline)
-  - [`new_stream_from_text`](#new_stream_from_text)
-  - [`remit`](#remit)
-  - [`remit_async`](#remit_async)
-  - [`run`](#run)
-  - [`send`](#send)
+  - [@$](#@)
+  - [@$as_text = ( stringify ) ->](#@as_text---stringify---)
+  - [@$async](#@async)
+  - [@$batch](#@batch)
+  - [@$collect](#@collect)
+  - [@$count](#@count)
+  - [@$filter](#@filter)
+  - [@$join = ( joiner = '\n' ) ->](#@join---joiner--%5Cn---)
+  - [@$lockstep](#@lockstep)
+  - [@$on_end](#@on_end)
+  - [@$on_first](#@on_first)
+  - [@$on_start](#@on_start)
+  - [@$parse_csv](#@parse_csv)
+  - [@$pass_through](#@pass_through)
+  - [@$sample = ( p = 0.5, options ) ->](#@sample---p--05-options---)
+  - [@$show](#@show)
+  - [@$sort](#@sort)
+  - [@$sort = ( sorter, settings ) ->](#@sort---sorter-settings---)
+  - [@$split = ( matcher, mapper, settings ) ->](#@split---matcher-mapper-settings---)
+  - [@$split_tsv = ( settings ) ->](#@split_tsv---settings---)
+  - [@$spread](#@spread)
+  - [@$stop_time](#@stop_time)
+  - [@$throttle_bytes](#@throttle_bytes)
+  - [@$throttle_items](#@throttle_items)
+  - [@end = ( me ) ->](#@end---me---)
+  - [@isa_stream](#@isa_stream)
+  - [@new_stream](#@new_stream)
+  - [@new_stream_from_pipeline](#@new_stream_from_pipeline)
+  - [@new_stream_from_text](#@new_stream_from_text)
+  - [@remit](#@remit)
+  - [@remit_async](#@remit_async)
+  - [@run](#@run)
+  - [@send = ( me, data ) ->](#@send---me-data---)
 - [Backmatter](#backmatter)
   - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
     - [Through2](#through2)
@@ -341,9 +341,9 @@ be prepared for an empty stream where it is called once with `data` being
 $async ( data, send, end ) -> ...
 ```
 
-## `$`
+## @$
 
-## `@$as_text = ( stringify ) ->`
+## @$as_text = ( stringify ) ->
 Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings
 in the data stream is passed through unaffected. Observe that buffers in the stream will very probably not
 come out the way you'd expect them; this is because there's no way to know for the method what kind of
@@ -352,34 +352,82 @@ data they represent.
 This method is handy to put as a safeguard right in front of a `.pipe output_file` clause to avoid
 `illegal non-buffer` issues. 
 
-## `$async`
-## `$batch`
-## `$collect`
-## `$count`
-## `$filter`
-## `$join`
-## `$lockstep`
-## `$on_end`
-## `$on_first`
-## `$on_start`
-## `$parse_csv`
-## `$pass_through`
-## `$sample`
-## `$show`
-## `$sort`
+## @$async
+## @$batch
+## @$collect
+## @$count
+## @$filter
 
-## `@$sort = ( sorter, settings ) ->`
+## @$join = ( joiner = '\n' ) ->
+Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
+of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
+well. 
+
+## @$lockstep
+## @$on_end
+## @$on_first
+## @$on_start
+## @$parse_csv
+## @$pass_through
+
+## @$sample = ( p = 0.5, options ) ->
+
+Given a `0 <= p <= 1`, interpret `p` as the *p*robability to *p*ick a given record and otherwise toss
+it, so that `$sample 1` will keep all records, `$sample 0` will toss all records, and
+`$sample 0.5` (the default) will toss (on average) every other record.
+
+You can pipe several `$sample()` calls, reducing the data stream to 50% with each step. If you know
+your data set has, say, 1000 records, you can cut down to a random sample of 10 by piping the result of
+calling `$sample 1 / 1000 * 10` (or, of course, `$sample 0.01`).
+
+Tests have shown that a data file with 3'722'578 records (which didn't even fit into memory when parsed)
+could be perused in a matter of seconds with `$sample 1 / 1e4`, delivering a sample of around 370
+records. Because these records are randomly selected and because the process is so immensely sped up, it
+becomes possible to develop regular data processing as well as coping strategies for data-overload
+symptoms with much more ease as compared to a situation where small but realistic data sets are not
+available or have to be produced in an ad-hoc, non-random manner.
+
+**Parsing CSV**: There is a slight complication when your data is in a CSV-like format: in that case,
+there is, with `0 < p < 1`, a certain chance that the *first* line of a file is tossed, but some
+subsequent lines are kept. If you start to transform the text line into objects with named values later in
+the pipe (which makes sense, because you will typically want to thin out largeish streams as early on as
+feasible), the first line kept will be mis-interpreted as a header line (which must come first in CSV
+files) and cause all subsequent records to become weirdly malformed. To safeguard against this, use
+`$sample p, headers: true` (JS: `$sample( p, { headers: true } )`) in your code.
+
+**Predictable Samples**: Sometimes it is important to have randomly selected data where samples are
+constant across multiple runs:
+
++ once you have seen that a certain record appears on the screen log, you are certain it will be in the
+  database, so you can write a snippet to check for this specific one;
+
++ you have implemented a new feature you want to test with an arbitrary subset of your data. You're
+  still tweaking some parameters and want to see how those affect output and performance. A random
+  sample that is different on each run would be a problem because the number of records and the sheer
+  bytecount of the data may differ from run to run, so you wouldn't be sure which effects are due to
+  which causes.
+
+To obtain predictable samples, use `$sample p, seed: 1234` (with a non-zero number of your choice);
+you will then get the exact same
+sample whenever you re-run your piping application with the same stream and the same seed. An interesting
+property of the predictable sample is that—everything else being the same—a sample with a smaller `p`
+will always be a subset of a sample with a bigger `p` and vice versa. 
+
+## @$show
+## @$sort
+
+## @$sort = ( sorter, settings ) ->
 
 Uses [github.com/mziccard/node-timsort](https://github.com/mziccard/node-timsort) for an
 efficient, and, importantly, stable sort.
 
-## $split = ( matcher, mapper, settings ) ->
+## @$split = ( matcher, mapper, settings ) ->
 
 Uses [github.com/mcollina/split2](https://github.com/mcollina/split2) to split
 a stream of buffers or texts into lines (in the default setting; for details
 see the split2 project page).
 
-## `@$split_tsv = ( settings ) ->`
+## @$split_tsv = ( settings ) ->
 
 A fairly complex stream transform to help in reading files with data in
 [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
@@ -409,19 +457,27 @@ and blank lines, omit comments, and name fields.
   left in the stream.
 
 
-## `$spread`
-## `$stop_time`
-## `$throttle_bytes`
-## `$throttle_items`
-## `end`
-## `isa_stream`
-## `new_stream`
-## `new_stream_from_pipeline`
-## `new_stream_from_text`
-## `remit`
-## `remit_async`
-## `run`
-## `send`
+## @$spread
+## @$stop_time
+## @$throttle_bytes
+## @$throttle_items
+
+## @end = ( me ) ->
+
+Given a stream, end it. 
+
+## @isa_stream
+## @new_stream
+## @new_stream_from_pipeline
+## @new_stream_from_text
+## @remit
+## @remit_async
+## @run
+
+## @send = ( me, data ) ->
+
+Given a stream and some data, send / write / push that data into the stream.
+
 
 <!-- ####################################################################################### -->
 
