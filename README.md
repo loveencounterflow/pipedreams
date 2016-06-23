@@ -21,6 +21,7 @@ Install as `npm install --save pipedreams2`.
   - [Require Statement](#require-statement)
   - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
   - [Never Assume Your Streams to be Synchronous](#never-assume-your-streams-to-be-synchronous)
+  - [Stream Creation](#stream-creation)
   - [The Remit and Remit-Async Methods](#the-remit-and-remit-async-methods)
     - [(Synchronous) Stream Observer](#synchronous-stream-observer)
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
@@ -98,7 +99,7 @@ In the below, I will assume you `require`d PipeDreams the first way, above.
 The `remit` method (as well as its asynchronous companion, `remit_async`)  is
 very much the centerpiece of the PipeDreams API¹. It accepts a function (call
 it a 'transformation') and returns a stream transform. In case you're
-familiar with the [*event-stream*](https://github.com/dominictarr/event-stream) 
+familiar with the [*event-stream*](https://github.com/dominictarr/event-stream)
 way of doing things, then PipeDreams' `remit f` is roughly equivalent
 to event-stream's  `through on_data, on_end`, except you can handle both the
 `on_data` and `on_end` parts in a single function `f`. `remit_async f` is
@@ -111,7 +112,7 @@ As a general note that users should keep in mind, please observe that no
 guarantee is made that any given stream works in a synchronous manner. More
 specifically and with regard to the most typical usage pattern: never deal
 with pipelined data 'right below' the pipeline definition, always do that
-from inside a stream transform.  
+from inside a stream transform.
 
 Here's an example from `src/tests.coffee`: we create a stream, define a
 pipeline to split the text into lines and collect those lines into a list;
@@ -156,6 +157,36 @@ or `D.$on_end`:
   input.end()
 ```
 
+## Stream Creation
+
+```coffee
+@new_stream = ( settings ) ->
+
+D.new_stream()
+D.new_stream pipeline: [ transform, transform, ..., ]
+D.new_stream text: "helo world"
+
+D.new_stream           file: "/tmp/foo.txt"
+D.new_stream 'read',   file: "/tmp/foo.txt"
+D.new_stream 'write',  file: "/tmp/foo.txt"
+D.new_stream 'append', file: "/tmp/foo.txt"
+
+D.new_stream           path: "/tmp/foo.txt"
+D.new_stream 'read',   path: "/tmp/foo.txt"
+D.new_stream 'write',  path: "/tmp/foo.txt"
+D.new_stream 'append', path: "/tmp/foo.txt"
+
+D.new_stream           url: "/tmp/foo.txt"
+D.new_stream 'read',   url: "/tmp/foo.txt"
+D.new_stream 'write',  url: "/tmp/foo.txt"
+D.new_stream 'append', url: "/tmp/foo.txt"
+```
+
+**D.new_stream** **hints**\* { **kind** **:** **locator**, }
+
+
+
+
 ## The Remit and Remit-Async Methods
 
 The behavior of the stream transform—the return value of calling `remit` or
@@ -166,7 +197,7 @@ function that takes two, or three arguments. In a nutshell, you have the
 following options:
 
 ```coffee
-$ ( data ) -> 
+$ ( data ) ->
 $ ( data, send ) -> ...
 $ ( data, send, end ) -> ...
 $async ( data, send ) -> ...
@@ -182,7 +213,7 @@ should be ended. `send` is used as `send some_data`; it always has a member
 `end()`, where used and when defined, must always be called (without any
 arguments).—Now for the details.
 
-### (Synchronous) Stream Observer 
+### (Synchronous) Stream Observer
 
 When calling `$` with a function that takes **a single argument**, you get
 back an **Observer**, that is, a transform that gets all the data events
@@ -193,17 +224,17 @@ observer can still mutate that event). The observer will be called once more
 with `data` set to `null` when the stream is about to end:
 
 ```coffee
-$ ( data ) -> 
+$ ( data ) ->
 ```
 
-You can use that idiom 'inline', i.e. right within the pipeline 
+You can use that idiom 'inline', i.e. right within the pipeline
 notation:
 
 ```coffee
 input = ( require 'fs' ).createReadStream()
 input
   .pipe D.$split()      # convert buffer chunks into single-line strings
-  .pipe $ ( data ) -> 
+  .pipe $ ( data ) ->
     if data? then console.log "received event:", data
     else          console.log "stream has ended"
   .pipe output
@@ -211,27 +242,27 @@ input
 
 However, for any but the most one-off, simple purposes, you'll probably want
 a named function; it is customary to write the transform as a factory function
-that must get called once when being entered into the pipeline. 
+that must get called once when being entered into the pipeline.
 
 To denote the special status of a stream transform factory—a function that is
 a 'factory for potentially stateful transforms that only makes sense when
 being called as argument to a `.pipe` call within a stream pipeline'
 (iknowiknow, that's a mouthful)—it is also customary to prefix the name with a
-`$` (dollar sign). 
+`$` (dollar sign).
 
 Since `$observe`, below, is such a factory function, the transform that
 it returns may hold private state within the closure, an immensely useful
 technique (notwithstanding the folks who claim that everything should be pure
-functions; pure functions are great but try to count using those): 
+functions; pure functions are great but try to count using those):
 
 ```coffee
-$observe = -> 
+$observe = ->
   count = 0
-  return $ ( data ) -> 
-    if data? 
+  return $ ( data ) ->
+    if data?
       count += +1
       console.log "received event:", data
-    else          
+    else
       console.log "stream has ended; read #{count} events"
 
 input = ( require 'fs' ).createReadStream()
@@ -290,13 +321,13 @@ Use synchronous transforms when you want to both mangle data as it passes by
 and aggregate data across the entire stream.
 
 ```coffee
-$observe = -> 
+$observe = ->
   count = 0
-  return $ ( data ) -> 
-    if data? 
+  return $ ( data ) ->
+    if data?
       count += +1
       console.log "received event:", data
-    else          
+    else
       console.log "stream has ended; read #{count} events"
 
 input = D.new_stream()  # returns a `through2` stream
@@ -322,7 +353,7 @@ accepts eiter two or three arguments.
 reads. Since those can happen at an arbitrary time in the future, async
 stream transforms must always notify the pipeline when they've finished;
 to do this, there's a callback method tacked unto the `send` argument called
-`send.done`. 
+`send.done`.
 
 You can call `send data` as often as you like to, but you **must** call
 `send.done()` (or `send.done data`) whenever you're finished—otherwise the
@@ -350,7 +381,7 @@ come out the way you'd expect them; this is because there's no way to know for t
 data they represent.
 
 This method is handy to put as a safeguard right in front of a `.pipe output_file` clause to avoid
-`illegal non-buffer` issues. 
+`illegal non-buffer` issues.
 
 ### @$async
 ### @$batch
@@ -361,7 +392,7 @@ This method is handy to put as a safeguard right in front of a `.pipe output_fil
 ### @$join = ( joiner = '\n' ) ->
 Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
 of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
-well. 
+well.
 
 ### @$lockstep
 ### @$on_end
@@ -411,7 +442,7 @@ To obtain predictable samples, use `$sample p, seed: 1234` (with a non-zero numb
 you will then get the exact same
 sample whenever you re-run your piping application with the same stream and the same seed. An interesting
 property of the predictable sample is that—everything else being the same—a sample with a smaller `p`
-will always be a subset of a sample with a bigger `p` and vice versa. 
+will always be a subset of a sample with a bigger `p` and vice versa.
 
 ### @$show
 ### @$sort
@@ -431,7 +462,7 @@ see the split2 project page).
 
 A fairly complex stream transform to help in reading files with data in
 [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
-format. It basically accepts a stream of buffers or text, splits it into 
+format. It basically accepts a stream of buffers or text, splits it into
 lines, and splits each line into fields. In the process it can also skip empty
 and blank lines, omit comments, and name fields.
 
@@ -464,7 +495,7 @@ and blank lines, omit comments, and name fields.
 
 ### @end = ( me ) ->
 
-Given a stream, end it. 
+Given a stream, end it.
 
 ### @isa_stream
 ### @new_stream
@@ -491,13 +522,13 @@ Given a stream and some data, send / write / push that data into the stream.
 > [github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream)
 > and did so largely successfully, but problems with aysnchronous streams did surface in some
 > places.
-> 
+>
 > Unfortunately, *event-stream* is pegged to NodeJS streams v1 (as used in
 > NodeJS v0.8), but meanwhile we've reached NodeJS streams v3 (as used in NodeJS v5.x)
-> 
+>
 > > For more details, see Dominic Tarr's [rundown of NodeJS Streams
 > > History](http://dominictarr.com/post/145135293917/history-of-streams); worthwhile snippet:
-> 
+>
 > > > If node streams teach us anything, it’s that it’s very difficult to develop
 > > > something as fundamental as streams inside a “core”[. Y]ou can’t change core
 > > > without breaking things, because things simply assume core and never declare
@@ -506,38 +537,38 @@ Given a stream and some data, send / write / push that data into the stream.
 > > > performance improvements. This is still a pretty good thing, except
 > > > sometimes decisions get inadvertently made that have negative implications,
 > > > but that isn’t apparent until it’s too late.
-> 
+>
 > > How very true. People should keep this in mind when they berate JavaScript as
 > > a 'language with virtual no standard library at all'.
-> 
-> 
+>
+>
 ### Through2
-> 
+>
 > [Through2](https://github.com/rvagg/through2) provides a fairly manageable
 > interface to build stream transforms on:
-> 
+>
 > > ```js
 > > var through2 = require('through2');
 > > var transform = through2([ options, ] [ transformFunction ] [, flushFunction ])
 > > ```
-> 
+>
 > > To queue a new chunk, call `this.push(chunk)`—this can be called as many
 > > times as required before the `callback()` if you have multiple pieces to
 > > send on.
-> 
+>
 > > Alternatively, you may use `callback(err, chunk)` as shorthand for emitting
 > > a single chunk or an error.
-> 
+>
 > > The optional `flushFunction` is provided as the last argument (2nd or 3rd,
 > > depending on whether you've supplied `options`) is called just prior to the
 > > stream ending. Can be used to finish up any processing that may be in
 > > progress.
-> 
+>
 > So I wrote this simple 'demo test' (i.e. a tentative implementation as a proof
 > of concept) to see whether things work out the way I need them to have. Below
 > I will give the (much shorter) PipeDreams version for achieving the same
 > result:
-> 
+>
 > ```coffee
 > #-----------------------------------------------------------------------------------------------------------
 > @[ "(v4) stream / transform construction with through2" ] = ( T, T_done ) ->
@@ -583,12 +614,12 @@ Given a stream and some data, send / write / push that data into the stream.
 >     .pipe D.$show()
 >     .pipe D.$on_end => T_done()
 > ```
-> 
+>
 > I'm using Through2 via the
 > [mississippi](https://github.com/maxogden/mississippi) collection, which
 > brings a number of up-to-date and (hopefully) mutually compatible stream
 > modules together in a neat bundle.
-> 
+>
 >
 ## What's in a Name?
 >

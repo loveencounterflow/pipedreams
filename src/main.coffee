@@ -34,9 +34,9 @@ MSP                       = require 'mississippi'
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( settings ) ->
   return MSP.through.obj() if ( not settings? ) or ( keys = Object.keys ).length is 0
-  return @new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
-  return @new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
-  return @new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
+  # return @_new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
+  return @_new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
+  return @_new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
   expected  = ( rpr key for key in @new_stream.keys ).join ', '
   got       = ( rpr key for key in             keys ).join ', '
   throw new Error "expected one of #{expected}, got #{got}"
@@ -51,13 +51,7 @@ MSP                       = require 'mississippi'
   'pipeline' ]
 
 #-----------------------------------------------------------------------------------------------------------
-pluck = ( x, key ) ->
-  R = x[ key ]
-  delete x[ key ]
-  return R
-
-#-----------------------------------------------------------------------------------------------------------
-@new_stream_from_text = ( text, settings ) ->
+@_new_stream_from_text = ( text, settings ) ->
   ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
   other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
   returned stream will not have to been resumed explicitly. ###
@@ -67,7 +61,7 @@ pluck = ( x, key ) ->
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-@new_stream_from_pipeline = ( pipeline, settings ) ->
+@_new_stream_from_pipeline = ( pipeline, settings ) ->
   ### Given a list of transforms (a.k.a. a 'pipeline'), return a stream that has all the transforms
   successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
   reading from the stream will read from the last transform. If the pipeline is an empty list,
@@ -705,9 +699,16 @@ pluck = ( x, key ) ->
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
-### TAINT use CND method ###
 rnd_from_seed = ( seed ) ->
+  ### TAINT use CND method ###
   return if seed? then CND.get_rnd seed else Math.random
+
+#-----------------------------------------------------------------------------------------------------------
+pluck = ( x, key ) ->
+  ### TAINT use CND method ###
+  R = x[ key ]
+  delete x[ key ]
+  return R
 
 
 #===========================================================================================================

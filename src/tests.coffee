@@ -22,7 +22,7 @@ D                         = require './main'
 #===========================================================================================================
 # TESTS
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_pipeline (1a)" ] = ( T, done ) ->
+@[ "(v4) _new_stream_from_pipeline (1a)" ] = ( T, done ) ->
   MSP                       = require 'mississippi'
   create_frob_tee           = null
   #.........................................................................................................
@@ -94,7 +94,7 @@ D                         = require './main'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_pipeline (3)" ] = ( T, done ) ->
+@[ "(v4) _new_stream_from_pipeline (3)" ] = ( T, done ) ->
   MSP                       = require 'mississippi'
   create_frob_tee           = null
   #.........................................................................................................
@@ -130,7 +130,7 @@ D                         = require './main'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_pipeline (4)" ] = ( T, done ) ->
+@[ "(v4) _new_stream_from_pipeline (4)" ] = ( T, done ) ->
   probes      = [ 10 .. 20 ]
   matchers    = [20,22,24,26,28,30,32,34,36,38,40]
   results     = []
@@ -138,7 +138,7 @@ D                         = require './main'
     ( $ ( data, send ) => send n + 2 )
     ( $ ( data, send ) => send n * 2 )
     ]
-  confluence  = D.new_stream pipeline: pipeline
+  confluence  = D.new_stream { pipeline, }
   confluence
     .pipe D.$show()
     .pipe $ ( data, send, end ) =>
@@ -156,7 +156,7 @@ D                         = require './main'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_text" ] = ( T, done ) ->
+@[ "(v4) _new_stream_from_text" ] = ( T, done ) ->
   text = """
     Just in order to stress it, a 'character’ in this chart is equivalent to 'a Unicode
     codepoint’, so for example 馬 and 马 count as two characters, and 關, 关, 関, 闗, 𨶹 count
@@ -164,7 +164,7 @@ D                         = require './main'
     and 關关関闗𨶹 as 'one character with five variants’, but that’s not what we’re counting
     here.
     """
-  input     = D.new_stream_from_text text
+  input     = D.new_stream { text, }
   count     = 0
   input
     .pipe $ ( data, send, end ) ->
@@ -178,7 +178,7 @@ D                         = require './main'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_text doesn't work synchronously" ] = ( T, done ) ->
+@[ "(v4) _new_stream_from_text doesn't work synchronously" ] = ( T, done ) ->
   collector = []
   input     = D.new_stream()
   input
@@ -192,7 +192,7 @@ D                         = require './main'
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new_stream_from_text (2)" ] = ( T, done ) ->
+@[ "(v4) _new_stream_from_text (2)" ] = ( T, done ) ->
   collector = []
   input     = D.new_stream()
   input
@@ -482,7 +482,7 @@ D                         = require './main'
   stream.end()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) D.new_stream_from_pipeline" ] = ( T, done ) ->
+@[ "(v4) D._new_stream_from_pipeline" ] = ( T, done ) ->
   pipeline = [
     # D.$show()
     do =>
@@ -494,7 +494,7 @@ D                         = require './main'
           end()
           done()
     ]
-  T.ok isa_stream stream = D.new_stream_from_pipeline pipeline
+  T.ok isa_stream stream = D.new_stream { pipeline, }
   stream.write 'foo'
   stream.write 'bar'
   stream.write 'baz'
@@ -882,17 +882,17 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 unless module.parent?
   include = [
     # "(v4) stream / transform construction with through2 (2)"
-    "(v4) new_stream_from_pipeline (1a)"
-    "(v4) new_stream_from_pipeline (3)"
-    "(v4) new_stream_from_pipeline (4)"
-    "(v4) new_stream_from_text"
-    "(v4) new_stream_from_text doesn't work synchronously"
-    "(v4) new_stream_from_text (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_text (2)"
     "(v4) observer transform called with data `null` on stream end"
     "(v4) README demo (1)"
     "(v4) D.new_stream"
     "(v4) stream / transform construction with through2 (1)"
-    "(v4) D.new_stream_from_pipeline"
+    "(v4) D._new_stream_from_pipeline"
     "(v4) $async with method arity 2"
     "(v4) $async with method arity 3"
     "(v4) $sort 1"
