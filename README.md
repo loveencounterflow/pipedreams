@@ -26,6 +26,38 @@ Install as `npm install --save pipedreams2`.
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
+  - [`$`](#)
+  - [`$as_text`](#as_text)
+  - [`$async`](#async)
+  - [`$batch`](#batch)
+  - [`$collect`](#collect)
+  - [`$count`](#count)
+  - [`$filter`](#filter)
+  - [`$join`](#join)
+  - [`$lockstep`](#lockstep)
+  - [`$on_end`](#on_end)
+  - [`$on_first`](#on_first)
+  - [`$on_start`](#on_start)
+  - [`$parse_csv`](#parse_csv)
+  - [`$pass_through`](#pass_through)
+  - [`$sample`](#sample)
+  - [`$show`](#show)
+  - [`$sort`](#sort)
+  - [`$split`](#split)
+  - [`$split_tsv`](#split_tsv)
+  - [`$spread`](#spread)
+  - [`$stop_time`](#stop_time)
+  - [`$throttle_bytes`](#throttle_bytes)
+  - [`$throttle_items`](#throttle_items)
+  - [`end`](#end)
+  - [`isa_stream`](#isa_stream)
+  - [`new_stream`](#new_stream)
+  - [`new_stream_from_pipeline`](#new_stream_from_pipeline)
+  - [`new_stream_from_text`](#new_stream_from_text)
+  - [`remit`](#remit)
+  - [`remit_async`](#remit_async)
+  - [`run`](#run)
+  - [`send`](#send)
 - [Backmatter](#backmatter)
   - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
     - [Through2](#through2)
@@ -307,6 +339,43 @@ be prepared for an empty stream where it is called once with `data` being
 ```coffee
 $async ( data, send, end ) -> ...
 ```
+
+## `$`
+## `$as_text`
+## `$async`
+## `$batch`
+## `$collect`
+## `$count`
+## `$filter`
+## `$join`
+## `$lockstep`
+## `$on_end`
+## `$on_first`
+## `$on_start`
+## `$parse_csv`
+## `$pass_through`
+## `$sample`
+## `$show`
+## `$sort`
+## `$split`
+## `$split_tsv`
+## `$spread`
+## `$stop_time`
+## `$throttle_bytes`
+## `$throttle_items`
+## `end`
+## `isa_stream`
+## `new_stream`
+## `new_stream_from_pipeline`
+## `new_stream_from_text`
+## `remit`
+## `remit_async`
+## `run`
+## `send`
+
+<!-- ####################################################################################### -->
+
+
 >
 # Backmatter
 >
