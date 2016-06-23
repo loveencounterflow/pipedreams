@@ -27,7 +27,7 @@ Install as `npm install --save pipedreams2`.
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
   - [`$`](#)
-  - [`$as_text`](#as_text)
+  - [`@$as_text = ( stringify ) ->`](#@as_text---stringify---)
   - [`$async`](#async)
   - [`$batch`](#batch)
   - [`$collect`](#collect)
@@ -43,8 +43,9 @@ Install as `npm install --save pipedreams2`.
   - [`$sample`](#sample)
   - [`$show`](#show)
   - [`$sort`](#sort)
-  - [`$split`](#split)
-  - [`$split_tsv`](#split_tsv)
+  - [`@$sort = ( sorter, settings ) ->`](#@sort---sorter-settings---)
+  - [`@$split = ( matcher, mapper, settings ) ->`](#@split---matcher-mapper-settings---)
+  - [`@$split_tsv = ( settings ) ->`](#@split_tsv---settings---)
   - [`$spread`](#spread)
   - [`$stop_time`](#stop_time)
   - [`$throttle_bytes`](#throttle_bytes)
@@ -341,7 +342,16 @@ $async ( data, send, end ) -> ...
 ```
 
 ## `$`
-## `$as_text`
+
+## `@$as_text = ( stringify ) ->`
+Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings
+in the data stream is passed through unaffected. Observe that buffers in the stream will very probably not
+come out the way you'd expect them; this is because there's no way to know for the method what kind of
+data they represent.
+
+This method is handy to put as a safeguard right in front of a `.pipe output_file` clause to avoid
+`illegal non-buffer` issues. 
+
 ## `$async`
 ## `$batch`
 ## `$collect`
@@ -357,8 +367,48 @@ $async ( data, send, end ) -> ...
 ## `$sample`
 ## `$show`
 ## `$sort`
-## `$split`
-## `$split_tsv`
+
+## `@$sort = ( sorter, settings ) ->`
+
+Uses [github.com/mziccard/node-timsort](https://github.com/mziccard/node-timsort) for an
+efficient, and, importantly, stable sort.
+
+## `@$split = ( matcher, mapper, settings ) ->`
+
+Uses [github.com/mcollina/split2](https://github.com/mcollina/split2) to split
+a stream of buffers or texts into lines (in the default setting; for details
+see the split2 project page).
+
+## `@$split_tsv = ( settings ) ->`
+
+A fairly complex stream transform to help in reading files with data in
+[Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
+format. It basically accepts a stream of buffers or text, splits it into 
+lines, and splits each line into fields. In the process it can also skip empty
+and blank lines, omit comments, and name fields.
+
+
++ `comments` defines how to recognize a comment. If it is a string, lines (or fields, when `first:
+  'split'` has been specified) that start with the specified text are left out of the results.
+  It is also possible to use a RegEx or a custom function to recognize comments.
+
++ `trim`: `false` for no trimming, `true` for trimming both ends of each line (with `first: 'trim'`)
+  or each field (with `first: 'split'`).
+
++ `first`: either `'trim'` or `'split'`. No effect with `trim: false`; otherwise, indicates whether
+  first the line is trimmed (which means that leading and trailing tabs are also removed), or whether
+  we should first split into lines, and then trim each field individually. The `first: 'trim'` method—the
+  default—is faster, but it may conflate empty fields if there are any. The `first: 'split'` method
+  will first split each line using the `splitter` setting, and then trim all the fields individually.
+  This has the side-effect that comments (as field values on their own, not when tacked unto a non-comment
+  value) are reliably recognized and sorted out (when `comments` is set to a sensible value).
+
++ `splitter` defines one or more characters to split each line into fields.
+
++ When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
+  left in the stream.
+
+
 ## `$spread`
 ## `$stop_time`
 ## `$throttle_bytes`
