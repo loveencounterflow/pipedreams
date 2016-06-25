@@ -427,6 +427,20 @@ This method is handy to put as a safeguard right in front of a `.pipe output_fil
 
 ### @$async
 ### @$batch
+
+### @$bridge = ( stream ) ->
+
+Make it so that the pipeline may be continued even below a writable but not
+readable stream. Conceivably, this method could have be named `tunnel` as
+well. Something to get you across, you get the meaning. Useful for NodeJS
+writable streams which do not normally allow you to pipe something out of—in
+other words, when you pipe something into, say, `fs.createWriteStream
+'/tmp/foo.txt'`, you'can't take that stream and pipe it somewhere else. This
+won't work:
+
+  return @new_stream pipeline: [ @$pass_through(), stream, ]
+
+
 ### @$collect
 ### @$count
 ### @$filter
@@ -540,11 +554,29 @@ and blank lines, omit comments, and name fields.
 Given a stream, end it.
 
 ### @isa_stream
+
+Return whether `x` is a stream.
+
+### @isa_readable_stream = ( x ) ->
+
+Return whether `x` is a stream that is readable.
+
+### @isa_writable_stream = ( x ) ->
+
+Return whether `x` is a stream that is writable.
+
+### @isa_duplex_stream = ( x ) ->
+
+Return whether `x` is a stream that is both readable and writable.
+
 ### @new_stream
-### @new_stream_from_pipeline
-### @new_stream_from_text
-### @remit
-### @remit_async
+`@_new_stream_from_path`, `@_new_stream_from_pipeline`, `@_new_stream_from_text`,
+
+### @remit, @$, @remit_async, @$async
+
+See the extensive [section on the Remit and Remit-Async Methods](#the-remit-and-remit-async-methods),
+above.
+
 ### @run
 
 ### @send = ( me, data ) ->

@@ -162,17 +162,9 @@ MSP                       = require 'mississippi'
   ### The underlying implementation does not allow to get passed less than two streams, so we
   add pass-through transforms to satisfy it: ###
   if pipeline.length < 2
-    pipeline = Object.assign [], pipeline
-    pipeline.push @$pass_through()          if pipeline.length is 0
-    pipeline.splice 0, 0, @$pass_through()  if pipeline.length is 1
+    pipeline  = Object.assign [], pipeline
+    pipeline.unshift @$pass_through() while pipeline.length < 2
   return MSP.pipeline.obj pipeline...
-  # # return MSP.pipe pipeline..., ( error ) => throw error
-  # source  = MSP.through.obj()
-  # return source if pipeline.length is 0
-  # sink    = source
-  # for transform, idx in pipeline
-  #   sink = sink.pipe transform
-  # return MSP.duplex source, sink, objectMode: true
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -195,7 +187,10 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
-@isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
+@isa_stream           = ( x ) -> x instanceof ( require 'stream' ).Stream
+@isa_readable_stream  = ( x ) -> ( @isa_stream x ) and x.readable
+@isa_writable_stream  = ( x ) -> ( @isa_stream x ) and x.writable
+@isa_duplex_stream    = ( x ) -> ( @isa_stream x ) and x.readable and x.writable
 
 #-----------------------------------------------------------------------------------------------------------
 @$pass_through = -> MSP.through.obj()
@@ -720,8 +715,7 @@ pluck = ( x, key ) ->
   meaning. ###
   throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
-  throw new Error "expected a writable stream"                      if not stream.writable
-  # throw new Error "expected a writable, non-readable stream"        if     stream.readable
+  throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
   return @new_stream pipeline: [ @$pass_through(), stream, ]
 
 
