@@ -554,6 +554,55 @@ D                         = require './main'
   DEMO.new_stream 'write', route: "~/some-file.txt"
   done()
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path (interim) (2)" ] = ( T, done ) ->
+  ### One possible implementation of `D.$bridge` ###
+  step        = ( require 'coffeenode-suspend' ).step
+  MSP         = require 'mississippi'
+  path_1      = resolve_temp_path '_new_stream_from_path-2.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    # output  = MSP.duplex ( D.new_stream 'write', 'lines', path: path_1 ), D.new_stream()
+    # output = ( D.new_stream 'write', 'lines', path: path_1 )
+    W = ( require 'fs' ).createWriteStream path_1
+    Z = D.new_stream()
+    A = $ ( data, send, end ) =>
+        if data?
+          W.write data
+          Z.write data
+        if end?
+          W.end()
+          Z.end()
+          end()
+    output  = MSP.duplex A, Z, { objectMode: yes, }
+    input
+      .pipe $ ( line, send ) => send line + '\n'
+      .pipe output
+      .pipe D.$show()
+      .pipe D.$on_end => handler()
+    #.......................................................................................................
+    D.send input, probe for probe in probes
+    D.end input
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    input   = D.new_stream 'read', 'lines', path: path_1
+    input
+      .pipe D.$collect()
+      # .pipe D.$show()
+      .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_end => handler()
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample  resume
+    yield read_sample   resume
+    done()
+  #.........................................................................................................
+  return null
+
+
 
 #===========================================================================================================
 # HELPERS
