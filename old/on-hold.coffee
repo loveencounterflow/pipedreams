@@ -61,25 +61,6 @@ f = ->
   #-----------------------------------------------------------------------------------------------------------
   @new_file_writestream = -> throw new Error "new_file_writestream not implemented"
 
-  #===========================================================================================================
-  # BRIDGING
-  #-----------------------------------------------------------------------------------------------------------
-  @$bridge = ( stream ) ->
-    ### Make it so that the pipeline may be continued even below a writable but not readable stream.
-    Conceivably, this method could have be named `tunnel` as well. Something to get you across, you get the
-    meaning. ###
-    throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
-    throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
-    throw new Error "expected a writable stream"                      if not stream.writable
-    throw new Error "expected a writable, non-readable stream"        if     stream.readable
-    #.........................................................................................................
-    return @$ ( data, send, end ) =>
-      stream.write data if data?
-      send data
-      if end?
-        stream.end() unless stream is process.stdout
-        # throw error unless ( message = error[ 'message' ] )? and message.endsWith "cannot be closed."
-        end()
 
   #-----------------------------------------------------------------------------------------------------------
   @$observe = ( method ) ->
@@ -145,6 +126,28 @@ f = ->
           end()
     #.........................................................................................................
     return R
+
+#-----------------------------------------------------------------------------------------------------------
+@$bridge_A = ( stream ) ->
+  ### Make it so that the pipeline may be continued even below a writable but not readable stream.
+  Conceivably, this method could have be named `tunnel` as well. Something to get you across, you get the
+  meaning. ###
+  throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
+  throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
+  throw new Error "expected a writable stream"                      if not stream.writable
+  # throw new Error "expected a writable, non-readable stream"        if     stream.readable
+  # W = ( require 'fs' ).createWriteStream path_1
+  Z = @new_stream()
+  A = @$ ( data, send, end ) =>
+      if data?
+        stream.write data
+        Z.write data
+      if end?
+        stream.end()
+        Z.end()
+        end()
+  return MSP.duplex A, Z, { objectMode: yes, }
+
 
 
 ############################################################################################################

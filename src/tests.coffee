@@ -173,10 +173,124 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) _new_stream_from_path with custom hint" ] = ( T, done ) ->
-  Object.create
+@[ "(v4) _new_stream_from_path (interim) (2)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  MSP         = require 'mississippi'
+  path_1      = resolve_temp_path '_new_stream_from_path-2.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    # output  = MSP.duplex ( D.new_stream 'write', 'lines', path: path_1 ), D.new_stream()
+    # output = ( D.new_stream 'write', 'lines', path: path_1 )
+    W = ( require 'fs' ).createWriteStream path_1
+    Z = D.new_stream()
+    A = $ ( data, send, end ) =>
+        if data?
+          W.write data
+          Z.write data
+        if end?
+          W.end()
+          Z.end()
+          end()
+    output  = MSP.duplex A, Z, { objectMode: yes, }
+    input
+      .pipe $ ( line, send ) => send line + '\n'
+      .pipe output
+      .pipe D.$show()
+      .pipe D.$on_end => handler()
+    #.......................................................................................................
+    D.send input, probe for probe in probes
+    D.end input
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    input   = D.new_stream 'read', 'lines', path: path_1
+    input
+      .pipe D.$collect()
+      # .pipe D.$show()
+      .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_end => handler()
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample  resume
+    yield read_sample   resume
+    done()
   #.........................................................................................................
   return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path (2)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path_1      = resolve_temp_path '_new_stream_from_path-2.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    output  = ( require 'fs' ).createWriteStream path_1
+    input
+      .pipe D.$show()
+      .pipe D.$as_line()
+      .pipe D.$bridge output
+      .pipe D.$on_end => handler()
+    #.......................................................................................................
+    D.send input, probe for probe in probes
+    D.end input
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    input   = D.new_stream 'read', 'lines', path: path_1
+    input
+      .pipe D.$collect()
+      # .pipe D.$show()
+      .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_end => handler()
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample  resume
+    yield read_sample   resume
+    done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path (3)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path_1      = resolve_temp_path '_new_stream_from_path-2.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    output  = D.new_stream 'write', 'lines', { file: path_1, }
+    input
+      .pipe D.$show()
+      .pipe output
+      .pipe D.$on_end => handler()
+    #.......................................................................................................
+    D.send input, probe for probe in probes
+    D.end input
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    input   = D.new_stream 'read', 'lines', path: path_1
+    input
+      .pipe D.$collect()
+      # .pipe D.$show()
+      .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_end => handler()
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample  resume
+    yield read_sample   resume
+    done()
+  #.........................................................................................................
+  return null
+
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "(v4) _new_stream_from_path with custom hint" ] = ( T, done ) ->
+#   Object.create
+#   #.........................................................................................................
+#   return null
 
 ### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
 ### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
@@ -1048,10 +1162,12 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
     "(v4) new new_stream signature (1)"
     "(v4) new new_stream signature (2)"
     "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_path (interim) (2)"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_path (3)"
     "(v4) _new_stream_from_pipeline (1a)"
     "(v4) _new_stream_from_pipeline (3)"
     "(v4) _new_stream_from_pipeline (4)"
@@ -1062,6 +1178,7 @@ unless module.parent?
     "(v4) README demo (1)"
     "(v4) D.new_stream"
     "(v4) stream / transform construction with through2 (1)"
+    # "(v4) stream / transform construction with through2 (2)"
     "(v4) D._new_stream_from_pipeline"
     "(v4) $async with method arity 2"
     "(v4) $async with method arity 3"
@@ -1080,7 +1197,7 @@ unless module.parent?
     ]
   @_prune()
   @_main()
-  # debug '5562', JSON.stringify Object.keys D
+  # debug '5562', JSON.stringify key for key in Object.keys @
 
   # @[ "(v4) _new_stream_from_path (1)" ]()
 

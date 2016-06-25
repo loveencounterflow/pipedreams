@@ -154,18 +154,25 @@ MSP                       = require 'mississippi'
 @_new_stream_from_pipeline = ( pipeline, hints, settings ) ->
   ### Given a list of transforms (a.k.a. a 'pipeline'), return a stream that has all the transforms
   successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
-  reading from the stream will read from the last transform. If the pipeline is an empty list,
-  a simple `through2` stream is returned. ###
+  reading from the stream will read from the last transform. ###
   throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}"        if hints?
   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
   #.........................................................................................................
-  source  = MSP.through.obj()
-  return source if pipeline.length is 0
-  sink    = source
-  for transform, idx in pipeline
-    sink = sink.pipe transform
-  return MSP.duplex source, sink, objectMode: true
+  ### The underlying implementation does not allow to get passed less than two streams, so we
+  add pass-through transforms to satisfy it: ###
+  if pipeline.length < 2
+    pipeline = Object.assign [], pipeline
+    pipeline.push @$pass_through()          if pipeline.length is 0
+    pipeline.splice 0, 0, @$pass_through()  if pipeline.length is 1
+  return MSP.pipeline.obj pipeline...
+  # # return MSP.pipe pipeline..., ( error ) => throw error
+  # source  = MSP.through.obj()
+  # return source if pipeline.length is 0
+  # sink    = source
+  # for transform, idx in pipeline
+  #   sink = sink.pipe transform
+  # return MSP.duplex source, sink, objectMode: true
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -618,21 +625,21 @@ MSP                       = require 'mississippi'
     my_show rpr record
     send record
 
-#-----------------------------------------------------------------------------------------------------------
-@$stop_time = ( badge_or_handler ) ->
-  t0 = null
-  return @$observe ( data, is_last ) =>
-    t0 = +new Date() if data? and not t0?
-    if is_last
-      dt = ( new Date() ) - t0
-      switch type = CND.type_of badge_or_handler
-        when 'function'
-          badge_or_handler dt
-        when 'text', 'jsundefined'
-          logger = CND.get_logger 'info', badge_or_handler ? 'stop time'
-          logger "#{(dt / 1000).toFixed 2}s"
-        else
-          throw new Error "expected function or text, got a #{type}"
+# #-----------------------------------------------------------------------------------------------------------
+# @$stop_time = ( badge_or_handler ) ->
+#   t0 = null
+#   return @$observe ( data, is_last ) =>
+#     t0 = +new Date() if data? and not t0?
+#     if is_last
+#       dt = ( new Date() ) - t0
+#       switch type = CND.type_of badge_or_handler
+#         when 'function'
+#           badge_or_handler dt
+#         when 'text', 'jsundefined'
+#           logger = CND.get_logger 'info', badge_or_handler ? 'stop time'
+#           logger "#{(dt / 1000).toFixed 2}s"
+#         else
+#           throw new Error "expected function or text, got a #{type}"
 
 
 #===========================================================================================================
@@ -702,6 +709,20 @@ pluck = ( x, key ) ->
   R = x[ key ]
   delete x[ key ]
   return R
+
+
+#===========================================================================================================
+# BRIDGING
+#-----------------------------------------------------------------------------------------------------------
+@$bridge = ( stream ) ->
+  ### Make it so that the pipeline may be continued even below a writable but not readable stream.
+  Conceivably, this method could have be named `tunnel` as well. Something to get you across, you get the
+  meaning. ###
+  throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
+  throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
+  throw new Error "expected a writable stream"                      if not stream.writable
+  # throw new Error "expected a writable, non-readable stream"        if     stream.readable
+  return @new_stream pipeline: [ @$pass_through(), stream, ]
 
 
 #===========================================================================================================
