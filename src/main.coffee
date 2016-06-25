@@ -38,6 +38,7 @@ MSP                       = require 'mississippi'
     when 'pipeline'     then return @_new_stream_from_pipeline  seed, hints, settings
     when 'text'         then return @_new_stream_from_text      seed, hints, settings
     when 'url'          then return @_new_stream_from_url       seed, hints, settings
+    when 'transform'    then return @_new_stream_from_transform seed, hints, settings
   throw new Error "unknown kind #{rpr kind} (shouldn't happen)"
   return null
 
@@ -48,6 +49,8 @@ MSP                       = require 'mississippi'
   kind          = null
   seed          = null
   hints         = null
+  # #.........................................................................................................
+  # return [ 'transform', t, null, null, ] if P.length is 1 and CND.isa_function t = P[ 0 ]
   #.........................................................................................................
   if P.length > 0
     if P.length > 1
@@ -84,8 +87,7 @@ MSP                       = require 'mississippi'
   return [ kind, seed, hints, settings, ]
 
 #...........................................................................................................
-@new_stream._kinds = [ '*plain', 'file', 'path',    'pipeline', 'text',   'url',                       ]
-# @new_stream._hints = [ 'utf-8',  'utf8', 'binary',  'read',     'write',  'append',                    ]
+@new_stream._kinds = [ '*plain', 'file', 'path', 'pipeline', 'text', 'url', 'transform', ]
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream = ( seed, hints, settings ) ->
@@ -186,6 +188,23 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream_from_url: not implemented"
 
 #-----------------------------------------------------------------------------------------------------------
+@_new_stream_from_transform = ( transform, hints, settings ) ->
+  throw new Error "_new_stream_from_transform doesn't accept 'settings', got #{rpr settings}"  if settings?
+  #.........................................................................................................
+  hints ?= []
+  #.........................................................................................................
+  unless CND.is_subset hints, @_new_stream_from_transform._hints
+    expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
+    got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
+    throw new Error "expected 'hints' out of #{expected}, got #{got}"
+  #.........................................................................................................
+  return @$async transform if 'async' in hints
+  return @$ transform
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream_from_transform._hints = [ 'async', ]
+
+#-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
 @isa_stream           = ( x ) -> x instanceof ( require 'stream' ).Stream
 @isa_readable_stream  = ( x ) -> ( @isa_stream x ) and x.readable
@@ -268,6 +287,7 @@ MSP                       = require 'mississippi'
 @send = ( me, data ) ->
   ### Given a stream and some data, send / write / push that data into the stream. ###
   me.write data
+  # me.push data
   return me
 
 #-----------------------------------------------------------------------------------------------------------

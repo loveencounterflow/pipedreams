@@ -94,6 +94,8 @@ D               = require 'pipedreams'
 
 In the below, I will assume you `require`d PipeDreams the first way, above.
 
+## Streams are Transforms, Transforms are Streams
+
 ## remit (aka $) and remit_async (aka $async)
 
 The `remit` method (as well as its asynchronous companion, `remit_async`)  is

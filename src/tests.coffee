@@ -79,7 +79,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     ["*plain",null,["binary","append","~/some-file.txt"],null,null]
     ["file","~/some-file.txt",["omg","append"],null,null]
     # bad
-    [null,null,null,null,"expected a 'kind' out of '*plain', 'file', 'path', 'pipeline', 'text', 'url', got 'route'"]
+    [null,null,null,null,"expected a 'kind' out of '*plain', 'file', 'path', 'pipeline', 'text', 'url', 'transform', got 'route'"]
     ]
   #.........................................................................................................
   for probe, probe_idx in probes
@@ -269,6 +269,42 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     yield write_sample  resume
     yield read_sample   resume
     done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) streams as transforms and v/v (1)" ] = ( T, done ) ->
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  input       = $ ( data ) ->
+  input
+    .pipe D.$collect()
+    .pipe D.$show()
+    .pipe $ ( lines ) => T.eq lines, matcher if lines?
+    .pipe D.$on_end => done()
+  #.........................................................................................................
+  D.send  input, probe for probe in probes
+  D.end   input
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) streams as transforms and v/v (2)" ] = ( T, done ) ->
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'HELO', 'world', '𪉟⿱鹵皿' ]
+  transform   = ( line, send ) =>
+    if line is 'helo' then  send 'HELO'
+    else                    send line
+    return null
+  input       = $ ( data ) ->
+  input
+    .pipe D.new_stream { transform, }
+    .pipe D.$collect()
+    .pipe D.new_stream transform: ( ( lines ) => T.eq lines, matcher if lines? )
+    .pipe D.$on_end => done()
+  #.........................................................................................................
+  D.send  input, probe for probe in probes
+  D.end   input
   #.........................................................................................................
   return null
 
@@ -1180,6 +1216,8 @@ unless module.parent?
     "(v4) $split_tsv (4)"
     "(v4) _new_stream_from_path (3)"
     "(v4) _new_stream_from_path (4)"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
     ]
   @_prune()
   @_main()
