@@ -29,41 +29,6 @@ MSP                       = require 'mississippi'
 # timsort                   = require 'timsort'
 
 
-OLD = ->
-  #===========================================================================================================
-  # STREAM CREATION
-  #-----------------------------------------------------------------------------------------------------------
-  @new_stream = ( settings ) ->
-    return MSP.through.obj() if ( not settings? ) or ( kinds = Object.keys settings ).length is 0
-    # return @_new_stream_from_file     file,     settings if ( file     = pluck settings, 'file'     )?
-    return @_new_stream_from_text     text,     settings if ( text     = pluck settings, 'text'     )?
-    return @_new_stream_from_pipeline pipeline, settings if ( pipeline = pluck settings, 'pipeline' )?
-    expected  = ( rpr kind for kind in @new_stream.kinds ).join ', '
-    got       = ( rpr kind for kind in             kinds ).join ', '
-    throw new Error "expected a 'kind' out of #{expected}, got #{got}"
-
-  #-----------------------------------------------------------------------------------------------------------
-  @new_stream.kinds = [
-    'file'
-    'text'
-    'pipeline' ]
-
-  #-----------------------------------------------------------------------------------------------------------
-  @_new_stream_from_text = ( text, settings ) ->
-    ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
-    other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
-    returned stream will not have to been resumed explicitly. ###
-    R = @new_stream()
-    R.write text
-    R.end()
-    return R
-
-
-### NEW ###
-### NEW ###
-### NEW ###
-### NEW ###
-### NEW ###
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( P... ) ->
   [ kind, seed, hints, settings, ] = @new_stream._read_arguments P
@@ -100,11 +65,11 @@ OLD = ->
     unless ( kind_count = ( Object.keys kind_and_seed ).length ) is 1
       throw new Error "expected 0 or 1 'kind', got #{kind_count}"
     break for kind, seed of kind_and_seed
-  #.........................................................................................................
-  unless CND.is_subset hints, @new_stream._hints
-    expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
-    got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
-    throw new Error "expected 'hints' out of #{expected}, got #{got}"
+  # #.........................................................................................................
+  # unless CND.is_subset hints, @new_stream._hints
+  #   expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
+  #   got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
+  #   throw new Error "expected 'hints' out of #{expected}, got #{got}"
   #.........................................................................................................
   unless kind in @new_stream._kinds
     expected  = ( rpr x for x in @new_stream._kinds ).join ', '
@@ -120,7 +85,7 @@ OLD = ->
 
 #...........................................................................................................
 @new_stream._kinds = [ '*plain', 'file', 'path',    'pipeline', 'text',   'url',                       ]
-@new_stream._hints = [ 'utf-8',  'utf8', 'binary',  'read',     'write',  'append',                    ]
+# @new_stream._hints = [ 'utf-8',  'utf8', 'binary',  'read',     'write',  'append',                    ]
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream = ( seed, hints, settings ) ->
@@ -134,8 +99,18 @@ OLD = ->
   unless type = ( CND.type_of path ) is 'text'
     throw new Error "expected path to be a text, got a #{type}"
   #.........................................................................................................
-  role = 'read'
+  role          = 'read'
+  use_line_mode = null
+  #.........................................................................................................
   if hints?
+    #.......................................................................................................
+    unless CND.is_subset hints, @_new_stream_from_path._hints
+      expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
+      got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
+      throw new Error "expected 'hints' out of #{expected}, got #{got}"
+    #.......................................................................................................
+    use_line_mode = 'lines' in hints
+    #.......................................................................................................
     role_count  = 0
     if 'read' in hints
       role        = 'read'
@@ -148,19 +123,32 @@ OLD = ->
       role_count += +1
     if role_count > 1
       throw new Error "can only specify one of `read`, `write` or `append`; got #{rpr hints}"
+  # #.........................................................................................................
+  # if hints? and hints.length > 1
+  #   warn "ignoring additional hints of #{rpr hints} for the time being"
   #.........................................................................................................
-  if hints.length > 1
-    warn "ignoring additional hints of #{rpr hints} for the time being"
+  if role is 'read'
+    R = ( require 'fs' ).createReadStream path
+    #.......................................................................................................
+    if use_line_mode
+      pipeline  = [ R, @$split(), ]
+      R         = @new_stream { pipeline, }
   #.........................................................................................................
-  switch role
-    when 'read'
-      return ( require 'fs' ).createReadStream path
-    when 'write'
-      return ( require 'fs' ).createWriteStream path
-    when 'append'
-      return ( require 'fs' ).createWriteStream path, { flags: 'a', }
+  else # role is write or append
+    #.......................................................................................................
+    if role is 'write' then fs_settings = {}
+    else                    fs_settings = { flags: 'a', }
+    #.......................................................................................................
+    R = ( require 'fs' ).createWriteStream path, fs_settings
+    #.......................................................................................................
+    if use_line_mode
+      pipeline  = [ @$as_line(), R, ]
+      R         = @new_stream { pipeline, }
   #.........................................................................................................
-  throw new Error "unknwon role #{rpr role} (should never happen)"
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream_from_path._hints = [ 'utf-8',  'utf8', 'binary',  'read', 'write', 'append', 'lines', ]
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_pipeline = ( pipeline, hints, settings ) ->
@@ -168,9 +156,10 @@ OLD = ->
   successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
   reading from the stream will read from the last transform. If the pipeline is an empty list,
   a simple `through2` stream is returned. ###
-  throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}" if hints?
-  throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}" if settings?
+  throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}"        if hints?
+  throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
+  #.........................................................................................................
   source  = MSP.through.obj()
   return source if pipeline.length is 0
   sink    = source
@@ -183,8 +172,8 @@ OLD = ->
   ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
   other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
   returned stream will not have to been resumed explicitly. ###
-  throw new Error "illegal argument 'hints': #{rpr hints}"        if hints?
-  throw new Error "illegal argument 'settings': #{rpr settings}"  if settings?
+  throw new Error "_new_stream_from_text doesn't accept 'hints', got #{rpr hints}"        if hints?
+  throw new Error "_new_stream_from_text doesn't accept 'settings', got #{rpr settings}"  if settings?
   unless ( type = CND.type_of text ) in [ 'text', 'buffer', ]
     throw new Error "expected text or buffer, got a #{type}"
   #.........................................................................................................
@@ -194,14 +183,8 @@ OLD = ->
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream_from_url = ( seed, hints, settings ) -> throw new Error "_new_stream_from_url: not implemented"
-### NEW ###
-### NEW ###
-### NEW ###
-### NEW ###
-### NEW ###
-### NEW ###
-### NEW ###
+@_new_stream_from_url = ( seed, hints, settings ) ->
+  throw new Error "_new_stream_from_url: not implemented"
 
 #-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
@@ -358,158 +341,36 @@ OLD = ->
     send data
 
 #-----------------------------------------------------------------------------------------------------------
-@$parse_csv = ( options ) ->
-  field_names = null
-  options    ?= {}
-  headers     = options[ 'headers'    ] ? true
-  delimiter   = options[ 'delimiter'  ] ? ','
-  qualifier   = options[ 'qualifier'  ] ? '"'
-  ### http://stringjs.com ###
-  stringfoo   = require 'string'
-  #.........................................................................................................
-  return @$ ( record, send ) =>
-    if record?
-      values = ( stringfoo record ).parseCSV delimiter, qualifier, '\\'
-      if headers
-        if field_names is null
-          field_names = values
-        else
-          record = {}
-          record[ field_names[ idx ] ] = value for value, idx in values
-          send record
-      else
-        send values
+@$as_line = ( stringify ) ->
+  ### Like `$as_text`, but appends a newline to each chunk. ###
+  pipeline = [
+    ( @$as_text stringify )
+    ( @$ ( text, send ) => send text + '\n' ) ]
+  return @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
-@$split_tsv = ( settings ) ->
-  ### A fairly complex stream transform to help in reading files with data in
-  [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
-  format.
-
-  * `comments` defines how to recognize a comment. If it is a string, lines (or fields, when `first:
-    'split'` has been specified) that start with the specified text are left out of the results.
-    It is also possible to use a RegEx or a custom function to recognize comments.
-
-  * `trim`: `false` for no trimming, `true` for trimming both ends of each line (with `first: 'trim'`)
-    or each field (with `first: 'split'`).
-
-  * `first`: either `'trim'` or `'split'`. No effect with `trim: false`; otherwise, indicates whether
-    first the line is trimmed (which means that leading and trailing tabs are also removed), or whether
-    we should first split into lines, and then trim each field individually. The `first: 'trim'` method—the
-    default—is faster, but it may conflate empty fields if there are any. The `first: 'split'` method
-    will first split each line using the `splitter` setting, and then trim all the fields individually.
-    This has the side-effect that comments (as field values on their own, not when tacked unto a non-comment
-    value) are reliably recognized and sorted out (when `comments` is set to a sensible value).
-
-  * `splitter` defines one or more characters to split each line into fields.
-
-  * When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
-    left in the stream.
-  ###
-  first           =       settings?[ 'first'      ] ? 'trim' # or 'split'
-  trim            =       settings?[ 'trim'       ] ? yes
-  splitter        =       settings?[ 'splitter'   ] ? '\t'
-  skip_empty      = not ( settings?[ 'empty'      ] ? no )
-  comment_pattern =       settings?[ 'comments'   ] ? '#'
-  use_names       =       settings?[ 'names'      ] ? null
-  #.........................................................................................................
-  unless first in [ 'trim', 'split', ]
-    throw new Error "### MEH ###"
-  #.........................................................................................................
-  ### TAINT may want to allow custom function to do trimming ###
-  switch trim
-    when yes
-      if first is 'trim'
-        $trim = => @$ ( line, send ) =>
-          send line.trim()
-      else
-        $trim = => @$ ( fields, send ) =>
-          fields[ idx ] = field.trim() for field, idx in fields
-          send fields
-    when no then null
-    else throw new Error "### MEH ###"
-  #.........................................................................................................
-  ### TAINT may want to specify empty lines, fields ###
-  unless skip_empty in [ true, false, ]
-    throw new Error "### MEH ###"
-  #.........................................................................................................
-  switch type = CND.type_of comment_pattern
-    when 'null', 'undefined'  then comments =  no; is_comment = ( text ) -> no
-    when 'text'               then comments = yes; is_comment = ( text ) -> text.startsWith comment_pattern
-    when 'regex'              then comments = yes; is_comment = ( text ) -> comment_pattern.test text
-    when 'function'           then comments = yes; is_comment = ( text ) -> not not comment_pattern text
-    else throw new Error "### MEH ###"
-  #.........................................................................................................
-  if first is 'trim'
-    $skip_comments = => @$ ( line, send ) =>
-      send line unless is_comment line
-  else
-    $skip_comments = => @$ ( fields, send ) =>
-      for field, idx in fields
-        # urge '7765', idx, ( rpr field ), is_comment field
-        continue unless is_comment field
-        fields.length = idx
-        break
-      send fields unless skip_empty and fields.length is 0
-  #.........................................................................................................
-  if skip_empty
-    $skip_empty_lines = => @$ ( line, send ) => send line if line.length > 0
-    if first is 'split'
-      $skip_empty_fields = => @$ ( fields, send ) =>
-        for field in fields
-          continue if field.length is 0
-          send fields
-          break
-        return null
-  #.........................................................................................................
-  use_names = null if use_names is no
-  if use_names?
-    names = null
-    #.......................................................................................................
-    if CND.isa_list use_names
-      names = use_names
-      $name_fields = =>
-        return @$ ( fields, send ) =>
-          send name_fields fields
-    #.......................................................................................................
-    else if use_names in [ 'inline', yes, ]
-      $name_fields = =>
-        is_first  = yes
-        return @$ ( fields, send ) =>
-          return send name_fields fields unless is_first
-          is_first  = no
-          names     = fields
-    #.......................................................................................................
-    else
-      throw new Error "expected setting names to be true, false, 'inline', or a list; got #{rpr use_names}"
-    #.......................................................................................................
-    use_names   = yes
-    name_fields = ( fields ) =>
-      R = {}
-      for field, idx in fields
-        R[ names[ idx ] ? "field-#{idx}" ] = field
-      return R
-  #.........................................................................................................
-  unless ( type_of_splitter = CND.type_of splitter ) in [ 'text', 'regex', 'function', ]
-    throw new Error "### MEH ###"
-  throw new Error "splitter as function no yet implemented" if type_of_splitter is 'function'
-  $split_line = =>
-    return @$ ( line, send ) =>
-      send line.split splitter
-  #.........................................................................................................
-  pipeline = []
-  pipeline.push @$split()
-  pipeline.push $trim()               if first is 'trim'
-  pipeline.push $skip_empty_lines()   if skip_empty
-  pipeline.push $skip_comments()      if first is 'trim' and comments
-  pipeline.push $split_line()
-  pipeline.push $trim()               if first is 'split'
-  pipeline.push $skip_comments()      if first is 'split' and comments
-  pipeline.push $skip_empty_fields()  if first is 'split' and skip_empty
-  pipeline.push $name_fields()        if use_names
-  # pipeline.push @$ ( data ) => debug '3', JSON.stringify data if data?
-  #.........................................................................................................
-  return @new_stream { pipeline, }
+@$parse_csv = ( options ) ->
+  throw new Error "$parse_csv is on hold; investigating other libraries and extensibility"
+  # field_names = null
+  # options    ?= {}
+  # headers     = options[ 'headers'    ] ? true
+  # delimiter   = options[ 'delimiter'  ] ? ','
+  # qualifier   = options[ 'qualifier'  ] ? '"'
+  # ### http://stringjs.com ###
+  # stringfoo   = require 'string'
+  # #.........................................................................................................
+  # return @$ ( record, send ) =>
+  #   if record?
+  #     values = ( stringfoo record ).parseCSV delimiter, qualifier, '\\'
+  #     if headers
+  #       if field_names is null
+  #         field_names = values
+  #       else
+  #         record = {}
+  #         record[ field_names[ idx ] ] = value for value, idx in values
+  #         send record
+  #     else
+  #       send values
 
 
 #===========================================================================================================
@@ -841,6 +702,12 @@ pluck = ( x, key ) ->
   R = x[ key ]
   delete x[ key ]
   return R
+
+
+#===========================================================================================================
+# EXTRA MODULES
+#-----------------------------------------------------------------------------------------------------------
+@$split_tsv = ( require './transform-split-tsv' ).$split_tsv
 
 
 #===========================================================================================================

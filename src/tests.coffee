@@ -17,6 +17,8 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 D                         = require './main'
 { $, $async, }            = D
+$split_tsv                = require './transform-split-tsv'
+
 #...........................................................................................................
 ### TAINT for the time being, we create one global folder and keep it beyond process termination; this
 allows to inspect folder contents after tests have terminated. It would probably be a good idea to remove
@@ -33,139 +35,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #===========================================================================================================
 # TESTS
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) new new_stream signature (preview)" ] = ( T, done ) ->
-
-  ############################################################################################################
-  test_function_signature_def = ->
-
-    #-----------------------------------------------------------------------------------------------------------
-    @new_stream = ( P... ) ->
-      #.........................................................................................................
-      help() # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      help Array.from arguments # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      try # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        [ kind, seed, hints, settings, ] = @new_stream._read_arguments P # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        switch kind
-          when '*plain'       then return @_new_stream                seed, hints, settings
-          when 'file', 'path' then return @_new_stream_from_path      seed, hints, settings
-          when 'pipeline'     then return @_new_stream_from_pipeline  seed, hints, settings
-          when 'text'         then return @_new_stream_from_text      seed, hints, settings
-          when 'url'          then return @_new_stream_from_url       seed, hints, settings
-          else throw new Error "unknown kind #{rpr kind} (shouldn't happen)"
-      catch error # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        warn error[ 'message' ] # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        return # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    #-----------------------------------------------------------------------------------------------------------
-    @new_stream._read_arguments = ( P ) =>
-      kind_and_seed = null
-      settings      = null
-      kind          = null
-      seed          = null
-      hints         = null
-      #.........................................................................................................
-      if P.length > 0
-        if P.length > 1
-          unless CND.isa_text P[ P.length - 1 ]
-            kind_and_seed = P.pop()
-        unless CND.isa_text P[ P.length - 1 ]
-          settings  = kind_and_seed
-          kind_and_seed = P.pop()
-      #.........................................................................................................
-      hints = P
-      #.........................................................................................................
-      unless kind_and_seed?
-        kind = '*plain'
-      else
-        unless ( kind_count = ( Object.keys kind_and_seed ).length ) is 1
-          throw new Error "expected 0 or 1 'kind', got #{kind_count}"
-        break for kind, seed of kind_and_seed
-      #.........................................................................................................
-      unless CND.is_subset hints, @new_stream._hints
-        expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
-        got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
-        throw new Error "expected 'hints' out of #{expected}, got #{got}"
-      #.........................................................................................................
-      unless kind in @new_stream._kinds
-        expected  = ( rpr x for x in @new_stream._kinds ).join ', '
-        got       =   rpr kind
-        throw new Error "expected a 'kind' out of #{expected}, got #{got}"
-      #.........................................................................................................
-      urge 'kind      ', kind
-      urge 'seed      ', seed
-      urge 'hints     ', hints
-      urge 'settings  ', settings
-      hints = null if hints.length is 0
-      return [ kind, seed, hints, settings, ]
-
-    #...........................................................................................................
-    @new_stream._kinds = [ '*plain', 'file', 'path',    'pipeline', 'text',   'url',                       ]
-    @new_stream._hints = [ 'utf-8',  'utf8', 'binary',  'read',     'write',  'append',                    ]
-
-    #-----------------------------------------------------------------------------------------------------------
-    @_new_stream = ( seed, hints, settings ) ->
-      throw new Error "_new_stream doesn't accept 'seed', got #{rpr seed}" if seed?
-      throw new Error "_new_stream doesn't accept 'hints', got #{rpr hints}" if hints?
-      throw new Error "_new_stream doesn't accept 'settings', got #{rpr settings}" if settings?
-      return MSP.through.obj()
-
-    #-----------------------------------------------------------------------------------------------------------
-    @_new_stream_from_path = ( seed, hints, settings ) -> throw new Error "_new_stream_from_path: not implemented"
-
-    #-----------------------------------------------------------------------------------------------------------
-    @_new_stream_from_pipeline = ( seed, hints, settings ) -> throw new Error "_new_stream_from_pipeline: not implemented"
-
-    #-----------------------------------------------------------------------------------------------------------
-    @_new_stream_from_text = ( seed, hints, settings ) ->
-      ### Given a text, return a stream that has `text` written into it; as soon as you `.pipe` it to some
-      other stream or transformer pipeline, those parts will get to read the text. Unlike PipeDreams v2, the
-      returned stream will not have to been resumed explicitly. ###
-      throw new Error "illegal argument 'hints': #{rpr hints}"        if hints?
-      throw new Error "illegal argument 'settings': #{rpr settings}"  if settings?
-      unless ( type = CND.type_of seed ) in [ 'text', 'buffer', ]
-        throw new Error "expected text or buffer, got a #{type}"
-      #.........................................................................................................
-      R = @new_stream()
-      R.write text
-      R.end()
-      return R
-
-    #-----------------------------------------------------------------------------------------------------------
-    @_new_stream_from_url = ( seed, hints, settings ) -> throw new Error "_new_stream_from_url: not implemented"
-
-
-  #===========================================================================================================
-  MSP                       = require 'mississippi'
-  DEMO                      = {}
-  test_function_signature_def.apply DEMO
-  #.........................................................................................................
-  debug DEMO.new_stream._kinds
-  debug DEMO.new_stream._hints
-  DEMO.new_stream()
-  DEMO.new_stream 'utf-8'
-  DEMO.new_stream 'write', 'binary', file: 'baz.doc'
-  DEMO.new_stream 'write', pipeline: []
-  DEMO.new_stream 'write', 'binary', { file: 'baz.doc', }, { mode: 0o744, }
-  DEMO.new_stream text: "make it so"
-  DEMO.new_stream 'oops', text: "make it so"
-  DEMO.new_stream 'text', "make it so"
-  DEMO.new_stream 'binary', 'append', "~/some-file.txt"
-  DEMO.new_stream 'omg', 'append', file: "~/some-file.txt"
-  DEMO.new_stream 'write', route: "~/some-file.txt"
-  done()
-
-
-
-### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
-### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
-### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
-### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
-###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
-###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
-###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
-###          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##            ###
-
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new new_stream signature (1)" ] = ( T, done ) ->
   #.........................................................................................................
@@ -189,11 +58,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     [ 'write', pipeline: [],                                      ]
     [ 'write', 'binary', { file: 'baz.doc', }, { mode: 0o744, },  ]
     [ text: "make it so",                                         ]
-    # bad
     [ 'oops', text: "make it so",                                 ]
     [ 'text', "make it so",                                       ]
     [ 'binary', 'append', "~/some-file.txt",                      ]
     [ 'omg', 'append', file: "~/some-file.txt",                   ]
+    # bad
     [ 'write', route: "~/some-file.txt",                          ]
     ]
   #.........................................................................................................
@@ -205,29 +74,33 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     ["pipeline",[],["write"],null,null]
     ["file","baz.doc",["write","binary"],{"mode":484},null]
     ["text","make it so",null,null,null]
+    ["text","make it so",["oops"],null,null]
+    ["*plain",null,["text","make it so"],null,null]
+    ["*plain",null,["binary","append","~/some-file.txt"],null,null]
+    ["file","~/some-file.txt",["omg","append"],null,null]
     # bad
-    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got 'oops'"]
-    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got 'text', 'make it so'"]
-    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got '~/some-file.txt'"]
-    [null,null,null,null,"expected 'hints' out of 'utf-8', 'utf8', 'binary', 'read', 'write', 'append', got 'omg'"]
     [null,null,null,null,"expected a 'kind' out of '*plain', 'file', 'path', 'pipeline', 'text', 'url', got 'route'"]
     ]
   #.........................................................................................................
   for probe, probe_idx in probes
     result = new_stream_instrument probe...
+    # debug JSON.stringify result
     T.eq result, matchers[ probe_idx ]
   #.........................................................................................................
   done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new new_stream signature (2)" ] = ( T, done ) ->
-  path_1 = resolve_temp_path 't-dfgh-1.txt'
-  path_2 = resolve_temp_path 't-dfgh-2.txt'
-  path_3 = resolve_temp_path 't-dfgh-3.txt'
+  path_1      = resolve_temp_path 't-dfgh-1.txt'
+  path_2      = resolve_temp_path 't-dfgh-2.txt'
+  path_3      = resolve_temp_path 't-dfgh-3.txt'
+  fakestream  = { 'stream': yes, }
   #.........................................................................................................
   new_stream_instrument = ( P... ) ->
+    R       = null
+    message = null
     try
-      R = D.new_stream P
+      R = D.new_stream P...
     catch error
       message = error[ 'message' ]
     return [ R, message, ]
@@ -241,6 +114,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     [ 'binary', 'append',  file: path_3,                      ]
     [ text: "make it so",                                         ]
     # bad
+    [ 'oops', text: "make it so",                                 ]
     [ 'utf-8',                                                    ]
     [ 'write', pipeline: [],                                      ]
     ]
@@ -252,18 +126,57 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     [{"stream":true},null]
     [{"stream":true},null]
     [{"stream":true},null]
+    [null,"_new_stream_from_text doesn't accept 'hints', got [ 'oops' ]"]
     [null,"_new_stream doesn't accept 'hints', got [ 'utf-8' ]"]
     [null,"_new_stream_from_pipeline doesn't accept 'hints', got [ 'write' ]"]
     ]
-  ASTREAM   = { 'stream': yes, }
   #.........................................................................................................
   for probe, probe_idx in probes
     result      = new_stream_instrument probe...
-    result[ 0 ] = ASTREAM if isa_stream result[ 0 ]
-    debug JSON.stringify result
-    # T.eq result, matchers[ probe_idx ]
+    result[ 0 ] = fakestream if isa_stream result[ 0 ]
+    # debug JSON.stringify result
+    T.eq result, matchers[ probe_idx ]
   #.........................................................................................................
   done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path (1)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path_1      = resolve_temp_path '_new_stream_from_path-1.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    output  = D.new_stream 'write', 'lines', path: path_1
+    input
+      # .pipe $ ( line, send ) => send line + '\n'
+      .pipe D.$on_end => handler()
+      .pipe output
+    #.......................................................................................................
+    D.send input, probe for probe in probes
+    D.end input
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    input   = D.new_stream 'read', 'lines', path: path_1
+    input
+      .pipe D.$collect()
+      # .pipe D.$show()
+      .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_end => handler()
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample  resume
+    yield read_sample   resume
+    done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path with custom hint" ] = ( T, done ) ->
+  Object.create
+  #.........................................................................................................
+  return null
 
 ### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
 ### ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##          ## ## ##   ###
@@ -969,7 +882,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 @[ "(v4) $split_tsv (1)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe D.$split_tsv()
+    .pipe $split_tsv()
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
@@ -1008,7 +921,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 @[ "(v4) $split_tsv (2)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe D.$split_tsv first: 'split'
+    .pipe $split_tsv first: 'split'
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
@@ -1042,7 +955,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 @[ "(v4) $split_tsv (3)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe D.$split_tsv first: 'split', names: [ 'fncr', 'glyph', 'formula', ]
+    .pipe $split_tsv first: 'split', names: [ 'fncr', 'glyph', 'formula', ]
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
@@ -1076,7 +989,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 @[ "(v4) $split_tsv (4)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe D.$split_tsv first: 'split', names: 'inline'
+    .pipe $split_tsv first: 'split', names: 'inline'
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
@@ -1129,46 +1042,47 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 #-----------------------------------------------------------------------------------------------------------
 @_main = ->
-  test @, 'timeout': 3000
   info "temporary files, if any, written to #{temp_home}"
+  test @, 'timeout': 3000
 
 ############################################################################################################
 unless module.parent?
   include = [
     # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) new new_stream signature (preview)"
     "(v4) new new_stream signature (1)"
     "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $split_tsv (2)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) $split_tsv (1)"
+    "(v4) $split_tsv (2)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
     ]
   @_prune()
   @_main()
   # debug '5562', JSON.stringify Object.keys D
 
+  # @[ "(v4) _new_stream_from_path (1)" ]()
 
 
 

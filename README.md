@@ -159,6 +159,13 @@ or `D.$on_end`:
 
 ## Stream Creation
 
+The PipeDreams way to creating new streams looks a little bit different than
+what most libraries do. Since PipeDreams streams are underlingly just NodeJS
+streams v3, feel free to go on using `fs.createReadStream()` or other stuff if
+that is closer to what you like and need. I'd wager to claim, though, that for
+a huge number of practical use cases using the PipeDreams API is simpler and
+yet does the job.
+
 ```coffee
 @new_stream = ( settings ) ->
 
