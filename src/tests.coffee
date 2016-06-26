@@ -274,15 +274,12 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) file stream events (1)" ] = ( T, done ) ->
-  step        = ( require 'coffeenode-suspend' ).step
   path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
   probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  MSP         = require 'mississippi'
   #.........................................................................................................
   write_sample = ( handler ) =>
-    input   = MSP.through.obj()
-    thruput = MSP.through.obj()
+    input   = D.new_stream()
+    thruput = D.new_stream()
     output  = D.new_stream 'append', file: path_1
     pipeline = input
       .pipe D.$as_line()
@@ -303,7 +300,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     output.on 'finish', handler
     #.......................................................................................................
     for probe in probes
-      setImmediate => input.write probe
+      do ( probe ) =>
+        setImmediate => input.write probe
     setImmediate => input.end()
   #.........................................................................................................
   write_sample ( error ) =>

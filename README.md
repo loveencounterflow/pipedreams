@@ -157,20 +157,18 @@ D.new_stream 'read', file: 'foo.txt'
 ## When to Call it a Day
 
 Given the asynchronous nature of NodeJS' I/O handling, stream end detection can be a fickle thing and hard
-to get right. To demonstrate just how counterintuitive sequences of events can become in
-asynchronous&nbsp;(!) stream&nbsp;(!) pipelines&nbsp;(!), I wrote this test case:
+to get right. To demonstrate just how counterintuitive sequences of events can become with
+asynchronous&nbsp;(!) stream&nbsp;(!), I wrote this test case:
 
 ```coffee
+#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) file stream events (1)" ] = ( T, done ) ->
-  step        = ( require 'coffeenode-suspend' ).step
   path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
   probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  MSP         = require 'mississippi'
   #.........................................................................................................
   write_sample = ( handler ) =>
-    input   = MSP.through.obj()
-    thruput = MSP.through.obj()
+    input   = D.new_stream()
+    thruput = D.new_stream()
     output  = D.new_stream 'append', file: path_1
     pipeline = input
       .pipe D.$as_line()
@@ -191,7 +189,8 @@ asynchronous&nbsp;(!) stream&nbsp;(!) pipelines&nbsp;(!), I wrote this test case
     output.on 'finish', handler
     #.......................................................................................................
     for probe in probes
-      setImmediate => input.write probe
+      do ( probe ) =>
+        setImmediate => input.write probe
     setImmediate => input.end()
   #.........................................................................................................
   write_sample ( error ) =>
