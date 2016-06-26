@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
+    "async": "^2.0.0-rc.6",
     "cnd": "^3.2.0",
     "coffeenode-suspend": "^0.1.11",
     "lodash.clonedeep": "^4.3.2",
