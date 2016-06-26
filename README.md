@@ -96,6 +96,111 @@ In the below, I will assume you `require`d PipeDreams the first way, above.
 
 ## Streams are Transforms, Transforms are Streams
 
+**In the PipeDreams world, write streams are read just like read streams; also, streams and transforms are no
+different.**
+
+Yesyes, I know, they're *supposed* to be different. After all, you'd write your typical streamy app
+approximately like this:
+
+```coffee
+input   = fs.createReadStream   'foo.txt'
+output  = fs.createWriteStream  'bar.txt'
+input
+  .pipe get_transform_A()
+  .pipe get_transform_B()
+  .pipe get_transform_C()
+  .pipe output
+```
+
+In this view, clearly, a read-stream is a source of data—something that pushes data into the stream; a
+write-stream is a sink—something that accepts data from the stream; and a transform—well, a transform takes
+data, does something with it, and passes it on. In other words, a transform acts like a write-stream on its
+'upper' end (), and acts like a read-stream on its lower end.
+
+In the typical NodeJS way of doing things, you can't just go on with the pipeline after a write-stream; this
+would be illegal:
+
+```coffee
+# won't work
+input   = fs.createReadStream 'foo.txt'
+input
+  .pipe get_transform_A()
+  .pipe fs.createWriteStream 'bar.txt'
+  .pipe get_transform_B()
+```
+
+Trying to read from a NodeJS write-stream will elicit a dry `Cannot pipe. Not readable.` complaint from the
+engine. After all, this is a write-stream, right, so what should you want to read from it, right? Wrong!
+Consider this simple setup:
+
+```coffee
+# won't work
+fs.createReadStream 'foo.txt'
+  .pipe fs.createWriteStream 'copy-1.txt'
+  .pipe fs.createWriteStream 'copy-2.txt'
+  .pipe fs.createWriteStream 'copy-3.txt'
+```
+
+Isn't it quite obvious that the only sensible course of action here is to A) read from `foo.txt` and B) copy
+those bytes to all of `copy-1.txt`, `copy-2.txt`, `copy-3.txt`? Why not? Turns out you can *easily* achieve
+the above with PipeDreams:
+
+```coffee
+# works!
+D = require 'pipedreams'
+D.new_stream 'read', file: 'foo.txt'
+  .pipe D.new_stream 'write', file: 'copy-1.txt'
+  .pipe D.new_stream 'write', file: 'copy-2.txt'
+  .pipe D.new_stream 'write', file: 'copy-3.txt'
+```
+
+## When to Call it a Day
+
+Given the asynchronous nature of NodeJS' I/O handling, stream end detection can be a fickle thing and hard
+to get right. To demonstrate just how counterintuitive sequences of events can become in
+asynchronous&nbsp;(!) stream&nbsp;(!) pipelines&nbsp;(!), I wrote this test case:
+
+```coffee
+@[ "(v4) file stream events (1)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  MSP         = require 'mississippi'
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = MSP.through.obj()
+    thruput = MSP.through.obj()
+    output  = D.new_stream 'append', file: path_1
+    pipeline = input
+      .pipe D.$as_line()
+      .pipe D.$show()
+      .pipe output
+      .pipe thruput
+      .pipe $ ( data ) ->
+        return send data if data?
+        debug CND.green 'transform end'
+    input.on 'end',       -> debug CND.lime 'input end'
+    input.on 'finish',    -> debug CND.lime 'input finish'
+    output.on 'end',      -> debug CND.red  'output end'
+    output.on 'finish',   -> debug CND.red  'output finish'
+    thruput.on 'end',     -> debug CND.gold 'thruput end'
+    thruput.on 'finish',  -> debug CND.gold 'thruput finish'
+    pipeline.on 'end',    -> debug CND.blue 'pipeline end'
+    pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
+    output.on 'finish', handler
+    #.......................................................................................................
+    for probe in probes
+      setImmediate => input.write probe
+    setImmediate => input.end()
+  #.........................................................................................................
+  write_sample ( error ) =>
+    throw error if error?
+    setImmediate => done()
+  #.........................................................................................................
+  return null
+```
+
 ## remit (aka $) and remit_async (aka $async)
 
 The `remit` method (as well as its asynchronous companion, `remit_async`)  is

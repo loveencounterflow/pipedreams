@@ -273,6 +273,46 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "(v4) file stream events (1)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  MSP         = require 'mississippi'
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = MSP.through.obj()
+    thruput = MSP.through.obj()
+    output  = D.new_stream 'append', file: path_1
+    pipeline = input
+      .pipe D.$as_line()
+      .pipe D.$show()
+      .pipe output
+      .pipe thruput
+      .pipe $ ( data ) ->
+        return send data if data?
+        debug CND.green 'transform end'
+    input.on 'end',       -> debug CND.lime 'input end'
+    input.on 'finish',    -> debug CND.lime 'input finish'
+    output.on 'end',      -> debug CND.red  'output end'
+    output.on 'finish',   -> debug CND.red  'output finish'
+    thruput.on 'end',     -> debug CND.gold 'thruput end'
+    thruput.on 'finish',  -> debug CND.gold 'thruput finish'
+    pipeline.on 'end',    -> debug CND.blue 'pipeline end'
+    pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
+    output.on 'finish', handler
+    #.......................................................................................................
+    for probe in probes
+      setImmediate => input.write probe
+    setImmediate => input.end()
+  #.........................................................................................................
+  write_sample ( error ) =>
+    throw error if error?
+    setImmediate => done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) streams as transforms and v/v (1)" ] = ( T, done ) ->
   probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
   matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
@@ -1161,10 +1201,17 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
 delay = ( name, f ) =>
+  if arguments.length is 1
+    f     = name
+    name  = null
   dt = CND.random_integer 10, 200
   # dt = 1
-  whisper "delay for #{rpr name}: #{dt}ms"
+  whisper "delay for #{rpr name}: #{dt}ms" if name?
   setTimeout f, dt
+
+#-----------------------------------------------------------------------------------------------------------
+sleep = ( dt, handler ) =>
+  setTimeout handler, dt
 
 #-----------------------------------------------------------------------------------------------------------
 isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
@@ -1184,40 +1231,41 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text doesn't work synchronously"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) README demo (1)"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 2"
-    "(v4) $async with method arity 3"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) $split_tsv (1)"
-    "(v4) $split_tsv (2)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) _new_stream_from_path (3)"
-    "(v4) _new_stream_from_path (4)"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) README demo (1)"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 2"
+    # "(v4) $async with method arity 3"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $split_tsv (2)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) _new_stream_from_path (3)"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) _new_stream_from_path (4)"
+    "(v4) file stream events (1)"
     ]
   @_prune()
   @_main()

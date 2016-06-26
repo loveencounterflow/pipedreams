@@ -32,15 +32,16 @@ MSP                       = require 'mississippi'
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( P... ) ->
   [ kind, seed, hints, settings, ] = @new_stream._read_arguments P
-  switch kind
-    when '*plain'       then return @_new_stream                seed, hints, settings
-    when 'file', 'path' then return @_new_stream_from_path      seed, hints, settings
-    when 'pipeline'     then return @_new_stream_from_pipeline  seed, hints, settings
-    when 'text'         then return @_new_stream_from_text      seed, hints, settings
-    when 'url'          then return @_new_stream_from_url       seed, hints, settings
-    when 'transform'    then return @_new_stream_from_transform seed, hints, settings
-  throw new Error "unknown kind #{rpr kind} (shouldn't happen)"
-  return null
+  R = switch kind
+    when '*plain'       then @_new_stream                seed, hints, settings
+    when 'file', 'path' then @_new_stream_from_path      seed, hints, settings
+    when 'pipeline'     then @_new_stream_from_pipeline  seed, hints, settings
+    when 'text'         then @_new_stream_from_text      seed, hints, settings
+    when 'url'          then @_new_stream_from_url       seed, hints, settings
+    when 'transform'    then @_new_stream_from_transform seed, hints, settings
+    else throw new Error "unknown kind #{rpr kind} (shouldn't happen)"
+  #.....................................................................................................
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream._read_arguments = ( P ) =>
@@ -103,6 +104,7 @@ MSP                       = require 'mississippi'
   #.........................................................................................................
   role          = 'read'
   use_line_mode = null
+  pipeline      = []
   #.........................................................................................................
   if hints?
     #.......................................................................................................
@@ -130,24 +132,16 @@ MSP                       = require 'mississippi'
   #   warn "ignoring additional hints of #{rpr hints} for the time being"
   #.........................................................................................................
   if role is 'read'
-    R = ( require 'fs' ).createReadStream path
-    #.......................................................................................................
-    if use_line_mode
-      pipeline  = [ R, @$split(), ]
-      R         = @new_stream { pipeline, }
+    pipeline.push ( require 'fs' ).createReadStream path
+    pipeline.push @$split() if use_line_mode
   #.........................................................................................................
   else # role is write or append
-    #.......................................................................................................
     if role is 'write' then fs_settings = {}
     else                    fs_settings = { flags: 'a', }
-    #.......................................................................................................
-    R = ( require 'fs' ).createWriteStream path, fs_settings
-    #.......................................................................................................
-    if use_line_mode
-      pipeline  = [ @$as_line(), R, ]
-      R         = @new_stream { pipeline, }
+    pipeline.push @$as_line() if use_line_mode
+    pipeline.push ( require 'fs' ).createWriteStream path, fs_settings
   #.........................................................................................................
-  return R
+  return @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path._hints = [ 'utf-8',  'utf8', 'binary',  'read', 'write', 'append', 'lines', ]
@@ -279,7 +273,6 @@ MSP                       = require 'mississippi'
     return null
   #.....................................................................................................
   return MSP.through.obj main, flush
-
 
 #===========================================================================================================
 # SENDING DATA
