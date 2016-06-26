@@ -139,7 +139,7 @@ MSP                       = require 'mississippi'
     if role is 'write' then fs_settings = {}
     else                    fs_settings = { flags: 'a', }
     pipeline.push @$as_line() if use_line_mode
-    pipeline.push ( require 'fs' ).createWriteStream path, fs_settings
+    pipeline.push @$bridge ( require 'fs' ).createWriteStream path, fs_settings
   #.........................................................................................................
   return @new_stream { pipeline, }
 
@@ -617,6 +617,14 @@ MSP                       = require 'mississippi'
     else
       send data
 
+#-----------------------------------------------------------------------------------------------------------
+@on_finish = ( stream, handler ) ->
+  ### This is the preferred way to detect when your stream has finished writing. If you have
+  any ouput stream (say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in
+  `D.on_finish output, callback`. Terminating stream processing from handlers for other event  (e.g.
+  `'end'`) and/or of other parts of the pipeline (including the `D.$on_end` transform) may lead to
+  hard-to-find bugs. Observe that `on_finish` calls `handler` in an asynchronous fashion. ###
+  stream.on 'finish', => setImmediate handler
 
 #===========================================================================================================
 # FILTERING
@@ -729,7 +737,14 @@ pluck = ( x, key ) ->
   throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
-  return @new_stream pipeline: [ @$pass_through(), stream, ]
+  # return @new_stream pipeline: [ @$pass_through(), stream, ]
+  return @$ ( data, send, end ) =>
+    if data?
+      stream.write data
+      send data
+    if end?
+      stream.end()
+      end()
 
 
 #===========================================================================================================

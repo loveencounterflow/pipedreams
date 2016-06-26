@@ -178,15 +178,15 @@ asynchronous&nbsp;(!) stream&nbsp;(!), I wrote this test case:
       .pipe $ ( data ) ->
         return send data if data?
         debug CND.green 'transform end'
-    input.on 'end',       -> debug CND.lime 'input end'
-    input.on 'finish',    -> debug CND.lime 'input finish'
-    output.on 'end',      -> debug CND.red  'output end'
-    output.on 'finish',   -> debug CND.red  'output finish'
-    thruput.on 'end',     -> debug CND.gold 'thruput end'
-    thruput.on 'finish',  -> debug CND.gold 'thruput finish'
+    input.on    'end',    -> debug CND.lime 'input end'
+    input.on    'finish', -> debug CND.lime 'input finish'
+    output.on   'end',    -> debug CND.red  'output end'
+    output.on   'finish', -> debug CND.red  'output finish'
+    thruput.on  'end',    -> debug CND.gold 'thruput end'
+    thruput.on  'finish', -> debug CND.gold 'thruput finish'
     pipeline.on 'end',    -> debug CND.blue 'pipeline end'
     pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
-    output.on 'finish', handler
+    output.on   'finish', handler
     #.......................................................................................................
     for probe in probes
       do ( probe ) =>
@@ -198,6 +198,25 @@ asynchronous&nbsp;(!) stream&nbsp;(!), I wrote this test case:
     setImmediate => done()
   #.........................................................................................................
   return null
+```
+
+
+
+Here's what it ouputs:
+```
+TEST  ▶  started:   '(v4) file stream events (1)'
+PIPEDREAMS/tests  ⚙  thruput finish
+PIPEDREAMS/tests  ⚙  output end
+PIPEDREAMS/tests  ⚙  transform end
+PIPEDREAMS/tests  ⚙  pipeline finish
+PIPEDREAMS/tests  ⚙  thruput end
+*  ▶  'helo\n'
+*  ▶  'world\n'
+*  ▶  '𪉟⿱鹵皿\n'
+PIPEDREAMS/tests  ⚙  input finish
+PIPEDREAMS/tests  ⚙  input end
+PIPEDREAMS/tests  ⚙  output finish
+TEST  ▶  completed: '(v4) file stream events (1)'
 ```
 
 ## remit (aka $) and remit_async (aka $async)
@@ -560,6 +579,15 @@ well.
 ### @$on_end
 ### @$on_first
 ### @$on_start
+
+### @on_finish = ( stream, handler ) ->
+
+This is the preferred way to detect when your stream has finished writing. If you have any ouput stream
+(say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in `D.on_finish output,
+callback`. Terminating stream processing from handlers for other event  (e.g. `'end'`) and/or of other parts
+of the pipeline (including the `D.$on_end` transform) may lead to hard-to-find bugs. Observe that
+`on_finish` calls `handler` in an asynchronous fashion.
+
 ### @$parse_csv
 ### @$pass_through
 

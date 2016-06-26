@@ -25,7 +25,8 @@ allows to inspect folder contents after tests have terminated. It would probably
 the `keep: yes` setting at a later point in time. ###
 TMP                       = require 'tmp'
 TMP.setGracefulCleanup()
-_temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
+_temp_thing               = TMP.dirSync keep: yes, unsafeCleanup: no, prefix: 'pipedreams-'
+# _temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
 temp_home                 = _temp_thing[ 'name' ]
 resolve_path              = ( require 'path' ).resolve
 resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.\/]/g, '' for p in P )...
@@ -186,7 +187,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe D.$show()
       .pipe D.$as_line()
       .pipe D.$bridge output
-      .pipe D.$on_end => handler()
+    D.on_finish output, handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -203,6 +204,39 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     yield write_sample  resume
     yield read_sample   resume
     done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) transforms below output receive data events" ] = ( T, done ) ->
+  path_1      = resolve_temp_path '(v4) transforms below output receive data events.txt'
+  probes      = [ 'line-1', 'line-2', 23, 56, ]
+  matcher     = [ 'line-1\n', 'line-2\n', '23\n', '56\n', ]
+  #.........................................................................................................
+  $verify = =>
+    idx = -1
+    return $ ( data ) =>
+      if data?
+        idx += +1
+        T.eq data, matcher[ idx ]
+      else
+        T.eq idx + 1, matcher.length
+      return null
+  #.........................................................................................................
+  input   = D.new_stream()
+  output  = D.new_stream 'write', file: path_1
+  input
+    .pipe D.$show()
+    .pipe D.$as_line()
+    .pipe output
+    .pipe D.$show()
+    .pipe $verify()
+  D.on_finish output, => help 'done'; done()
+  #.......................................................................................................
+  for probe in probes
+    do ( probe ) =>
+      setImmediate => D.send input, probe
+  setImmediate => D.end input
   #.........................................................................................................
   return null
 
@@ -252,7 +286,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input
       .pipe D.$as_line()
       .pipe D.new_stream pipeline: [ ( D.$bridge output ), D.$show(), ]
-      .pipe D.$on_end => handler()
+    D.on_finish output, handler
+    # output.on 'finish', => setImmediate => handler()
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -282,22 +317,19 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     thruput = D.new_stream()
     output  = D.new_stream 'append', file: path_1
     pipeline = input
-      .pipe D.$as_line()
-      .pipe D.$show()
+      .pipe $ ( data ) => info '1', data; debug CND.green 'transform 1 end' unless data?
       .pipe output
       .pipe thruput
-      .pipe $ ( data ) ->
-        return send data if data?
-        debug CND.green 'transform end'
-    input.on 'end',       -> debug CND.lime 'input end'
-    input.on 'finish',    -> debug CND.lime 'input finish'
-    output.on 'end',      -> debug CND.red  'output end'
-    output.on 'finish',   -> debug CND.red  'output finish'
-    thruput.on 'end',     -> debug CND.gold 'thruput end'
-    thruput.on 'finish',  -> debug CND.gold 'thruput finish'
+      .pipe $ ( data ) => info '2', data; debug CND.green 'transform 2 end' unless data?
+    input.on    'end',    -> debug CND.lime 'input end'
+    input.on    'finish', -> debug CND.lime 'input finish'
+    output.on   'end',    -> debug CND.red  'output end'
+    output.on   'finish', -> debug CND.red  'output finish'
+    thruput.on  'end',    -> debug CND.gold 'thruput end'
+    thruput.on  'finish', -> debug CND.gold 'thruput finish'
     pipeline.on 'end',    -> debug CND.blue 'pipeline end'
     pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
-    output.on 'finish', handler
+    output.on   'finish', handler
     #.......................................................................................................
     for probe in probes
       do ( probe ) =>
@@ -1261,15 +1293,17 @@ unless module.parent?
     # "(v4) $split_tsv (4)"
     # "(v4) _new_stream_from_path (3)"
     # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) _new_stream_from_path (4)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) _new_stream_from_path (4)"
     "(v4) file stream events (1)"
+    "(v4) transforms below output receive data events"
     ]
   @_prune()
   @_main()
   # debug '5562', JSON.stringify key for key in Object.keys @
 
   # @[ "(v4) _new_stream_from_path (1)" ]()
+  # @[ "(v4) _new_stream_from_path (4)" ]()
 
 
 
