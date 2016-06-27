@@ -265,24 +265,27 @@ surprise, since nothing in the code suggests that the thing should not work in a
 ```
 </strike>
 
+**Update**: The above code is no longer valid and has been removed; however, the following code is
+still valid
 
-In order for the code to meet expectations, remember to always grab
-your results from within a stream transform; commonly, this is either
-done by using a [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection),
-or `D.$on_end`:
+In order for the code to meet expectations, remember to always grab your results from within a stream
+transform or from a stream `finish` handler; commonly, this is either done by using a [Synchronous Transform
+With Stream End Detection](#synchronous-transform-with-stream-end-detection), or `D.on_finish`:
 
 ```coffee
 @[ "(v4) new_stream_from_text (2)" ] = ( T, done ) ->
   collector = []
   input     = D.new_stream()
+  D.on_finish input, done
   input
     .pipe D.$split()
-    .pipe $ ( line, send ) =>
-      send line
-      collector.push line
-    .pipe D.$on_end =>
-      T.eq collector, [ "first line", "second line", ]
-      done()
+    .pipe $ ( line, send, end ) =>
+      if line?
+        send line
+        collector.push line
+      if end?
+        T.eq collector, [ "first line", "second line", ]
+        end()
   input.write "first line\nsecond line"
   input.end()
 ```
@@ -657,7 +660,7 @@ efficient, and, importantly, stable sort.
 
 Uses [github.com/maxogden/binary-split](https://github.com/maxogden/binary-split) to split
 a stream of buffers or texts into lines (in the default setting; for details
-see the binary-split project page).—See also XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+see the binary-split project page).
 
 ## @$split_tsv = ( settings ) ->
 
