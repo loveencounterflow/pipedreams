@@ -160,7 +160,7 @@ D.new_stream 'read', file: 'foo.txt'
   .pipe D.new_stream 'write', file: 'copy-3.txt'
 ```
 
-## When to Call it a Day
+## When to Call it a Day: Always Use an Output and Wait for it
 
 Given the asynchronous nature of NodeJS' I/O handling, stream end detection can be a fickle thing and hard
 to get right. For example, when writing into a file, one might be tempted to attach an ´$on_end`
@@ -205,9 +205,22 @@ write_sample = ( handler ) =>
 Observe that `on_finish` uses `setImmediate` to delay calling the callback handler until the next tick of
 the event loop; this too, helps to prevent prematurely leaving the writing procedure.
 
-In cases where there is no output stream, it is probably safe to stick with the `.pipe D.$on_end =>
-handler()` idiom, but on the other hand, in the interest of uniformity and simplicity, it is more
-advisable to write `D.on_finish input, handler`.
+In cases where there is no proper output stream, it is recommended to use `sink = D.new_stream 'devnull'`
+and `D.on_finish sink, handler` instead:
+
+```coffee
+write_sample = ( handler ) =>
+  input   = D.new_stream file: 'bar.txt'
+  sink    = D.new_stream 'devnull'
+  input
+    .pipe D.$show()
+    .pipe sink
+  D.on_finish sink, handler
+```
+
+**Note** While you technically *can* attach further stream transforms below a PipeDreams `devnull` sink,
+you're not guaranteed to be able to read any piece of meaningful data, so see to it that you put `devnull`
+to the very end of your pipeline.
 
 
 ## remit (aka $) and remit_async (aka $async)
@@ -303,6 +316,8 @@ D.new_stream           url: "/tmp/foo.txt"
 D.new_stream 'read',   url: "/tmp/foo.txt"
 D.new_stream 'write',  url: "/tmp/foo.txt"
 D.new_stream 'append', url: "/tmp/foo.txt"
+
+D.new_stream 'devnull'
 ```
 
 
@@ -342,6 +357,7 @@ Hints:
 'read'
 'write'
 'append'
+'devnull'
 ```
 
 
@@ -719,7 +735,46 @@ Given a stream and some data, send / write / push that data into the stream.
 
 ## Always Use D.on_finish to Detect Ending
 
+## Don't Use a Pass Thru Stream in Front of a Read Stream
 
+Here's a Minimal Working Example, using PipeDreams' underlying
+[mississippi](https://github.com/maxogden/mississippi) library (assuming its methods are well-tested and
+reasonably bug-free); our only mistake is that the pipeline has a pass-thru stream *in front of* a
+file read stream:
+
+```coffee
+#-----------------------------------------------------------------------------------------------------------
+f = ( handler ) ->
+  MSP   = require 'mississippi'
+  pipeline = [
+    ( MSP.through.obj() )
+    ( ( require 'fs' ).createReadStream 'foo.txt', encoding: 'utf-8' )
+    ]
+  input = MSP.pipeline.obj pipeline...
+  input
+    .pipe D.$show()
+  MSP.finished input, ( error ) =>
+    return handler error if error
+    handler()
+  return null
+```
+
+Now it would be great if this code failed on pipeline construction time, preferrably with a sane error
+message and a helpful pointer into our code. It does not do that; instead, it fails with an obscure message
+and irrelevant (to the developper) pointers, to wit:
+
+```
+Error: premature close
+    at onclose (.../pipedreams/node_modules/end-of-stream/index.js:44:54)
+    at emitNone (events.js:85:20)
+    at emit (events.js:179:7)
+    at Duplexify._destroy (.../pipedreams/node_modules/duplexify/index.js:191:8)
+    at .../pipedreams/node_modules/duplexify/index.js:174:10
+    at _combinedTickCallback (node.js:370:9)
+    at process._tickDomainCallback (node.js:425:11)
+```
+
+## Always Use an Output and Wait for it
 
 >
 # Backmatter

@@ -208,7 +208,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) transforms below output receive data events" ] = ( T, done ) ->
+@[ "(v4) transforms below output receive data events (1)" ] = ( T, done ) ->
   path_1      = resolve_temp_path '(v4) transforms below output receive data events.txt'
   probes      = [ 'line-1', 'line-2', 23, 56, ]
   matcher     = [ 'line-1\n', 'line-2\n', '23\n', '56\n', ]
@@ -237,6 +237,29 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     do ( probe ) =>
       setImmediate => D.send input, probe
   setImmediate => D.end input
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) transforms below output receive data events (2)" ] = ( T, done ) ->
+  path    = ( require 'path' ).resolve __dirname, '../test-data/shape-breakdowwn-formula.txt'
+  input   = D.new_stream { path, }
+  sink_1  = D.new_stream 'devnull'
+  sink_2  = D.new_stream 'devnull'
+  D.on_finish sink_2, done
+  #.........................................................................................................
+  $verify = =>
+    count = 0
+    return $ ( entry ) =>
+      if entry? then  count += +1
+      else            T.eq count, 23
+      return null
+  #.........................................................................................................
+  input
+    .pipe $split_tsv first: 'split', names: 'inline'
+    .pipe sink_1
+    .pipe $verify()
+    .pipe sink_2
   #.........................................................................................................
   return null
 
@@ -1292,6 +1315,96 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   D.end input
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) read TSV file (1)" ] = ( T, done ) ->
+  path  = ( require 'path' ).resolve __dirname, '../test-data/shape-breakdowwn-formula.txt'
+  input = D.new_stream { path, }
+  # sink  = D.new_stream 'write', path: '/dev/null'
+  # sink  = D.new_stream 'write', path: '/tmp/output.txt'
+  sink  = D.new_stream 'devnull'
+  #.........................................................................................................
+  $is_valid_fncr = ->
+    errors = []
+    return $ ( entry, send, end ) =>
+      if entry?
+        { fncr, glyph, }  = entry
+        fncr_cid          = parseInt ( fncr.replace /^[^\/]+\/(.+)$/g, '$1' ), 16
+        glyph_cid         = glyph.codePointAt 0
+        #...................................................................................................
+        unless fncr_cid is glyph_cid
+          fncr_cid_hex  = '0x' + fncr_cid.toString  16
+          glyph_cid_hex = '0x' + glyph_cid.toString 16
+          message = "CID mismatch: #{fncr} (#{fncr_cid_hex} != #{glyph} (#{glyph_cid_hex}))"
+          entry[ 'error' ] = message
+          errors.push message
+        #...................................................................................................
+        send entry
+      #.....................................................................................................
+      if end?
+        if errors.length > 0
+          warn "there were #{errors.length} CID mismatches"
+          urge "(these were deliberately inserted into the data"
+          urge "so these error messages are expected):"
+          for error_message in errors
+            warn error_message
+        end()
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  $verify = =>
+    error_count = 0
+    return $ ( entry, send, end ) =>
+      if entry?
+        { error, }    = entry
+        error_count  += +1 if error?
+        send entry
+      #.....................................................................................................
+      if end?
+        T.eq error_count, 2
+        end()
+      #.....................................................................................................
+      return null
+  #.........................................................................................................
+  D.on_finish sink, done
+  #.........................................................................................................
+  input
+    # .pipe D.$split()
+    .pipe $split_tsv first: 'split', names: 'inline'
+    .pipe $is_valid_fncr()
+    .pipe $verify()
+    # .pipe $ ( data ) -> help JSON.stringify data if data?
+    .pipe sink
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) fail to read when thru stream comes before read stream" ] = ( T, done ) ->
+  MSP   = require 'mississippi'
+  path  = ( require 'path' ).resolve __dirname, '../test-data/shape-breakdowwn-formula.txt'
+  input = D.new_stream { path, }
+  # input = D.new_stream 'utf-8', { path, }
+  # input = ( require 'fs' ).createReadStream path, encoding: 'utf-8'
+  pipeline = [
+    ( MSP.through.obj() )
+    ( ( require 'fs' ).createReadStream path, encoding: 'utf-8' )
+    ]
+  input = MSP.pipeline.obj pipeline...
+  input
+    # .pipe $split_tsv first: 'split', names: 'inline'
+    # .pipe $ ( data ) -> help JSON.stringify data if data?
+    .pipe D.$show()
+    # .pipe D.$collect()
+    # .pipe D.$show()
+    # .pipe D.$on_end => debug 'transform end'; done()
+  input.on    'end',    => debug CND.lime 'input end'
+  input.on    'finish', => debug CND.lime 'input finish'
+  MSP.finished input, ( error ) =>
+    throw error if error
+    urge "MSP.finish"
+    done()
+  # D.on_finish input, done
+  return null
+
 
 #===========================================================================================================
 # HELPERS
@@ -1327,43 +1440,46 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_path (1)"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $split_tsv (2)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) _new_stream_from_path (4)"
+    # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) fail to read when thru stream comes before read stream"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) $split_tsv (1)"
+    "(v4) $split_tsv (2)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) _new_stream_from_path (4)"
     "(v4) _new_stream_from_path (3)"
     "(v4) file stream events (1)"
     "(v4) file stream events (2)"
-    "(v4) transforms below output receive data events"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) read TSV file (1)"
     ]
   @_prune()
   @_main()
@@ -1372,8 +1488,8 @@ unless module.parent?
 
   # @[ "(v4) _new_stream_from_path (1)" ]()
   # @[ "(v4) _new_stream_from_path (4)" ]()
-  # @[ "(v4) file stream events (2)" ]()
+  # @[ "(v4) read TSV file (1)" ]()
 
 
-
+  # debug ('〓'.codePointAt 0).toString 16
 

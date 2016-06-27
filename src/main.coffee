@@ -92,10 +92,21 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream = ( seed, hints, settings ) ->
+  if ( not seed? ) and ( not settings? ) and hints? and ( hints.length is 1 ) and 'devnull' in hints
+    return @_new_devnull_stream()
   throw new Error "_new_stream doesn't accept 'seed', got #{rpr seed}" if seed?
   throw new Error "_new_stream doesn't accept 'hints', got #{rpr hints}" if hints?
   throw new Error "_new_stream doesn't accept 'settings', got #{rpr settings}" if settings?
   return MSP.through.obj()
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_devnull_stream = ->
+  x = new Buffer "data\n"
+  pipeline = [
+    ( @$ ( data, send ) => send x )
+    ( @new_stream 'write', path: '/dev/null' )
+    ]
+  return @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path = ( path, hints, settings ) ->
@@ -131,8 +142,9 @@ MSP                       = require 'mississippi'
   # if hints? and hints.length > 1
   #   warn "ignoring additional hints of #{rpr hints} for the time being"
   fs_settings = {}
-  if ( 'utf8' in hints ) or ( 'utf-8' in hints )
-    fs_settings[ 'encoding' ] = 'utf-8'
+  if hints?
+    if ( 'utf8' in hints ) or ( 'utf-8' in hints )
+      fs_settings[ 'encoding' ] = 'utf-8'
   #.........................................................................................................
   if role is 'read'
     pipeline.push ( require 'fs' ).createReadStream path, fs_settings
@@ -161,7 +173,11 @@ MSP                       = require 'mississippi'
   add pass-through transforms to satisfy it: ###
   if pipeline.length < 2
     pipeline  = Object.assign [], pipeline
-    pipeline.unshift @$pass_through() while pipeline.length < 2
+    while pipeline.length < 2
+      if ( pipeline.length is 1 ) and ( @isa_readonly_stream pipeline[ 0 ] )
+        pipeline.push @$pass_through()
+      else
+        pipeline.unshift @$pass_through()
   return MSP.pipeline.obj pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
@@ -205,7 +221,9 @@ MSP                       = require 'mississippi'
 @isa_stream           = ( x ) -> x instanceof ( require 'stream' ).Stream
 @isa_readable_stream  = ( x ) -> ( @isa_stream x ) and x.readable
 @isa_writable_stream  = ( x ) -> ( @isa_stream x ) and x.writable
-@isa_duplex_stream    = ( x ) -> ( @isa_stream x ) and x.readable and x.writable
+@isa_readonly_stream  = ( x ) -> ( @isa_stream x ) and x.readable and not x.writable
+@isa_writeonly_stream = ( x ) -> ( @isa_stream x ) and x.writable and not x.readable
+@isa_duplex_stream    = ( x ) -> ( @isa_stream x ) and x.readable and     x.writable
 
 #-----------------------------------------------------------------------------------------------------------
 @$pass_through = -> MSP.through.obj()
