@@ -641,6 +641,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) _new_stream_from_text doesn't work synchronously" ] = ( T, done ) ->
+  ### TAINT behavior changed now that we're using binary-split in place of split2 ###
   collector = []
   input     = D.new_stream()
   input
@@ -1405,6 +1406,18 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   # D.on_finish input, done
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_url" ] = ( T, done ) ->
+  url   = 'http:/example.com'
+  input = D.new_stream { url, }
+  sink  = D.new_stream 'devnull'
+  D.on_finish sink, done
+  input
+    .pipe D.$split()
+    .pipe D.$show()
+    .pipe sink
+  return null
+
 
 #===========================================================================================================
 # HELPERS
@@ -1442,6 +1455,7 @@ unless module.parent?
   include = [
     # "(v4) stream / transform construction with through2 (2)"
     # "(v4) fail to read when thru stream comes before read stream"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
     "(v4) new new_stream signature (1)"
     "(v4) new new_stream signature (2)"
     "(v4) _new_stream_from_path (1)"
@@ -1450,7 +1464,6 @@ unless module.parent?
     "(v4) _new_stream_from_pipeline (3)"
     "(v4) _new_stream_from_pipeline (4)"
     "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text doesn't work synchronously"
     "(v4) _new_stream_from_text (2)"
     "(v4) observer transform called with data `null` on stream end"
     "(v4) README demo (1)"
@@ -1480,6 +1493,7 @@ unless module.parent?
     "(v4) transforms below output receive data events (1)"
     "(v4) transforms below output receive data events (2)"
     "(v4) read TSV file (1)"
+    "(v4) _new_stream_from_url"
     ]
   @_prune()
   @_main()
@@ -1489,6 +1503,7 @@ unless module.parent?
   # @[ "(v4) _new_stream_from_path (1)" ]()
   # @[ "(v4) _new_stream_from_path (4)" ]()
   # @[ "(v4) read TSV file (1)" ]()
+  # @[ "(v4) _new_stream_from_url" ]()
 
 
   # debug ('〓'.codePointAt 0).toString 16

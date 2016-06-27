@@ -197,7 +197,29 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_url = ( seed, hints, settings ) ->
-  throw new Error "_new_stream_from_url: not implemented"
+  # throw new Error "_new_stream_from_url: not implemented"
+  HTTP          = require 'http'
+  http_settings = { host: 'example.com', path: '/', }
+  R             = @new_stream()
+  request       = HTTP.request http_settings, ( response ) =>
+    sink = @new_stream 'devnull'
+    @on_finish sink, => @end R
+    response
+      .pipe @$ ( data, send ) =>
+        @send R, data
+        send data
+      .pipe sink
+    return null
+      # .pipe @$ ( data, send, end ) =>
+      #   if data?
+      #     @send R, data
+      #     send data
+      #   else
+      #     debug '3345'
+      #     @end R
+      #     end()
+  request.end()
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_transform = ( transform, hints, settings ) ->
@@ -326,8 +348,14 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$split = ( matcher, mapper, settings ) ->
-  ### https://github.com/mcollina/split2 ###
-  return ( require 'split2' ) matcher, mapper, settings
+  ### TAINT should allow to specify splitter, encoding, keep binary format ###
+  return @new_stream pipeline: [ ( ( require 'binary-split' ) '\n' ), @$decode(), ]
+
+#-----------------------------------------------------------------------------------------------------------
+@$decode = ( encoding = 'utf-8' ) ->
+  return @$ ( data, send ) =>
+    return send data unless Buffer.isBuffer data
+    send data.toString encoding
 
 #-----------------------------------------------------------------------------------------------------------
 @$sort = ( sorter, settings ) ->

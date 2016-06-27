@@ -88,17 +88,15 @@ out the most important methods for convenience is as follows:
 
 ```coffee
 D               = require 'pipedreams'
-{ $
-  $async }      = D
+{ $, $async }   = D
 ```
 
-If you don't like dollar signs in your code or `$` is already used for something
-else, you can either use `D.$` or `D.remit` or, alternatively,
+If you don't like dollar signs in your code or already use `$` for something else, you're of course free to
+`D.$` or fall back to the long name, `remit`:
 
 ```coffee
-D               = require 'pipedreams'
-{ remit
-  remit_async } = D
+D                       = require 'pipedreams'
+{ remit, remit_async }  = D
 ```
 
 In the below, I will assume you `require`d PipeDreams the first way, above.
@@ -231,7 +229,7 @@ to the very end of your pipeline.
 The `remit` method (as well as its asynchronous companion, `remit_async`)  is
 very much the centerpiece of the PipeDreams API¹. It accepts a function (call
 it a 'transformation') and returns a stream transform. In case you're
-familiar with the [*event-stream*](https://github.com/dominictarr/event-stream)
+familiar with the [event-stream](https://github.com/dominictarr/event-stream)
 way of doing things, then PipeDreams' `remit f` is roughly equivalent
 to event-stream's  `through on_data, on_end`, except you can handle both the
 `on_data` and `on_end` parts in a single function `f`. `remit_async f` is
@@ -246,12 +244,10 @@ specifically and with regard to the most typical usage pattern: never deal
 with pipelined data 'right below' the pipeline definition, always do that
 from inside a stream transform.
 
-Here's an example from `src/tests.coffee`: we create a stream, define a
-pipeline to split the text into lines and collect those lines into a list;
-then, we write a multi-line string to it and end the stream. When we now look
-at what's ended up in the collector, we find that the last line is  missing.
-This may come as a surprise, since nothing in the code suggests that the thing
-should not work in a simple top-down manner:
+<strike>Here's an example from `src/tests.coffee`: we create a stream, define a pipeline to split the text into
+lines and collect those lines into a list; then, we write a multi-line string to it and end the stream. When
+we now look at what's ended up in the collector, we find that the last line is missing. This may come as a
+surprise, since nothing in the code suggests that the thing should not work in a simple top-down manner:
 
 ```coffee
 @[ "(v4) new_stream_from_text doesn't work synchronously" ] = ( T, done ) ->
@@ -267,6 +263,8 @@ should not work in a simple top-down manner:
   T.eq collector, [ "first line", ] # <-- we're missing the last line here
   done()
 ```
+</strike>
+
 
 In order for the code to meet expectations, remember to always grab
 your results from within a stream transform; commonly, this is either
@@ -580,6 +578,7 @@ won't work:
 
 ## @$collect
 ## @$count
+## @$decode = ( encoding = 'utf-8' ) ->
 ## @$filter
 
 ## @$join = ( joiner = '\n' ) ->
@@ -656,9 +655,9 @@ efficient, and, importantly, stable sort.
 
 ## @$split = ( matcher, mapper, settings ) ->
 
-Uses [github.com/mcollina/split2](https://github.com/mcollina/split2) to split
+Uses [github.com/maxogden/binary-split](https://github.com/maxogden/binary-split) to split
 a stream of buffers or texts into lines (in the default setting; for details
-see the split2 project page).
+see the binary-split project page).—See also XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ## @$split_tsv = ( settings ) ->
 
@@ -736,7 +735,7 @@ Given a stream and some data, send / write / push that data into the stream.
 
 ## Never Assume a Stream to be Synchronous
 
-## Always Use D.on_finish to Detect Ending
+## Always Use D.on_finish to Detect End of Stream
 
 ## Don't Use a Pass Thru Stream in Front of a Read Stream
 
@@ -779,13 +778,43 @@ Error: premature close
 
 ## Always Use an Output and Wait for it
 
+## Beware of Incompatible Libraries
+
+When re-writing the algorithms of PipeDreams for version&nbsp;4, I wanted not only to weed out some odd bugs
+that appeared in strange corner cases, I also wanted to make sure that PipeDreams does not inadvertently
+cause some streams to fall back into pre-Streams-v3 mode. Consequently, I had to say good-bye to e.g.
+[github.com/dominictarr/event-stream](https://github.com/dominictarr/event-stream) and
+[github.com/dominictarr/split](https://github.com/dominictarr/split), both of which had served their purpose
+very well so far, but were no more up-to-date with the developement of NodeJS streams.
+
+Happy at first was I when finding [github.com/mcollina/split2](https://github.com/mcollina/split2), a
+library that says it "is inspired by @dominictarr split module, and it is totally API compatible with it";
+further, it promises to be "based on through2 by @rvagg and [to be] fully based on Stream3". That's great!
+Just swap the one for the other, done!
+
+Sadly, that didn't work out. I'm not claiming split2 has bugs, all I can say is that it did not reliably
+work within PipeDreams pipelines; the issue seems to be with stream end detection. Maybe there's something
+wrong with some PipeDreams method; I just don't know. All I do know is that
+[github.com/maxogden/binary-split](https://github.com/maxogden/binary-split) does work for me as advertised.
+
+I think the takeaway here is that **NodeJS streams are pretty complex beasts**. I realize that I've put a
+lot of work into understanding streams and how to use them right, and I still do think that it's a
+worthwhile effort. But in all that complexity, there's always a chance that one party gets it flat wrong, or
+has made some as-such-valid, but nevertheless conflicting design decisions—a fault may occur in the
+PipeDreams code, in the client code (i.e. Your Code), or in some 3rd party module.
+
+**When faced with some fault, try to write a minimal test case (also known as Minimal Working Example
+(MWE))** and cleanly delineate (for example, by switching parts of the code on and off and re-running the
+test) exactly where and under what conditions the test works and where and when it fails.
+
+
 >
 # Backmatter
 >
 ## Under the Hood: Base Libraries
 >
 > **Abstract**: PipeDreams was previously based on
-> [github.com/dominictarr/*event-stream*](https://github.com/dominictarr/event-stream)
+> [github.com/dominictarr/event-stream](https://github.com/dominictarr/event-stream)
 > and did so largely successfully, but problems with aysnchronous streams did surface in some
 > places.
 >
@@ -880,12 +909,17 @@ Error: premature close
 >     .pipe D.$show()
 >     .pipe D.$on_end => T_done()
 > ```
+### Mississippi
 >
 > I'm using Through2 via the
 > [mississippi](https://github.com/maxogden/mississippi) collection, which
 > brings a number of up-to-date and (hopefully) mutually compatible stream
 > modules together in a neat bundle.
 >
+>
+### Binary Split
+>
+> [github.com/maxogden/binary-split](https://github.com/maxogden/binary-split)
 >
 ## What's in a Name?
 >
