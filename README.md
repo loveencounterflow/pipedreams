@@ -17,9 +17,10 @@ Install as `npm install --save pipedreams2`.
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
+- [PipeDreams](#pipedreams)
   - [Require Statement](#require-statement)
   - [Streams are Transforms, Transforms are Streams](#streams-are-transforms-transforms-are-streams)
-  - [When to Call it a Day](#when-to-call-it-a-day)
+  - [When to Call it a Day: Always Use an Output and Wait for it](#when-to-call-it-a-day-always-use-an-output-and-wait-for-it)
   - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
   - [Never Assume Your Streams to be Synchronous](#never-assume-your-streams-to-be-synchronous)
   - [Stream Creation](#stream-creation)
@@ -67,6 +68,8 @@ Install as `npm install --save pipedreams2`.
 - [TL;DR: Things to Keep in Mind](#tldr-things-to-keep-in-mind)
   - [Never Assume a Stream to be Synchronous](#never-assume-a-stream-to-be-synchronous)
   - [Always Use D.on_finish to Detect Ending](#always-use-don_finish-to-detect-ending)
+  - [Don't Use a Pass Thru Stream in Front of a Read Stream](#dont-use-a-pass-thru-stream-in-front-of-a-read-stream)
+  - [Always Use an Output and Wait for it](#always-use-an-output-and-wait-for-it)
 - [Backmatter](#backmatter)
   - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
     - [Through2](#through2)
