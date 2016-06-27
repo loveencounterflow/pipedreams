@@ -130,14 +130,16 @@ MSP                       = require 'mississippi'
   # #.........................................................................................................
   # if hints? and hints.length > 1
   #   warn "ignoring additional hints of #{rpr hints} for the time being"
+  fs_settings = {}
+  if ( 'utf8' in hints ) or ( 'utf-8' in hints )
+    fs_settings[ 'encoding' ] = 'utf-8'
   #.........................................................................................................
   if role is 'read'
-    pipeline.push ( require 'fs' ).createReadStream path
+    pipeline.push ( require 'fs' ).createReadStream path, fs_settings
     pipeline.push @$split() if use_line_mode
   #.........................................................................................................
   else # role is write or append
-    if role is 'write' then fs_settings = {}
-    else                    fs_settings = { flags: 'a', }
+    if role is 'append' then fs_settings[ 'flags' ] = 'a'
     pipeline.push @$as_line() if use_line_mode
     pipeline.push @$bridge ( require 'fs' ).createWriteStream path, fs_settings
   #.........................................................................................................

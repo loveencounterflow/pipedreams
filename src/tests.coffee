@@ -352,7 +352,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) file stream events (1)" ] = ( T, done ) ->
-  path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
+  path_1      = resolve_temp_path '(v4) file stream events (1).txt'
   probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
   #.........................................................................................................
   write_sample = ( handler ) =>
@@ -364,15 +364,15 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe output
       .pipe thruput
       .pipe $ ( data ) => info '2', data; debug CND.green 'transform 2 end' unless data?
-    input.on    'end',    -> debug CND.lime 'input end'
-    input.on    'finish', -> debug CND.lime 'input finish'
-    output.on   'end',    -> debug CND.red  'output end'
-    output.on   'finish', -> debug CND.red  'output finish'
-    thruput.on  'end',    -> debug CND.gold 'thruput end'
-    thruput.on  'finish', -> debug CND.gold 'thruput finish'
-    pipeline.on 'end',    -> debug CND.blue 'pipeline end'
-    pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
-    output.on   'finish', handler
+    input.on    'end',    => debug CND.lime 'input end'
+    input.on    'finish', => debug CND.lime 'input finish'
+    output.on   'end',    => debug CND.red  'output end'
+    output.on   'finish', => debug CND.red  'output finish'
+    thruput.on  'end',    => debug CND.gold 'thruput end'
+    thruput.on  'finish', => debug CND.gold 'thruput finish'
+    pipeline.on 'end',    => debug CND.blue 'pipeline end'
+    pipeline.on 'finish', => debug CND.blue 'pipeline finish'
+    output.on   'finish', => setImmediate => debug CND.white 'over'; handler()
     #.......................................................................................................
     for probe in probes
       do ( probe ) =>
@@ -380,6 +380,29 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     setImmediate => input.end()
   #.........................................................................................................
   write_sample ( error ) =>
+    throw error if error?
+    setImmediate => done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) file stream events (2)" ] = ( T, done ) ->
+  path_1      = resolve_temp_path '(v4) file stream events (1).txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    input   = D.new_stream 'utf-8', file: path_1
+    pipeline = input
+      .pipe D.$show()
+      .pipe D.$on_end =>
+        debug CND.white 'transform 3 end'
+        handler()
+    input.on    'end',    -> debug CND.lime 'input end'
+    input.on    'finish', -> debug CND.lime 'input finish'
+    pipeline.on 'end',    -> debug CND.blue 'pipeline end'
+    pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
+  #.........................................................................................................
+  read_sample ( error ) =>
     throw error if error?
     setImmediate => done()
   #.........................................................................................................
@@ -1304,50 +1327,52 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text doesn't work synchronously"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) README demo (1)"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 2"
-    "(v4) $async with method arity 3"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) $split_tsv (1)"
-    "(v4) $split_tsv (2)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
-    "(v4) _new_stream_from_path (4)"
-    "(v4) file stream events (1)"
-    "(v4) transforms below output receive data events"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) README demo (1)"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 2"
+    # "(v4) $async with method arity 3"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $split_tsv (2)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) _new_stream_from_path (4)"
     "(v4) _new_stream_from_path (3)"
+    "(v4) file stream events (1)"
+    "(v4) file stream events (2)"
+    "(v4) transforms below output receive data events"
     ]
   @_prune()
   @_main()
+
   # debug '5562', JSON.stringify key for key in Object.keys @
 
   # @[ "(v4) _new_stream_from_path (1)" ]()
   # @[ "(v4) _new_stream_from_path (4)" ]()
-
+  # @[ "(v4) file stream events (2)" ]()
 
 
 

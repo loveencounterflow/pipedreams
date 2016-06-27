@@ -17,8 +17,9 @@ Install as `npm install --save pipedreams2`.
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [PipeDreams v4 API](#pipedreams-v4-api)
   - [Require Statement](#require-statement)
+  - [Streams are Transforms, Transforms are Streams](#streams-are-transforms-transforms-are-streams)
+  - [When to Call it a Day](#when-to-call-it-a-day)
   - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
   - [Never Assume Your Streams to be Synchronous](#never-assume-your-streams-to-be-synchronous)
   - [Stream Creation](#stream-creation)
@@ -27,39 +28,45 @@ Install as `npm install --save pipedreams2`.
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
-    - [@$](#@)
-    - [@$as_text = ( stringify ) ->](#@as_text---stringify---)
-    - [@$async](#@async)
-    - [@$batch](#@batch)
-    - [@$collect](#@collect)
-    - [@$count](#@count)
-    - [@$filter](#@filter)
-    - [@$join = ( joiner = '\n' ) ->](#@join---joiner--%5Cn---)
-    - [@$lockstep](#@lockstep)
-    - [@$on_end](#@on_end)
-    - [@$on_first](#@on_first)
-    - [@$on_start](#@on_start)
-    - [@$parse_csv](#@parse_csv)
-    - [@$pass_through](#@pass_through)
-    - [@$sample = ( p = 0.5, options ) ->](#@sample---p--05-options---)
-    - [@$show](#@show)
-    - [@$sort](#@sort)
-    - [@$sort = ( sorter, settings ) ->](#@sort---sorter-settings---)
-    - [@$split = ( matcher, mapper, settings ) ->](#@split---matcher-mapper-settings---)
-    - [@$split_tsv = ( settings ) ->](#@split_tsv---settings---)
-    - [@$spread](#@spread)
-    - [@$stop_time](#@stop_time)
-    - [@$throttle_bytes](#@throttle_bytes)
-    - [@$throttle_items](#@throttle_items)
-    - [@end = ( me ) ->](#@end---me---)
-    - [@isa_stream](#@isa_stream)
-    - [@new_stream](#@new_stream)
-    - [@new_stream_from_pipeline](#@new_stream_from_pipeline)
-    - [@new_stream_from_text](#@new_stream_from_text)
-    - [@remit](#@remit)
-    - [@remit_async](#@remit_async)
-    - [@run](#@run)
-    - [@send = ( me, data ) ->](#@send---me-data---)
+- [PipeDreams v4 API](#pipedreams-v4-api)
+  - [@$](#@)
+  - [@$as_text = ( stringify ) ->](#@as_text---stringify---)
+  - [@$async](#@async)
+  - [@$batch](#@batch)
+  - [@$bridge = ( stream ) ->](#@bridge---stream---)
+  - [@$collect](#@collect)
+  - [@$count](#@count)
+  - [@$filter](#@filter)
+  - [@$join = ( joiner = '\n' ) ->](#@join---joiner--%5Cn---)
+  - [@$lockstep](#@lockstep)
+  - [@$on_end](#@on_end)
+  - [@$on_first](#@on_first)
+  - [@$on_start](#@on_start)
+  - [@on_finish = ( stream, handler ) ->](#@on_finish---stream-handler---)
+  - [@$parse_csv](#@parse_csv)
+  - [@$pass_through](#@pass_through)
+  - [@$sample = ( p = 0.5, options ) ->](#@sample---p--05-options---)
+  - [@$show](#@show)
+  - [@$sort](#@sort)
+  - [@$sort = ( sorter, settings ) ->](#@sort---sorter-settings---)
+  - [@$split = ( matcher, mapper, settings ) ->](#@split---matcher-mapper-settings---)
+  - [@$split_tsv = ( settings ) ->](#@split_tsv---settings---)
+  - [@$spread](#@spread)
+  - [@$stop_time](#@stop_time)
+  - [@$throttle_bytes](#@throttle_bytes)
+  - [@$throttle_items](#@throttle_items)
+  - [@end = ( me ) ->](#@end---me---)
+  - [@isa_stream](#@isa_stream)
+  - [@isa_readable_stream = ( x ) ->](#@isa_readable_stream---x---)
+  - [@isa_writable_stream = ( x ) ->](#@isa_writable_stream---x---)
+  - [@isa_duplex_stream = ( x ) ->](#@isa_duplex_stream---x---)
+  - [@new_stream](#@new_stream)
+  - [@remit, @$, @remit_async, @$async](#@remit-@-@remit_async-@async)
+  - [@run](#@run)
+  - [@send = ( me, data ) ->](#@send---me-data---)
+- [TL;DR: Things to Keep in Mind](#tldr-things-to-keep-in-mind)
+  - [Never Assume a Stream to be Synchronous](#never-assume-a-stream-to-be-synchronous)
+  - [Always Use D.on_finish to Detect Ending](#always-use-don_finish-to-detect-ending)
 - [Backmatter](#backmatter)
   - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
     - [Through2](#through2)
@@ -69,8 +76,7 @@ Install as `npm install --save pipedreams2`.
 
 **Caveat** Below examples are all written in CoffeeScript.
 
-
-# PipeDreams v4 API
+# PipeDreams
 
 ## Require Statement
 
@@ -157,67 +163,52 @@ D.new_stream 'read', file: 'foo.txt'
 ## When to Call it a Day
 
 Given the asynchronous nature of NodeJS' I/O handling, stream end detection can be a fickle thing and hard
-to get right. To demonstrate just how counterintuitive sequences of events can become with
-asynchronous&nbsp;(!) stream&nbsp;(!), I wrote this test case:
+to get right. For example, when writing into a file, one might be tempted to attach an ´$on_end`
+transform to detect the point in time when all data has been written to disk and it's safe to continue
+with other stuff:
 
 ```coffee
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) file stream events (1)" ] = ( T, done ) ->
-  path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
-  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  #.........................................................................................................
-  write_sample = ( handler ) =>
-    input   = D.new_stream()
-    thruput = D.new_stream()
-    output  = D.new_stream 'append', file: path_1
-    pipeline = input
-      .pipe D.$as_line()
-      .pipe D.$show()
-      .pipe output
-      .pipe thruput
-      .pipe $ ( data ) ->
-        return send data if data?
-        debug CND.green 'transform end'
-    input.on    'end',    -> debug CND.lime 'input end'
-    input.on    'finish', -> debug CND.lime 'input finish'
-    output.on   'end',    -> debug CND.red  'output end'
-    output.on   'finish', -> debug CND.red  'output finish'
-    thruput.on  'end',    -> debug CND.gold 'thruput end'
-    thruput.on  'finish', -> debug CND.gold 'thruput finish'
-    pipeline.on 'end',    -> debug CND.blue 'pipeline end'
-    pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
-    output.on   'finish', handler
-    #.......................................................................................................
-    for probe in probes
-      do ( probe ) =>
-        setImmediate => input.write probe
-    setImmediate => input.end()
-  #.........................................................................................................
-  write_sample ( error ) =>
-    throw error if error?
-    setImmediate => done()
-  #.........................................................................................................
-  return null
+### TAINT Counter-example; don't do it this way ###
+write_sample = ( handler ) =>
+  input   = D.new_stream()
+  output  = D.new_stream 'write', 'lines', { file: path_1, }
+  input
+    .pipe D.$show()
+    .pipe output
+    .pipe D.$on_end => handler()
+  #.......................................................................................................
+  D.send input, data for data in [ 'foo', 'bar', 'baz', ]
+  D.end input
 ```
 
+(BTW, using PipeDreams streams, it's possible to attach stream transforms to a pipeline *after* piping into
+a write-stream; see [Streams are Transforms, Transforms are
+Streams](#streams-are-transforms-transforms-are-streams)). Stress tests have shown this pattern to produce a
+certain percentage (1 in 10, but that might depend on details of the writing process).
 
+On the other hand, the pattern below passes tests; here, we use the PipeDreams `on_finish` method and pass
+in the output stream (and the callback to be called when processing has completed):
 
-Here's what it ouputs:
+```coffee
+write_sample = ( handler ) =>
+  input   = D.new_stream()
+  output  = D.new_stream 'write', 'lines', { file: path_1, }
+  input
+    .pipe D.$show()
+    .pipe output
+  D.on_finish output, handler
+  #.......................................................................................................
+  D.send input, data for data in [ 'foo', 'bar', 'baz', ]
+  D.end input
 ```
-TEST  ▶  started:   '(v4) file stream events (1)'
-PIPEDREAMS/tests  ⚙  thruput finish
-PIPEDREAMS/tests  ⚙  output end
-PIPEDREAMS/tests  ⚙  transform end
-PIPEDREAMS/tests  ⚙  pipeline finish
-PIPEDREAMS/tests  ⚙  thruput end
-*  ▶  'helo\n'
-*  ▶  'world\n'
-*  ▶  '𪉟⿱鹵皿\n'
-PIPEDREAMS/tests  ⚙  input finish
-PIPEDREAMS/tests  ⚙  input end
-PIPEDREAMS/tests  ⚙  output finish
-TEST  ▶  completed: '(v4) file stream events (1)'
-```
+
+Observe that `on_finish` uses `setImmediate` to delay calling the callback handler until the next tick of
+the event loop; this too, helps to prevent prematurely leaving the writing procedure.
+
+In cases where there is no output stream, it is probably safe to stick with the `.pipe D.$on_end =>
+handler()` idiom, but on the other hand, in the interest of uniformity and simplicity, it is more
+advisable to write `D.on_finish input, handler`.
+
 
 ## remit (aka $) and remit_async (aka $async)
 
@@ -539,9 +530,11 @@ be prepared for an empty stream where it is called once with `data` being
 $async ( data, send, end ) -> ...
 ```
 
-### @$
+# PipeDreams v4 API
 
-### @$as_text = ( stringify ) ->
+## @$
+
+## @$as_text = ( stringify ) ->
 Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings
 in the data stream is passed through unaffected. Observe that buffers in the stream will very probably not
 come out the way you'd expect them; this is because there's no way to know for the method what kind of
@@ -550,10 +543,10 @@ data they represent.
 This method is handy to put as a safeguard right in front of a `.pipe output_file` clause to avoid
 `illegal non-buffer` issues.
 
-### @$async
-### @$batch
+## @$async
+## @$batch
 
-### @$bridge = ( stream ) ->
+## @$bridge = ( stream ) ->
 
 Make it so that the pipeline may be continued even below a writable but not
 readable stream. Conceivably, this method could have be named `tunnel` as
@@ -566,21 +559,21 @@ won't work:
   return @new_stream pipeline: [ @$pass_through(), stream, ]
 
 
-### @$collect
-### @$count
-### @$filter
+## @$collect
+## @$count
+## @$filter
 
-### @$join = ( joiner = '\n' ) ->
+## @$join = ( joiner = '\n' ) ->
 Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
 of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
 well.
 
-### @$lockstep
-### @$on_end
-### @$on_first
-### @$on_start
+## @$lockstep
+## @$on_end
+## @$on_first
+## @$on_start
 
-### @on_finish = ( stream, handler ) ->
+## @on_finish = ( stream, handler ) ->
 
 This is the preferred way to detect when your stream has finished writing. If you have any ouput stream
 (say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in `D.on_finish output,
@@ -588,10 +581,10 @@ callback`. Terminating stream processing from handlers for other event  (e.g. `'
 of the pipeline (including the `D.$on_end` transform) may lead to hard-to-find bugs. Observe that
 `on_finish` calls `handler` in an asynchronous fashion.
 
-### @$parse_csv
-### @$pass_through
+## @$parse_csv
+## @$pass_through
 
-### @$sample = ( p = 0.5, options ) ->
+## @$sample = ( p = 0.5, options ) ->
 
 Given a `0 <= p <= 1`, interpret `p` as the *p*robability to *p*ick a given record and otherwise toss
 it, so that `$sample 1` will keep all records, `$sample 0` will toss all records, and
@@ -634,21 +627,21 @@ sample whenever you re-run your piping application with the same stream and the 
 property of the predictable sample is that—everything else being the same—a sample with a smaller `p`
 will always be a subset of a sample with a bigger `p` and vice versa.
 
-### @$show
-### @$sort
+## @$show
+## @$sort
 
-### @$sort = ( sorter, settings ) ->
+## @$sort = ( sorter, settings ) ->
 
 Uses [github.com/mziccard/node-timsort](https://github.com/mziccard/node-timsort) for an
 efficient, and, importantly, stable sort.
 
-### @$split = ( matcher, mapper, settings ) ->
+## @$split = ( matcher, mapper, settings ) ->
 
 Uses [github.com/mcollina/split2](https://github.com/mcollina/split2) to split
 a stream of buffers or texts into lines (in the default setting; for details
 see the split2 project page).
 
-### @$split_tsv = ( settings ) ->
+## @$split_tsv = ( settings ) ->
 
 A fairly complex stream transform to help in reading files with data in
 [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
@@ -678,47 +671,54 @@ and blank lines, omit comments, and name fields.
   left in the stream.
 
 
-### @$spread
-### @$stop_time
-### @$throttle_bytes
-### @$throttle_items
+## @$spread
+## @$stop_time
+## @$throttle_bytes
+## @$throttle_items
 
-### @end = ( me ) ->
+## @end = ( me ) ->
 
 Given a stream, end it.
 
-### @isa_stream
+## @isa_stream
 
 Return whether `x` is a stream.
 
-### @isa_readable_stream = ( x ) ->
+## @isa_readable_stream = ( x ) ->
 
 Return whether `x` is a stream that is readable.
 
-### @isa_writable_stream = ( x ) ->
+## @isa_writable_stream = ( x ) ->
 
 Return whether `x` is a stream that is writable.
 
-### @isa_duplex_stream = ( x ) ->
+## @isa_duplex_stream = ( x ) ->
 
 Return whether `x` is a stream that is both readable and writable.
 
-### @new_stream
+## @new_stream
 `@_new_stream_from_path`, `@_new_stream_from_pipeline`, `@_new_stream_from_text`,
 
-### @remit, @$, @remit_async, @$async
+## @remit, @$, @remit_async, @$async
 
 See the extensive [section on the Remit and Remit-Async Methods](#the-remit-and-remit-async-methods),
 above.
 
-### @run
+## @run
 
-### @send = ( me, data ) ->
+## @send = ( me, data ) ->
 
 Given a stream and some data, send / write / push that data into the stream.
 
 
 <!-- ####################################################################################### -->
+
+# TL;DR: Things to Keep in Mind
+
+## Never Assume a Stream to be Synchronous
+
+## Always Use D.on_finish to Detect Ending
+
 
 
 >
