@@ -1408,14 +1408,198 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) _new_stream_from_url" ] = ( T, done ) ->
-  url   = 'http:/example.com'
-  input = D.new_stream { url, }
+  input = D.new_stream url: 'http://example.com'
   sink  = D.new_stream 'devnull'
-  D.on_finish sink, done
+  found = no
+  D.on_finish sink, =>
+    T.ok found
+    done()
+  input
+    .pipe D.$split()
+    .pipe $ ( line ) ->
+      if line?
+        found = found or ( /<h1>Example Domain<\/h1>/ ).test line
+    # .pipe D.$show()
+    .pipe sink
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_stream README example (1)" ] = ( T, done ) ->
+  input = D.new_stream()
   input
     .pipe D.$split()
     .pipe D.$show()
-    .pipe sink
+    .pipe D.$on_finish done
+  input.write "helo\nworld"
+  input.write "!"
+  input.end()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_stream README example (2)" ] = ( T, done ) ->
+  input   = D.new_stream()
+  thruput = D.new_stream()
+  output  = D.new_stream()
+  #.........................................................................................................
+  input
+    .pipe D.$split()
+    .pipe thruput
+    .pipe D.$on_finish done
+    .pipe output
+  #.........................................................................................................
+  thruput
+    .pipe $ ( data ) -> log 'thruput', rpr data
+  #.........................................................................................................
+  output
+    .pipe $ ( data ) -> log 'output', rpr data
+  #.........................................................................................................
+  input.write "helo\nworld"
+  input.write "!"
+  input.end()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) new_stream README example (3)" ] = ( T, done ) ->
+  input   = D.new_stream()
+  thruput = D.new_stream()
+  output  = D.new_stream()
+  #.........................................................................................................
+  input
+    .pipe D.$split()
+    .pipe thruput
+    .pipe D.$on_finish done
+    .pipe output
+    .pipe D.$show()
+  #.........................................................................................................
+  thruput
+    .pipe $ ( data ) -> log 'thruput', rpr data
+  #.........................................................................................................
+  output
+    .pipe $ ( data ) ->
+      if data is 'helo'
+        thruput.write "meh\n"
+        input.write "\nmoar\nof the same!\n"
+      # if '#' in data
+      #   input.end()
+      log 'output', rpr data
+  #.........................................................................................................
+  setImmediate => input.write "helo\nworld"
+  setImmediate => input.write "!"
+  setImmediate => input.write "#"
+  setImmediate => input.end()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path with encodings" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path        = resolve_temp_path '_new_stream_from_path with encodings.txt'
+  probe       = "helo world\näöü\n𪉟⿱鹵皿"
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  encodings   = [ null, 'ascii', 'utf-8', 'ucs2', 'base64', 'binary', 'hex', 'buffer', ]
+  matchers    = {}
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    output  = D.new_stream 'write', { path, }
+    input
+      .pipe D.$show()
+      .pipe output
+      .pipe D.$on_finish handler
+    #.......................................................................................................
+    D.send input, probe
+    D.end  input
+  #.........................................................................................................
+  read_matchers = ( encoding, handler ) =>
+    if encoding is 'buffer' then  input = ( require 'fs' ).createReadStream path
+    else                          input = ( require 'fs' ).createReadStream path, { encoding, }
+    input
+      .pipe D.$collect()
+      .pipe $ ( data ) => matchers[ encoding ] = data if data?
+      .pipe D.$on_finish handler
+    return null
+  #.........................................................................................................
+  read_sample = ( encoding, use_hint, handler ) =>
+    if use_hint
+      if encoding is null then  input = D.new_stream { path, }
+      else                      input = D.new_stream encoding, { path, }
+    else
+      if encoding is 'buffer' then  input = D.new_stream { path, }
+      else                          input = D.new_stream { path, }, { encoding, }
+    input
+      .pipe D.$collect()
+      # .pipe D.$show "using #{encoding}:"
+      .pipe $ ( result ) =>
+        if result?
+          if CND.equals result, matchers[ encoding ]
+            T.ok yes
+          else
+            T.fail """
+              reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
+              expected #{rpr matchers[ encoding ]}
+              got      #{rpr result}
+              """
+      .pipe D.$on_finish handler
+    return null
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample resume
+    for encoding in encodings
+      yield read_matchers encoding, resume
+    for use_hint in [ false, true, ]
+      for encoding in encodings
+        yield read_sample encoding, use_hint, resume
+    done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path (raw)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path        = resolve_temp_path '_new_stream_from_path (raw).txt'
+  probe       = "helo world\näöü\n𪉟⿱鹵皿"
+  matcher     = [ new Buffer [ 0x68, 0x65, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x0a, 0xc3, 0xa4, 0xc3, 0xb6, 0xc3, 0xbc, 0x0a, 0xf0, 0xaa, 0x89, 0x9f, 0xe2, 0xbf, 0xb1, 0xe9, 0xb9, 0xb5, 0xe7, 0x9a, 0xbf, ]]
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    output  = D.new_stream 'write', { path, }
+    input
+      .pipe D.$show()
+      .pipe output
+      .pipe D.$on_finish handler
+    #.......................................................................................................
+    D.send input, probe
+    D.end  input
+  #.........................................................................................................
+  read_sample = ( encoding, use_hint, handler ) =>
+    if use_hint
+      if encoding is null then  input = D.new_stream { path, }
+      else                      input = D.new_stream encoding, { path, }
+    else
+      if encoding is 'buffer' then  input = D.new_stream { path, }
+      else                          input = D.new_stream { path, }, { encoding, }
+    input
+      .pipe D.$collect()
+      .pipe D.$show "using #{encoding}:"
+      .pipe $ ( result ) =>
+        if result?
+          if CND.equals result, matcher
+            T.ok yes
+          else
+            T.fail """
+              reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
+              expected #{rpr matcher}
+              got      #{rpr result}
+              """
+      .pipe D.$on_finish handler
+    return null
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample resume
+    for use_hint in [ false, true, ]
+      for encoding in [ null, 'buffer', ]
+        yield read_sample encoding, use_hint, resume
+    done()
+  #.........................................................................................................
   return null
 
 
@@ -1458,7 +1642,6 @@ unless module.parent?
     # "(v4) _new_stream_from_text doesn't work synchronously"
     "(v4) new new_stream signature (1)"
     "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
     "(v4) _new_stream_from_path (2)"
     "(v4) _new_stream_from_pipeline (1a)"
     "(v4) _new_stream_from_pipeline (3)"
@@ -1494,6 +1677,12 @@ unless module.parent?
     "(v4) transforms below output receive data events (2)"
     "(v4) read TSV file (1)"
     "(v4) _new_stream_from_url"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) _new_stream_from_path (1)"
     ]
   @_prune()
   @_main()

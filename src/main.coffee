@@ -58,7 +58,7 @@ MSP                       = require 'mississippi'
       unless CND.isa_text P[ P.length - 1 ]
         kind_and_seed = P.pop()
     unless CND.isa_text P[ P.length - 1 ]
-      settings  = kind_and_seed
+      settings      = kind_and_seed
       kind_and_seed = P.pop()
   #.........................................................................................................
   hints = P
@@ -69,21 +69,12 @@ MSP                       = require 'mississippi'
     unless ( kind_count = ( Object.keys kind_and_seed ).length ) is 1
       throw new Error "expected 0 or 1 'kind', got #{kind_count}"
     break for kind, seed of kind_and_seed
-  # #.........................................................................................................
-  # unless CND.is_subset hints, @new_stream._hints
-  #   expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
-  #   got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
-  #   throw new Error "expected 'hints' out of #{expected}, got #{got}"
   #.........................................................................................................
   unless kind in @new_stream._kinds
     expected  = ( rpr x for x in @new_stream._kinds ).join ', '
     got       =   rpr kind
     throw new Error "expected a 'kind' out of #{expected}, got #{got}"
   #.........................................................................................................
-  # urge 'kind      ', kind
-  # urge 'seed      ', seed
-  # urge 'hints     ', hints
-  # urge 'settings  ', settings
   hints = null if hints.length is 0
   return [ kind, seed, hints, settings, ]
 
@@ -114,14 +105,16 @@ MSP                       = require 'mississippi'
     throw new Error "expected path to be a text, got a #{type}"
   #.........................................................................................................
   role          = 'read'
+  encoding      = null
   use_line_mode = null
   pipeline      = []
+  settings      = Object.assign {}, settings
   #.........................................................................................................
   if hints?
     #.......................................................................................................
     unless CND.is_subset hints, @_new_stream_from_path._hints
-      expected  = ( rpr x for x in @new_stream._hints                                  ).join ', '
-      got       = ( rpr x for x in              hints when x not in @new_stream._hints ).join ', '
+      expected  = ( rpr x for x in @_new_stream_from_path._hints ).join ', '
+      got       = ( rpr x for x in hints when x not in @_new_stream_from_path._hints ).join ', '
       throw new Error "expected 'hints' out of #{expected}, got #{got}"
     #.......................................................................................................
     use_line_mode = 'lines' in hints
@@ -141,24 +134,33 @@ MSP                       = require 'mississippi'
   # #.........................................................................................................
   # if hints? and hints.length > 1
   #   warn "ignoring additional hints of #{rpr hints} for the time being"
-  fs_settings = {}
   if hints?
-    if ( 'utf8' in hints ) or ( 'utf-8' in hints )
-      fs_settings[ 'encoding' ] = 'utf-8'
+    for key in [ 'ascii', 'utf8', 'utf-8', 'ucs2', 'base64', 'binary', 'hex', 'buffer', ]
+      if key in hints
+        throw new Error "hints contain multiple encodings: #{rpr hints}" if encoding?
+        encoding = key
   #.........................................................................................................
   if role is 'read'
-    pipeline.push ( require 'fs' ).createReadStream path, fs_settings
-    pipeline.push @$split() if use_line_mode
+    if use_line_mode
+      pipeline.push ( require 'fs' ).createReadStream path, settings
+      pipeline.push @$split { encoding, }
+    else
+      settings[ 'encoding' ]?= if encoding is 'buffer' then null else encoding
+      pipeline.push ( require 'fs' ).createReadStream path, settings
   #.........................................................................................................
   else # role is write or append
-    if role is 'append' then fs_settings[ 'flags' ] = 'a'
+    if role is 'append' then settings[ 'flags' ] = 'a'
+    settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
     pipeline.push @$as_line() if use_line_mode
-    pipeline.push @$bridge ( require 'fs' ).createWriteStream path, fs_settings
+    pipeline.push @$bridge ( require 'fs' ).createWriteStream path, settings
   #.........................................................................................................
   return @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream_from_path._hints = [ 'utf-8',  'utf8', 'binary',  'read', 'write', 'append', 'lines', ]
+@_new_stream_from_path._hints = [
+  'ascii', 'utf8', 'utf-8', 'ucs2', 'base64', 'binary', 'hex', 'buffer',
+  'read', 'write', 'append',
+  'lines', ]
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_pipeline = ( pipeline, hints, settings ) ->
@@ -196,12 +198,20 @@ MSP                       = require 'mississippi'
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream_from_url = ( seed, hints, settings ) ->
-  # throw new Error "_new_stream_from_url: not implemented"
-  HTTP          = require 'http'
-  http_settings = { host: 'example.com', path: '/', }
-  R             = @new_stream()
-  request       = HTTP.request http_settings, ( response ) =>
+@_new_stream_from_url = ( url, hints, settings ) ->
+  url_parts       = ( require 'url' ).parse url
+  { protocol
+    hostname
+    pathname }    = url_parts
+  pathname       ?= '/'
+  hostname       ?= 'localhost'
+  debug '8090', url_parts
+  unless ( protocol in [ 'http:', 'https:', ] ) and ( hostname.length > 0 ) and ( pathname.length > 0 )
+    throw new Error "URL not supported: #{JSON.stringify url_parts}\n#{rpr url}"
+  http_settings   = { hostname, pathname, protocol, followAllRedirects: yes, }
+  R               = @new_stream()
+  HTTP            = require if protocol is 'http:' then 'http' else 'https'
+  request         = HTTP.request http_settings, ( response ) =>
     sink = @new_stream 'devnull'
     @on_finish sink, => @end R
     response
@@ -210,14 +220,6 @@ MSP                       = require 'mississippi'
         send data
       .pipe sink
     return null
-      # .pipe @$ ( data, send, end ) =>
-      #   if data?
-      #     @send R, data
-      #     send data
-      #   else
-      #     debug '3345'
-      #     @end R
-      #     end()
   request.end()
   return R
 
@@ -347,9 +349,16 @@ MSP                       = require 'mississippi'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@$split = ( matcher, mapper, settings ) ->
+@$split = ( settings ) ->
   ### TAINT should allow to specify splitter, encoding, keep binary format ###
-  return @new_stream pipeline: [ ( ( require 'binary-split' ) '\n' ), @$decode(), ]
+  split     = require 'binary-split'
+  matcher   = settings?[ 'matcher'  ] ? '\n'
+  encoding  = settings?[ 'encoding' ] ? 'utf-8'
+  # debug '6654', settings, encoding
+  throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
+  R = split matcher
+  return R if encoding is 'buffer'
+  return @new_stream pipeline: [ R, ( @$decode encoding ), ]
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->
@@ -667,12 +676,14 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @on_finish = ( stream, handler ) ->
-  ### This is the preferred way to detect when your stream has finished writing. If you have
-  any ouput stream (say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in
-  `D.on_finish output, callback`. Terminating stream processing from handlers for other event  (e.g.
-  `'end'`) and/or of other parts of the pipeline (including the `D.$on_end` transform) may lead to
-  hard-to-find bugs. Observe that `on_finish` calls `handler` in an asynchronous fashion. ###
   stream.on 'finish', => setImmediate handler
+
+#-----------------------------------------------------------------------------------------------------------
+@$on_finish = ( method ) ->
+  R = @new_stream()
+  @on_finish R, method
+  return R
+
 
 #===========================================================================================================
 # FILTERING

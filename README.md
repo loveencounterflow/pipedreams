@@ -292,15 +292,155 @@ With Stream End Detection](#synchronous-transform-with-stream-end-detection), or
 
 ## Stream Creation
 
-The PipeDreams way to creating new streams looks a little bit different than
-what most libraries do. Since PipeDreams streams are underlingly just NodeJS
-streams v3, feel free to go on using `fs.createReadStream()` or other stuff if
-that is closer to what you like and need. I'd wager to claim, though, that for
-a huge number of practical use cases using the PipeDreams API is simpler and
-yet does the job.
+PipeDreams simplifies and unifies most common stream creation tasks by providing a (fairly) easy-to-use and
+flexible interface via its `new_stream` methods. For the future, it is planned to make that API extensible
+with plug-ins.
+
+The simplest possible use is to call `s = D.new_stream()` without any arguments, which will give you a
+[through2](https://github.com/rvagg/through2) stream that you can use as source, as sink or as transform.
+Here is a very simple example, a function that accepts a callback handler (because all streams are assumed
+to be asynchronous); it constructs a strem named `input`, writes two strings to it, and ends it. The
+pipeline is set up with three PipeDreams API calls: the first to split (and, actually re-join) the data
+events into lines (sans newline characters); the second to print out data events, and the last one to detect
+the stream's `finish` event and call the callback:
 
 ```coffee
-@new_stream = ( settings ) ->
+f = ( done ) ->
+  input = D.new_stream()
+  input
+    .pipe D.$split()
+    .pipe D.$show()
+    .pipe D.$on_finish done
+  input.write "helo\nworld"
+  input.write "!"
+  input.end()
+  return null
+```
+
+This ultra-simple streaming will do nothing but print out:
+
+```
+'helo'
+'world!'
+```
+
+Throughstreams can appear in any role in a stream pipeline: as sources, throughputs, or sinks of data.
+To demonstrate that, let's modify the above a little (`rpr` being a helper derived from `util.inspect`):
+
+```coffee
+f = ( done ) ->
+  input   = D.new_stream()
+  thruput = D.new_stream()
+  output  = D.new_stream()
+  #.........................................................................................................
+  input
+    .pipe D.$split()
+    .pipe thruput
+    .pipe D.$on_finish done
+    .pipe output
+  #.........................................................................................................
+  thruput
+    .pipe $ ( data ) -> log 'thruput', rpr data
+  #.........................................................................................................
+  output
+    .pipe $ ( data ) -> log 'output', rpr data
+  #.........................................................................................................
+  input.write "helo\nworld"
+  input.write "!"
+  input.end()
+  return null
+```
+
+The only surprise here is the somewhat weird ordering of what lines this function prints to the console:
+
+```
+output 'helo'
+thruput 'helo'
+output 'world!'
+thruput 'world!'
+thruput null
+output null
+```
+
+One might have expected the text from `thruput` to come *before* that from `ouput`, but the general rule is:
+**do not rely on a specific ordering of events across different stream transform; only the preservation of
+order *within* a given transform is guaranteed**.
+
+### Stream Creation API
+
+`D.new_stream` has a somewhat unusual call signature; its general format is (if you excuse my failed attempt
+at writing a sort-of BNF):
+
+```coffee
+D.new_stream [ hints... ], [ kind: seed ], [ settings ]
+```
+
+All parts are optional. `hints` consists of zero or more 'keywords', 'tags' or 'flags'—single-word strings
+that switch various behaviors of the stream on or off. `hints` are followed by an (also optional)
+single-element key/value object whose key specifies the `kind` of stream to be built; `settings` is another
+object that provides space for more stream-specific settings.
+
+There are currently 6 'kinds' of streams that `new_stream` can return; the simplest one—a featureless
+throughstream returned when `new_stream` is called without arguments—we have already encountered.
+
+The most useful ones are `file` and `pipeline` streams. A `file` stream reads from or writes to a file on
+disk, and PipeDreams `new_stream` acts as an interface to NodeJS' `fs.createReadStream` and
+`fs.createWriteStream`, as the case may be. The minimal file stream is created with a 'kind' of 'file' (or,
+equivalently, 'path'—pick one), and a 'seed' that specifies the file's location. Without any hints, you get
+a file read stream that emits buffers, so for example
+
+```coffee
+input = D.new_stream file: '/tmp/foo.txt'
+input.pipe D.$show()
+```
+
+might spit out `<Buffer 68 65 6c 6f 20 77 6f 72 6c 64 0a c3 a4 ...>` or something similar (should the file
+indeed exists). If you
+
+
+* `'ascii'`—for 7-bit ASCII data only. This encoding method is very fast and will strip the high bit if set.
+
+* `'utf-8'`, `'utf8'`—Multibyte encoded Unicode characters.
+
+* `'utf16le'`—2 or 4 bytes, little-endian encoded Unicode characters. Surrogate pairs (U+10000 to U+10FFFF)
+  are supported.
+
+* `'ucs2'`—Alias of 'utf16le'.
+
+* `'base64'`—Base64 string encoding. When creating a buffer from a string, this encoding will also correctly
+  accept "URL and Filename Safe Alphabet" as specified in RFC 4648, Section 5.
+
+* `'binary'`—A way of encoding the buffer into a one-byte (latin-1) encoded string. The string 'latin-1' is
+  not supported. Instead, pass 'binary' to use 'latin-1' encoding.
+
+* `'hex'`—Encode each byte as two hexadecimal characters.
+
+
+
+```coffee
+path = '/tmp/foo.txt'
+D.new_stream file: path
+D.new_stream 'read', file: path
+D.new_stream 'utf-8', { path, }
+D.new_stream 'read', 'lines', { path, }
+D.new_stream { path, }
+```
+
+```coffee
+D.new_stream 'write', file: path
+D.new_stream 'write', 'lines', { file: '/tmp/foo.txt', }
+```
+
+'file' / 'path'
+'pipeline'
+
+'text'
+'url'
+
+'transform'
+
+```coffee
+@new_stream = ( P... ) ->
 
 D.new_stream()
 D.new_stream pipeline: [ transform, transform, ..., ]
@@ -842,7 +982,7 @@ test) exactly where and under what conditions the test works and where and when 
 >
 ### Through2
 >
-> [Through2](https://github.com/rvagg/through2) provides a fairly manageable
+> [through2](https://github.com/rvagg/through2) provides a fairly manageable
 > interface to build stream transforms on:
 >
 > > ```js
@@ -941,3 +1081,4 @@ test) exactly where and under what conditions the test works and where and when 
 > they accept an optional configuration and return another (possibly stateful) function
 > to do the transformation work.
 
+<!-- cheatcode M42 -->
