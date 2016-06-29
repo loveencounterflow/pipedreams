@@ -1691,9 +1691,10 @@ unless module.parent?
   T   through
   PT  pass through
   PL  pipeline (?)
-  F   file
-    FR  file read
-    FW  file write
+  Fs  file system
+    FsR  file read
+    FsW  file write
+  //\n// split
   SI  stdin
   SO  stdout
   SE  stderr
@@ -1706,18 +1707,18 @@ unless module.parent?
   #   # .pipe $ ( line, send ) => send line + '\n'
   #   .pipe D.$on_end => handler()
   #   .pipe output
-  debug D.$on_end => handler()
+  # debug '7778', D.$on_end => handler()
   # #.......................................................................................................
   # D.send input, probe for probe in probes
   # D.end input
   # #.........................................................................................................
   # read_sample = ( handler ) =>
   input   = D.new_stream 'read', 'lines', path: path_1
-  input
-    .pipe D.$collect()
-    # .pipe D.$show()
-    .pipe $ ( lines ) => null #T.eq lines, matcher if lines?
-    .pipe D.$on_end => handler()
+  # input
+  #   # .pipe D.$collect()
+  #   # # .pipe D.$show()
+  #   # .pipe $ ( lines ) => null #T.eq lines, matcher if lines?
+  #   .pipe D.$on_end => null #handler()
 
 
   # debug '5562', JSON.stringify key for key in Object.keys @

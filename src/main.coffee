@@ -79,7 +79,7 @@ MSP                       = require 'mississippi'
   #.....................................................................................................
   R.kind ?= 'through'
   #.....................................................................................................
-  rprd = ( x ) -> insp x, depth: 2
+  rprd = ( x ) -> insp x, depth: 1
   debug '3345', ( CND.white rprd P ), ( CND.grey '=>' ), ( CND.lime rprd R )
   # debug '3345', ( CND.yellow ( require 'util' ).inspect P, depth: 0 )#, ( CND.grey '=>' ), ( CND.lime R )
   #.....................................................................................................
@@ -133,6 +133,29 @@ MSP                       = require 'mississippi'
   return @_wrap_stream 'P', MSP.through.obj()
 
 #-----------------------------------------------------------------------------------------------------------
+@_new_stream$fs_read_stream   = ( P ... )   ->
+  @_wrap_stream 'FsR', ( require 'fs' ).createReadStream  P...
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$fs_write_stream  = ( P ... )   ->
+  @_wrap_stream 'FsW', ( require 'fs' ).createWriteStream P...
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$split_buffer     = ( matcher ) ->
+  return @_wrap_stream "//#{rpr matcher}//", ( require 'binary-split' ) matcher
+
+#-----------------------------------------------------------------------------------------------------------
+@_wrap_stream = ( sigil, stream ) ->
+  if ( _inspect = stream.inspect )?
+    if CND.isa_function sigil then  inspect = -> "(#{sigil()} [#{_inspect()}])"
+    else                            inspect = -> "(#{sigil} [#{_inspect()}])"
+  else
+    if CND.isa_function sigil then  inspect = -> "(#{sigil()})"
+    else                            inspect = -> "(#{sigil})"
+  stream.inspect = inspect
+  return stream
+
+#-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
   x = new Buffer "data\n"
   pipeline = [
@@ -184,23 +207,19 @@ MSP                       = require 'mississippi'
   #.........................................................................................................
   if role is 'read'
     if use_line_mode
-      pipeline.push @_new_fs_read_stream path, settings
+      pipeline.push @_new_stream$fs_read_stream path, settings
       pipeline.push @$split { encoding, }
     else
       settings[ 'encoding' ]?= if encoding is 'buffer' then null else encoding
-      pipeline.push @_new_fs_read_stream path, settings
+      pipeline.push @_new_stream$fs_read_stream path, settings
   #.........................................................................................................
   else # role is write or append
     if role is 'append' then settings[ 'flags' ] = 'a'
     settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
     pipeline.push @$as_line() if use_line_mode
-    pipeline.push @$bridge @_new_fs_write_stream path, settings
+    pipeline.push @$bridge @_new_stream$fs_write_stream path, settings
   #.........................................................................................................
   return @new_stream { pipeline, }
-
-#-----------------------------------------------------------------------------------------------------------
-@_new_fs_read_stream  = ( P ... ) -> @_wrap_stream 'FR', ( require 'fs' ).createReadStream  P...
-@_new_fs_write_stream = ( P ... ) -> @_wrap_stream 'FW', ( require 'fs' ).createWriteStream P...
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path._hints = [
@@ -292,17 +311,6 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$pass_through = -> @_wrap_stream 'PT', MSP.through.obj()
-
-#-----------------------------------------------------------------------------------------------------------
-@_wrap_stream = ( sigil, stream ) ->
-  if ( _inspect = stream.inspect )?
-    if CND.isa_function sigil then  inspect = -> "(#{sigil()} [#{_inspect()}])"
-    else                            inspect = -> "(#{sigil} [#{_inspect()}])"
-  else
-    if CND.isa_function sigil then  inspect = -> "(#{sigil()})"
-    else                            inspect = -> "(#{sigil})"
-  stream.inspect = inspect
-  return stream
 
 
 #===========================================================================================================
@@ -415,12 +423,11 @@ MSP                       = require 'mississippi'
 #-----------------------------------------------------------------------------------------------------------
 @$split = ( settings ) ->
   ### TAINT should allow to specify splitter, encoding, keep binary format ###
-  split     = require 'binary-split'
   matcher   = settings?[ 'matcher'  ] ? '\n'
   encoding  = settings?[ 'encoding' ] ? 'utf-8'
   # debug '6654', settings, encoding
   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
-  R = split matcher
+  R         = @_new_stream$split_buffer matcher
   return R if encoding is 'buffer'
   return @new_stream pipeline: [ R, ( @$decode encoding ), ]
 
