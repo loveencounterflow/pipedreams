@@ -19,17 +19,61 @@ insp                      = ( require 'util' ).inspect
 # through2                  = require 'through2'
 ### https://github.com/maxogden/mississippi ###
 MSP                       = require 'mississippi'
-#...........................................................................................................
-### http://stringjs.com ###
-# stringfoo                 = require 'string'
-#...........................................................................................................
-### https://github.com/mcollina/split2 ###
-# split2                    = require 'split2'
-#...........................................................................................................
-### https://github.com/mziccard/node-timsort ###
-# timsort                   = require 'timsort'
 
 
+#===========================================================================================================
+# STREAM-PRODUCING 3RD PARTY LIBRARIES
+#...........................................................................................................
+###
+
+**Note** Conventions:
+
+* Never call a stream/transform-producing 3rd party API from an arbitrary place in this or affiliate
+  modules, but to always route such calls through a proxy method to be collected in the space below;
+
+* Issue `require` 3rd party libraries in a 'lazy' fashion / on-demand (i.e. on API-method call time, not on
+  module load time);
+
+* Wrap all stream/transform creation calls so that printing of shorthand descriptions of pipelines becomes
+  feasible. Printouts of unwrapped stream objects can extend over hundreds of lines and are nearly
+  impossible to digest properly (in the future, a more sophisticated solution may be implemented, but even
+  then and until such time, the wrapping is not going to hurt either).
+
+###
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$read_from_file = ( P ... )   ->
+  R = ( require 'fs' ).createReadStream  P...
+  return @_new_stream$wrap "FsR", R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$write_to_file = ( P ... )   ->
+  R = ( require 'fs' ).createWriteStream P...
+  return @_new_stream$wrap "FsW", R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$split_buffer = ( matcher ) ->
+  R = ( require 'binary-split' ) matcher
+  return @_new_stream$wrap "//#{rpr matcher}//", R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$throttle_bytes = ( bytes_per_second ) ->
+  R = new ( require 'throttle' ) bytes_per_second
+  return @_new_stream$wrap "throttle #{bytes_per_second} bps", R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$wrap = ( sigil, stream ) ->
+  if ( _inspect = stream.inspect )?
+    if CND.isa_function sigil then  inspect = -> "(#{sigil()} [#{_inspect()}])"
+    else                            inspect = -> "(#{sigil} [#{_inspect()}])"
+  else
+    if CND.isa_function sigil then  inspect = -> "(#{sigil()})"
+    else                            inspect = -> "(#{sigil})"
+  stream.inspect = inspect
+  return stream
+
+
+#===========================================================================================================
+# STREAM CREATION
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( P... ) ->
   @new_stream._read_arguments_2 P
@@ -130,30 +174,7 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream doesn't accept 'seed', got #{rpr seed}" if seed?
   throw new Error "_new_stream doesn't accept 'hints', got #{rpr hints}" if hints?
   throw new Error "_new_stream doesn't accept 'settings', got #{rpr settings}" if settings?
-  return @_wrap_stream 'P', MSP.through.obj()
-
-#-----------------------------------------------------------------------------------------------------------
-@_new_stream$fs_read_stream   = ( P ... )   ->
-  @_wrap_stream 'FsR', ( require 'fs' ).createReadStream  P...
-
-#-----------------------------------------------------------------------------------------------------------
-@_new_stream$fs_write_stream  = ( P ... )   ->
-  @_wrap_stream 'FsW', ( require 'fs' ).createWriteStream P...
-
-#-----------------------------------------------------------------------------------------------------------
-@_new_stream$split_buffer     = ( matcher ) ->
-  return @_wrap_stream "//#{rpr matcher}//", ( require 'binary-split' ) matcher
-
-#-----------------------------------------------------------------------------------------------------------
-@_wrap_stream = ( sigil, stream ) ->
-  if ( _inspect = stream.inspect )?
-    if CND.isa_function sigil then  inspect = -> "(#{sigil()} [#{_inspect()}])"
-    else                            inspect = -> "(#{sigil} [#{_inspect()}])"
-  else
-    if CND.isa_function sigil then  inspect = -> "(#{sigil()})"
-    else                            inspect = -> "(#{sigil})"
-  stream.inspect = inspect
-  return stream
+  return @_new_stream$wrap 'P', MSP.through.obj()
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
@@ -207,17 +228,17 @@ MSP                       = require 'mississippi'
   #.........................................................................................................
   if role is 'read'
     if use_line_mode
-      pipeline.push @_new_stream$fs_read_stream path, settings
+      pipeline.push @_new_stream$read_from_file path, settings
       pipeline.push @$split { encoding, }
     else
       settings[ 'encoding' ]?= if encoding is 'buffer' then null else encoding
-      pipeline.push @_new_stream$fs_read_stream path, settings
+      pipeline.push @_new_stream$read_from_file path, settings
   #.........................................................................................................
   else # role is write or append
     if role is 'append' then settings[ 'flags' ] = 'a'
     settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
     pipeline.push @$as_line() if use_line_mode
-    pipeline.push @$bridge @_new_stream$fs_write_stream path, settings
+    pipeline.push @$bridge @_new_stream$write_to_file path, settings
   #.........................................................................................................
   return @new_stream { pipeline, }
 
@@ -249,7 +270,7 @@ MSP                       = require 'mississippi'
   inspect = ->
     inner = ( insp p for p in pipeline ).join ' '
     return "PL #{inner} "
-  return @_wrap_stream inspect, MSP.pipeline.obj pipeline...
+  return @_new_stream$wrap inspect, MSP.pipeline.obj pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -310,7 +331,7 @@ MSP                       = require 'mississippi'
 @_new_stream_from_transform._hints = [ 'async', ]
 
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> @_wrap_stream 'PT', MSP.through.obj()
+@$pass_through = -> @_new_stream$wrap 'PT', MSP.through.obj()
 
 
 #===========================================================================================================
@@ -350,7 +371,7 @@ MSP                       = require 'mississippi'
       method null
       callback()
     #.......................................................................................................
-    return @_wrap_stream 't', MSP.through.obj main, flush
+    return @_new_stream$wrap 't', MSP.through.obj main, flush
   #.........................................................................................................
   if arity is 3
     flush = ( callback ) ->
@@ -388,7 +409,7 @@ MSP                       = require 'mississippi'
       callback() unless has_error
     return null
   #.....................................................................................................
-  return @_wrap_stream 't', MSP.through.obj main, flush
+  return @_new_stream$wrap 't', MSP.through.obj main, flush
 
 #===========================================================================================================
 # SENDING DATA
@@ -457,7 +478,7 @@ MSP                       = require 'mississippi'
     return -1 if a < b
     return  0
   #.........................................................................................................
-  return @$ ( data, send, end ) =>
+  return @_new_stream$wrap 'sort', @$ ( data, send, end ) =>
     collector.push data if data?
     if end?
       TIMSORT.sort collector, sorter
@@ -792,44 +813,45 @@ MSP                       = require 'mississippi'
 # THROUGHPUT LIMITING
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_bytes = ( bytes_per_second ) ->
-  return @_wrap_stream "throttle #{bytes_per_second} bps", new ( require 'throttle' ) bytes_per_second
+  return @_new_stream$throttle_bytes bytes_per_second
 
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_items = ( items_per_second ) ->
-  buffer    = []
-  count     = 0
-  idx       = 0
-  _send     = null
-  timer     = null
-  has_ended = no
-  #.........................................................................................................
-  emit = ->
-    if ( data = buffer[ idx ] ) isnt undefined
-      buffer[ idx ] = undefined
-      idx   += +1
-      count += -1
-      _send data
-    #.......................................................................................................
-    if has_ended and count < 1
-      clearInterval timer
-      _send.end()
-      buffer = _send = timer = null # necessary?
-    #.......................................................................................................
-    return null
-  #.........................................................................................................
-  start = ->
-    timer = setInterval emit, 1 / items_per_second * 1000
-  #---------------------------------------------------------------------------------------------------------
-  return @$ ( data, send, end ) =>
-    if data?
-      unless _send?
-        _send = send
-        start()
-      buffer.push data
-      count += +1
-    #.......................................................................................................
-    if end?
-      has_ended = yes
+  throw new Error "$throttle_items on hold"
+  # buffer    = []
+  # count     = 0
+  # idx       = 0
+  # _send     = null
+  # timer     = null
+  # has_ended = no
+  # #.........................................................................................................
+  # emit = ->
+  #   if ( data = buffer[ idx ] ) isnt undefined
+  #     buffer[ idx ] = undefined
+  #     idx   += +1
+  #     count += -1
+  #     _send data
+  #   #.......................................................................................................
+  #   if has_ended and count < 1
+  #     clearInterval timer
+  #     _send.end()
+  #     buffer = _send = timer = null # necessary?
+  #   #.......................................................................................................
+  #   return null
+  # #.........................................................................................................
+  # start = ->
+  #   timer = setInterval emit, 1 / items_per_second * 1000
+  # #---------------------------------------------------------------------------------------------------------
+  # return @$ ( data, send, end ) =>
+  #   if data?
+  #     unless _send?
+  #       _send = send
+  #       start()
+  #     buffer.push data
+  #     count += +1
+  #   #.......................................................................................................
+  #   if end?
+  #     has_ended = yes
 
 
 #===========================================================================================================
@@ -868,7 +890,7 @@ pluck = ( x, key ) ->
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
   # return @new_stream pipeline: [ @$pass_through(), stream, ]
-  return @$ ( data, send, end ) =>
+  return @_new_stream$wrap 'bridge', @$ ( data, send, end ) =>
     if data?
       stream.write data
       send data
