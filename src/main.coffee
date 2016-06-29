@@ -62,6 +62,18 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$wrap = ( sigil, stream ) ->
+  ###
+  T   through
+  PT  pass through
+  PL  pipeline (?)
+  Fs  file system
+    FsR  file read
+    FsW  file write
+  //\n// split
+  SI  stdin
+  SO  stdout
+  SE  stderr
+  ###
   if ( _inspect = stream.inspect )?
     if CND.isa_function sigil then  inspect = -> "(#{sigil()} [#{_inspect()}])"
     else                            inspect = -> "(#{sigil} [#{_inspect()}])"
@@ -124,7 +136,7 @@ MSP                       = require 'mississippi'
   R.kind ?= 'through'
   #.....................................................................................................
   rprd = ( x ) -> insp x, depth: 1
-  debug '3345', ( CND.white rprd P ), ( CND.grey '=>' ), ( CND.lime rprd R )
+  echo '3345', ( CND.white rprd P ), ( CND.grey '=>' ), ( CND.lime rprd R )
   # debug '3345', ( CND.yellow ( require 'util' ).inspect P, depth: 0 )#, ( CND.grey '=>' ), ( CND.lime R )
   #.....................................................................................................
   return R

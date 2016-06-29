@@ -309,11 +309,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   write_sample = ( handler ) =>
     input   = D.new_stream()
     output  = D.new_stream 'write', 'lines', { file: path_1, }
-    input
-      # .pipe D.$show()
-      .pipe output
-      # .pipe D.$on_end => handler()
     D.on_finish output, handler
+    input
+      .pipe output
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -1637,119 +1635,57 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) fail to read when thru stream comes before read stream"
-    # # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $split_tsv (2)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) _new_stream_from_path (4)"
-    # "(v4) _new_stream_from_path (3)"
-    # "(v4) file stream events (1)"
-    # "(v4) file stream events (2)"
-    # "(v4) transforms below output receive data events (1)"
-    # "(v4) transforms below output receive data events (2)"
-    # "(v4) read TSV file (1)"
-    # "(v4) _new_stream_from_url"
-    # "(v4) new_stream README example (1)"
-    # "(v4) new_stream README example (2)"
-    # "(v4) new_stream README example (3)"
-    # "(v4) _new_stream_from_path with encodings"
-    # "(v4) _new_stream_from_path (raw)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
+    # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) fail to read when thru stream comes before read stream"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) $split_tsv (1)"
+    "(v4) $split_tsv (2)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) file stream events (1)"
+    "(v4) file stream events (2)"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) read TSV file (1)"
+    "(v4) _new_stream_from_url"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
     "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_path (4)"
+    "(v4) _new_stream_from_path (3)"
     ]
-  # @_prune()
-  # @_main()
+  @_prune()
+  @_main()
 
-  ###
-  T   through
-  PT  pass through
-  PL  pipeline (?)
-  Fs  file system
-    FsR  file read
-    FsW  file write
-  //\n// split
-  SI  stdin
-  SO  stdout
-  SE  stderr
-  ###
-
-  path_1 = '/tmp/foo'
-  # input   = D.new_stream()
-  # output  = D.new_stream 'write', 'lines', path: path_1
-  # input
-  #   # .pipe $ ( line, send ) => send line + '\n'
-  #   .pipe D.$on_end => handler()
-  #   .pipe output
-  # debug '7778', D.$on_end => handler()
-  # #.......................................................................................................
-  # D.send input, probe for probe in probes
-  # D.end input
-  # #.........................................................................................................
-  # read_sample = ( handler ) =>
-  input   = D.new_stream 'read', 'lines', path: path_1
-  # input
-  #   # .pipe D.$collect()
-  #   # # .pipe D.$show()
-  #   # .pipe $ ( lines ) => null #T.eq lines, matcher if lines?
-  #   .pipe D.$on_end => null #handler()
 
 
   # debug '5562', JSON.stringify key for key in Object.keys @
-
-  # @[ "(v4) _new_stream_from_path (1)" ]()
-  # @[ "(v4) _new_stream_from_path (4)" ]()
-  # @[ "(v4) read TSV file (1)" ]()
-  # @[ "(v4) _new_stream_from_url" ]()
-
-
-  # debug ('〓'.codePointAt 0).toString 16
-
-  # ( require 'readable-stream/transform' ).inspect = -> '<dT>'
-  # Stream = ( require 'stream' ).Stream
-  # Stream.toString = -> '*'
-  # d = new Stream()
-  # debug d.toString()
-  # ( require 'mississippi' ).through.ctor()::inspect = -> '<#>'
-  # through = ( require 'mississippi' ).through
-  # through.toString = -> '<T>'
-  # d = through()
-  # debug d.toString()
-  # debug ( require 'util' ).inspect d, showHidden: no, depth: 0
-  # debug D.isa_stream d
-  # # d.inspect = ( P ) => return '<T2>'
-  # # debug ( require 'util' ).inspect d, showHidden: no, depth: 0
-  # debug CND.type_of d
-  # debug JSON.stringify d
-  # rprd = ( x ) =>
-  #   R = JSON.stringify x
-  #   R = R.replace /\{"_readableState":.+?"_destroyed":(?:false|true)\}/g, '<T>'
-  # debug rprd [ d, d, ]
-
 
