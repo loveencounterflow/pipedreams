@@ -145,7 +145,7 @@ urge                      = CND.get_logger 'urge',      badge
   pipeline.push $name_fields()        if use_names
   # pipeline.push @$ ( data ) => debug '3', JSON.stringify data if data?
   #.........................................................................................................
-  return @new_stream { pipeline, }
+  return @_wrap_stream 'split-tsv', @new_stream { pipeline, }
 
 
 ############################################################################################################

@@ -13,6 +13,7 @@ warn                      = CND.get_logger 'warn',      badge
 help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
+insp                      = ( require 'util' ).inspect
 #...........................................................................................................
 # ### https://github.com/rvagg/through2 ###
 # through2                  = require 'through2'
@@ -31,6 +32,7 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( P... ) ->
+  @new_stream._read_arguments_2 P
   [ kind, seed, hints, settings, ] = @new_stream._read_arguments P
   R = switch kind
     when '*plain'       then @_new_stream                seed, hints, settings
@@ -40,6 +42,46 @@ MSP                       = require 'mississippi'
     when 'url'          then @_new_stream_from_url       seed, hints, settings
     when 'transform'    then @_new_stream_from_transform seed, hints, settings
     else throw new Error "unknown kind #{rpr kind} (shouldn't happen)"
+  #.....................................................................................................
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@new_stream._read_arguments_2 = ( P ) =>
+  R =
+    flags:        []
+    kind:         null
+    seed:         null
+    settings:     {}
+  #.....................................................................................................
+  # ultimate_idx    = P.length - 1
+  # penultimate_idx = ultimate_idx - 1
+  flags_over      = no
+  #.....................................................................................................
+  for p, idx in P
+    if CND.isa_text p
+      if flags_over
+        throw new Error "detected flag at illegal position in call signature #{rpr P}"
+      R.flags.push p
+    else
+      flags_over = yes
+      unless R.kind?
+        for kind, seed of p
+          if R.kind?
+            throw new Error "can't have more than single key in kind selector object, got #{rpr P}"
+          unless kind in @new_stream._kinds
+            expected  = ( rpr x for x in @new_stream._kinds ).join ', '
+            got       =   rpr kind
+            throw new Error "expected a 'kind' out of #{expected}, got #{got}"
+          R.kind  = kind
+          R.seed  = seed
+      else
+        R.settings = Object.assign {}, P[ idx .. ]...
+  #.....................................................................................................
+  R.kind ?= 'through'
+  #.....................................................................................................
+  rprd = ( x ) -> insp x, depth: 2
+  debug '3345', ( CND.white rprd P ), ( CND.grey '=>' ), ( CND.lime rprd R )
+  # debug '3345', ( CND.yellow ( require 'util' ).inspect P, depth: 0 )#, ( CND.grey '=>' ), ( CND.lime R )
   #.....................................................................................................
   return R
 
@@ -88,7 +130,7 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream doesn't accept 'seed', got #{rpr seed}" if seed?
   throw new Error "_new_stream doesn't accept 'hints', got #{rpr hints}" if hints?
   throw new Error "_new_stream doesn't accept 'settings', got #{rpr settings}" if settings?
-  return MSP.through.obj()
+  return @_wrap_stream 'P', MSP.through.obj()
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
@@ -142,19 +184,23 @@ MSP                       = require 'mississippi'
   #.........................................................................................................
   if role is 'read'
     if use_line_mode
-      pipeline.push ( require 'fs' ).createReadStream path, settings
+      pipeline.push @_new_fs_read_stream path, settings
       pipeline.push @$split { encoding, }
     else
       settings[ 'encoding' ]?= if encoding is 'buffer' then null else encoding
-      pipeline.push ( require 'fs' ).createReadStream path, settings
+      pipeline.push @_new_fs_read_stream path, settings
   #.........................................................................................................
   else # role is write or append
     if role is 'append' then settings[ 'flags' ] = 'a'
     settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
     pipeline.push @$as_line() if use_line_mode
-    pipeline.push @$bridge ( require 'fs' ).createWriteStream path, settings
+    pipeline.push @$bridge @_new_fs_write_stream path, settings
   #.........................................................................................................
   return @new_stream { pipeline, }
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_fs_read_stream  = ( P ... ) -> @_wrap_stream 'FR', ( require 'fs' ).createReadStream  P...
+@_new_fs_write_stream = ( P ... ) -> @_wrap_stream 'FW', ( require 'fs' ).createWriteStream P...
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path._hints = [
@@ -180,7 +226,11 @@ MSP                       = require 'mississippi'
         pipeline.push @$pass_through()
       else
         pipeline.unshift @$pass_through()
-  return MSP.pipeline.obj pipeline...
+  #.........................................................................................................
+  inspect = ->
+    inner = ( insp p for p in pipeline ).join ' '
+    return "PL #{inner} "
+  return @_wrap_stream inspect, MSP.pipeline.obj pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -241,6 +291,23 @@ MSP                       = require 'mississippi'
 @_new_stream_from_transform._hints = [ 'async', ]
 
 #-----------------------------------------------------------------------------------------------------------
+@$pass_through = -> @_wrap_stream 'PT', MSP.through.obj()
+
+#-----------------------------------------------------------------------------------------------------------
+@_wrap_stream = ( sigil, stream ) ->
+  if ( _inspect = stream.inspect )?
+    if CND.isa_function sigil then  inspect = -> "(#{sigil()} [#{_inspect()}])"
+    else                            inspect = -> "(#{sigil} [#{_inspect()}])"
+  else
+    if CND.isa_function sigil then  inspect = -> "(#{sigil()})"
+    else                            inspect = -> "(#{sigil})"
+  stream.inspect = inspect
+  return stream
+
+
+#===========================================================================================================
+# ISA METHODS
+#-----------------------------------------------------------------------------------------------------------
 ### thx to German Attanasio http://stackoverflow.com/a/28564000/256361 ###
 @isa_stream           = ( x ) -> x instanceof ( require 'stream' ).Stream
 @isa_readable_stream  = ( x ) -> ( @isa_stream x ) and x.readable
@@ -248,9 +315,6 @@ MSP                       = require 'mississippi'
 @isa_readonly_stream  = ( x ) -> ( @isa_stream x ) and x.readable and not x.writable
 @isa_writeonly_stream = ( x ) -> ( @isa_stream x ) and x.writable and not x.readable
 @isa_duplex_stream    = ( x ) -> ( @isa_stream x ) and x.readable and     x.writable
-
-#-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> MSP.through.obj()
 
 
 #===========================================================================================================
@@ -278,7 +342,7 @@ MSP                       = require 'mississippi'
       method null
       callback()
     #.......................................................................................................
-    return MSP.through.obj main, flush
+    return @_wrap_stream 't', MSP.through.obj main, flush
   #.........................................................................................................
   if arity is 3
     flush = ( callback ) ->
@@ -316,7 +380,7 @@ MSP                       = require 'mississippi'
       callback() unless has_error
     return null
   #.....................................................................................................
-  return MSP.through.obj main, flush
+  return @_wrap_stream 't', MSP.through.obj main, flush
 
 #===========================================================================================================
 # SENDING DATA
@@ -721,7 +785,7 @@ MSP                       = require 'mississippi'
 # THROUGHPUT LIMITING
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_bytes = ( bytes_per_second ) ->
-  return new ( require 'throttle' ) bytes_per_second
+  return @_wrap_stream "throttle #{bytes_per_second} bps", new ( require 'throttle' ) bytes_per_second
 
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_items = ( items_per_second ) ->
