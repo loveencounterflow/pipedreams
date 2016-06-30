@@ -103,11 +103,11 @@ In the below, I will assume you `require`d PipeDreams the first way, above.
 
 ## Streams are Transforms, Transforms are Streams
 
-**In the PipeDreams world, write streams are read just like read streams; also, streams and transforms are no
-different.**
+**In the PipeDreams world, write streams can appear anywhere in the pipeline, just like read streams; also,
+streams and transforms are no different.**
 
-Yesyes, I know, they're *supposed* to be different. After all, you'd write your typical streamy app
-approximately like this:
+How can read streams, write streams and stream transforms be the same? After all, you'd write your typical
+streamy app approximately like this:
 
 ```coffee
 input   = fs.createReadStream   'foo.txt'

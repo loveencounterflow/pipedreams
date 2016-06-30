@@ -66,20 +66,6 @@ MSP                       = require 'mississippi'
   R = new ( require 'throttle' ) bytes_per_second
   return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
 
-# #-----------------------------------------------------------------------------------------------------------
-# @_new_stream$wrap = ( sigil, stream ) ->
-#   throw new Error "***"
-#   ###
-#   T   through
-#   PT  pass through
-#   PL  pipeline (?)
-#   Fs  file system
-#     FsR  file read
-#     FsW  file write
-#   //\n// split
-#   SI  stdin
-#   SO  stdout
-#   SE  stderr
 #   ⏏⌘⏚⏫⏬⏭⏮⏯⏳⏴⏵⏶⏷⏸⏹⏺📖💻🖨✇✀
 #   ⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟
 #   ∑⎶〈〉《》【】
@@ -93,15 +79,6 @@ MSP                       = require 'mississippi'
 #   ⇋  leftwards harpoon over rightwards harpoon Unicode code point: U+21CB
 #   ⇌  rightwards harpoon over leftwards harpoon Unicode code point: U+21CC
 
-#   ###
-#   r         = CND.lime.bind CND
-#   g         = CND.grey.bind CND
-#   if ( _inspect = stream.inspect )?
-#     inspect = -> ( r sigil ) + ( g " {" ) + _inspect() + ( g "}" ) + ( r() )
-#   else
-#     inspect = -> ( r sigil )                           #+ ( g "" )
-#   stream.inspect = inspect
-#   return stream
 
 #-----------------------------------------------------------------------------------------------------------
 @_rpr = ( symbol, name, extra, stream ) ->
@@ -113,21 +90,26 @@ MSP                       = require 'mississippi'
   throw new Error "expected 6 arguments, got #{arity}" unless ( arity = arguments.length ) is 6
   _symbols    = CND.yellow
   gl          = CND.gold
-  gy          = CND.grey
+  _name       = CND.grey
   _brackets   = CND.white
+  _sub        = CND.crimson
+  _extra      = CND.orange
   _inspect    = stream.inspect
+  show_subs   = no
   show_names  = no
   parts       = []
   parts.push _brackets start
   parts.push ' '
   parts.push _symbols symbol  if symbol?
   parts.push ' '              if symbol?
-  parts.push gy name          if show_names
+  parts.push _name name       if show_names
   parts.push ' '              if show_names
-  parts.push extra            if extra?
+  parts.push _extra extra     if extra?
   parts.push ' '              if extra?
-  parts.push _inspect()       if _inspect?
-  parts.push ' '              if _inspect?
+  parts.push _sub ' {='       if show_subs and _inspect?
+  parts.push _inspect()       if show_subs and _inspect?
+  parts.push _sub '=} '       if show_subs and _inspect?
+  # parts.push ' '              if _inspect?
   parts.push _brackets stop
   # parts.push gy ","
   stream.inspect = -> parts.join ''
@@ -243,7 +225,7 @@ MSP                       = require 'mississippi'
   x = new Buffer "data\n"
   pipeline = [
     ( @$ ( data, send ) => send x )
-    ( @new_stream 'write', path: '/dev/null' )
+    ( @new_stream 'write', file: '/dev/null' )
     ]
   return @_rpr "⏚", "devnull", null, @new_stream { pipeline, }
 
@@ -288,29 +270,37 @@ MSP                       = require 'mississippi'
         throw new Error "hints contain multiple encodings: #{rpr hints}" if encoding?
         encoding = key
   #.........................................................................................................
+  ### TAINT must simplify handling of encoding as tag and in settings ###
+  extra     = "#{rpr path}"
+  _encoding = encoding ? settings[ 'encoding' ]
+  extra    += ' ' + _encoding if _encoding?
+  ### TAINT no choice between symbol or name, no colorization ###
+  if use_line_mode
+    if role is 'read' then  extra += ' ' + "✀"
+    else                    extra += ' ' + "∮"
   if role is 'read'
     if use_line_mode
-      return @_rpr "🖹 △", "file-read", null, @new_stream pipeline: [
+      return @_rpr "🖹 △", "file-read", extra, @new_stream pipeline: [
         ( @_new_stream$read_from_file path, settings )
         ( @$split { encoding, }                      )
         ]
     else
       settings[ 'encoding' ]?= if encoding is 'buffer' then null else encoding
-      return @_rpr "🖹 △", "file-read", null, @_new_stream$read_from_file path, settings
+      return @_rpr "🖹 △", "file-read", extra, @_new_stream$read_from_file path, settings
   #.........................................................................................................
   settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
   #.........................................................................................................
   if role is 'append'
     R = @$bridge @_new_stream$append_to_file path, settings
     if use_line_mode
-      return @_rpr "🖹 ⏬", "file-append", null, @new_stream pipeline: [ @$as_line(), R, ]
-    return @_rpr "🖹 ⏬", "file-append", null, R
+      return @_rpr "🖹 ⏬", "file-append", extra, @new_stream pipeline: [ @$as_line(), R, ]
+    return @_rpr "🖹 ⏬", "file-append", extra, R
   #.........................................................................................................
   ### role is write ###
   R = @$bridge @_new_stream$write_to_file path, settings
   if use_line_mode
-    return @_rpr "🖹 ▼", "file-write", null, @new_stream pipeline: [ @$as_line(), R, ]
-  return @_rpr "🖹 ▼", "file-write", null, R
+    return @_rpr "🖹 ▼", "file-write", extra, @new_stream pipeline: [ @$as_line(), R, ]
+  return @_rpr "🖹 ▼", "file-write", extra, R
   #.........................................................................................................
   return null
 
@@ -519,8 +509,8 @@ MSP                       = require 'mississippi'
   encoding  = settings?[ 'encoding' ] ? 'utf-8'
   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
   R         = @_new_stream$split_buffer matcher
-  return @_rpr "✀", "split", null, R if encoding is 'buffer'
-  return @_rpr "✀", "split", null, @new_stream pipeline: [ R, ( @$decode encoding ), ]
+  return @_rpr "✀", "split", ( rpr matcher ), R if encoding is 'buffer'
+  return @_rpr "✀", "split", ( rpr matcher ), @new_stream pipeline: [ R, ( @$decode encoding ), ]
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->
@@ -960,13 +950,21 @@ pluck = ( x, key ) ->
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
   # return @new_stream pipeline: [ @$pass_through(), stream, ]
-  return @_rpr '↷', 'bridge', ( rpr stream ), @$ ( data, send, end ) =>
+  output      = @_rpr "output",     "output",     null, @new_stream()
+  # throughput  = @_rpr "throughput", "throughput", null, @$ ( data, send, end ) =>
+  throughput  = @$ ( data, send, end ) =>
     if data?
-      stream.write data
       send data
+      output.write data
     if end?
-      stream.end()
       end()
+      output.end()
+  bridge = @new_stream pipeline: [
+    throughput
+    stream
+    ]
+  extra = ( rpr bridge ) + ' ↝ ' + ( rpr output )
+  return @_rpr "↷", "bridge", extra, MSP.duplex.obj bridge, output
 
 
 #===========================================================================================================

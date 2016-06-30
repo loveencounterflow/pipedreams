@@ -1611,8 +1611,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   help ( CND.grey '006' ), D.new_stream 'lines', file: '/tmp/foo'
   help()
   help ( CND.grey '007' ), D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
+  help ( CND.grey '007' ), D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
   help ( CND.grey '008' ), D.$bridge D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
-  help ( CND.grey '009' ), D.new_stream 'write', file: '/tmp/foo'
+  help ( CND.grey '009' ), D.new_stream 'write',          file: '/tmp/foo'
+  help ( CND.grey '009' ), D.new_stream 'write', 'utf-8', file: '/tmp/foo'
   help ( CND.grey '010' ), D.new_stream 'write', 'lines', file: '/tmp/foo'
   help()
   help ( CND.grey '011' ), D.new_stream 'devnull'
@@ -1629,6 +1631,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   help ( CND.grey '019' ), D.$show()
   help ( CND.grey '020' ), D.$collect()
   help ( CND.grey '021' ), D.$spread()
+  help ( CND.grey '021' ), $split_tsv()
   help ( CND.grey '022' ), D.new_stream pipeline: [
     ( D.new_stream 'read', 'lines', file: '/tmp/input-foo' )
     ( D.$sort() )
@@ -1720,7 +1723,6 @@ unless module.parent?
     ]
   @_prune()
   @_main()
-
 
 
   # debug '5562', JSON.stringify key for key in Object.keys @
