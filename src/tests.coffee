@@ -1602,8 +1602,24 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) stream sigils" ] = ( T, done ) ->
-  debug D.new_stream()
-  debug D.new_stream pipeline: [ D.new_stream file: '/tmp/foo' ]
+  help '001', D.new_stream()
+  help '002', D.new_stream file: '/tmp/foo'
+  help '003', D.new_stream 'lines', file: '/tmp/foo'
+  help '004', D.new_stream 'write', file: '/tmp/foo'
+  help '005', D.new_stream 'write', 'lines', file: '/tmp/foo'
+  help '006', D.new_stream pipeline: [ $ ( data ) => null ]
+  help '007', $ ( data ) => null
+  help '008', D.$split matcher: 'x'
+  help '009', D.$throttle_bytes 100
+  help '010', D.$sort()
+  help '011', D.$show()
+  help '012', D.$collect()
+  help '013', D.$spread()
+  help '014', D.new_stream pipeline: [
+    ( D.new_stream 'read', 'lines', file: '/tmp/input-foo' )
+    ( D.$sort() )
+    ( D.new_stream 'write', 'lines', file: '/tmp/output-foo' )
+    ]
   done()
 
 #===========================================================================================================

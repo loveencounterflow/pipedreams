@@ -43,22 +43,22 @@ MSP                       = require 'mississippi'
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$read_from_file = ( P ... )   ->
   R = ( require 'fs' ).createReadStream  P...
-  return @_new_stream$wrap "FsR", R
+  return @_new_stream$wrap "✇⏵", R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$write_to_file = ( P ... )   ->
   R = ( require 'fs' ).createWriteStream P...
-  return @_new_stream$wrap "FsW", R
+  return @_new_stream$wrap "✇⏺", R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$split_buffer = ( matcher ) ->
   R = ( require 'binary-split' ) matcher
-  return @_new_stream$wrap "//#{rpr matcher}//", R
+  return @_new_stream$wrap "✀ #{rpr matcher}", R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$throttle_bytes = ( bytes_per_second ) ->
   R = new ( require 'throttle' ) bytes_per_second
-  return @_new_stream$wrap "throttle #{bytes_per_second} bps", R
+  return @_new_stream$wrap "⏳ #{bytes_per_second} B/s", R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$wrap = ( sigil, stream ) ->
@@ -73,13 +73,19 @@ MSP                       = require 'mississippi'
   SI  stdin
   SO  stdout
   SE  stderr
+  ⏏⌘⏚⏫⏬⏭⏮⏯⏳⏴⏵⏶⏷⏸⏹⏺📖💻🖨✇✀
+  ⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟
+  ∑⎶〈〉《》【】
+  🔵🔿🕀🗟🛈
   ###
+  r = CND.lime.bind CND
+  g = CND.grey.bind CND
   if ( _inspect = stream.inspect )?
-    if CND.isa_function sigil then  inspect = -> "(#{sigil()} [#{_inspect()}])"
-    else                            inspect = -> "(#{sigil} [#{_inspect()}])"
+    if CND.isa_function sigil then  inspect = -> ( r sigil() ) + ( g " [" ) + _inspect() + ( g "]," )
+    else                            inspect = -> ( r sigil   ) + ( g " [" ) + _inspect() + ( g "]," )
   else
-    if CND.isa_function sigil then  inspect = -> "(#{sigil()})"
-    else                            inspect = -> "(#{sigil})"
+    if CND.isa_function sigil then  inspect = -> ( r sigil() )                           + ( g "," )
+    else                            inspect = -> ( r sigil   )                           + ( g "," )
   stream.inspect = inspect
   return stream
 
@@ -136,7 +142,7 @@ MSP                       = require 'mississippi'
   R.kind ?= 'through'
   #.....................................................................................................
   rprd = ( x ) -> insp x, depth: 1
-  echo '3345', ( CND.white rprd P ), ( CND.grey '=>' ), ( CND.lime rprd R )
+  # echo '3345', ( CND.white rprd P ), ( CND.grey '=>' ), ( CND.lime rprd R )
   # debug '3345', ( CND.yellow ( require 'util' ).inspect P, depth: 0 )#, ( CND.grey '=>' ), ( CND.lime R )
   #.....................................................................................................
   return R
@@ -238,6 +244,7 @@ MSP                       = require 'mississippi'
         throw new Error "hints contain multiple encodings: #{rpr hints}" if encoding?
         encoding = key
   #.........................................................................................................
+  throw new Error "redefine with fewer pipelines"
   if role is 'read'
     if use_line_mode
       pipeline.push @_new_stream$read_from_file path, settings
@@ -281,7 +288,7 @@ MSP                       = require 'mississippi'
   #.........................................................................................................
   inspect = ->
     inner = ( insp p for p in pipeline ).join ' '
-    return "PL #{inner} "
+    return "(≋ #{inner})"
   return @_new_stream$wrap inspect, MSP.pipeline.obj pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
@@ -343,7 +350,7 @@ MSP                       = require 'mississippi'
 @_new_stream_from_transform._hints = [ 'async', ]
 
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> @_new_stream$wrap 'PT', MSP.through.obj()
+@$pass_through = -> @_new_stream$wrap '⦵', MSP.through.obj()
 
 
 #===========================================================================================================
@@ -383,7 +390,7 @@ MSP                       = require 'mississippi'
       method null
       callback()
     #.......................................................................................................
-    return @_new_stream$wrap 't', MSP.through.obj main, flush
+    return @_new_stream$wrap "≒d", MSP.through.obj main, flush
   #.........................................................................................................
   if arity is 3
     flush = ( callback ) ->
@@ -421,7 +428,8 @@ MSP                       = require 'mississippi'
       callback() unless has_error
     return null
   #.....................................................................................................
-  return @_new_stream$wrap 't', MSP.through.obj main, flush
+  x_sigil = if arity is 2 then 'ds' else 'dse'
+  return @_new_stream$wrap "≒#{x_sigil}", MSP.through.obj main, flush
 
 #===========================================================================================================
 # SENDING DATA
@@ -458,7 +466,6 @@ MSP                       = require 'mississippi'
   ### TAINT should allow to specify splitter, encoding, keep binary format ###
   matcher   = settings?[ 'matcher'  ] ? '\n'
   encoding  = settings?[ 'encoding' ] ? 'utf-8'
-  # debug '6654', settings, encoding
   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
   R         = @_new_stream$split_buffer matcher
   return R if encoding is 'buffer'
@@ -466,7 +473,7 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->
-  return @$ ( data, send ) =>
+  return @_new_stream$wrap "?#{encoding}", @$ ( data, send ) =>
     return send data unless Buffer.isBuffer data
     send data.toString encoding
 
@@ -490,7 +497,7 @@ MSP                       = require 'mississippi'
     return -1 if a < b
     return  0
   #.........................................................................................................
-  return @_new_stream$wrap 'sort', @$ ( data, send, end ) =>
+  return @_new_stream$wrap '∑ sort', @$ ( data, send, end ) =>
     collector.push data if data?
     if end?
       TIMSORT.sort collector, sorter
@@ -709,7 +716,7 @@ MSP                       = require 'mississippi'
 @$collect = ( on_end = null ) ->
   collector = []
   #.........................................................................................................
-  return @$ ( data, send, end ) ->
+  return @_new_stream$wrap "⚞", @$ ( data, send, end ) ->
     collector.push data if data?
     if end?
       send collector
@@ -719,7 +726,7 @@ MSP                       = require 'mississippi'
 @$spread = ( settings ) ->
   indexed   = settings?[ 'indexed'  ] ? no
   # end       = settings?[ 'end'      ] ? no
-  return @$ ( data, send ) =>
+  return @_new_stream$wrap "⚟", @$ ( data, send ) =>
     unless type = ( CND.type_of data ) is 'list'
       return send.error new Error "expected a list, got a #{rpr type}"
     for value, idx in data
