@@ -41,52 +41,96 @@ MSP                       = require 'mississippi'
 
 ###
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream$read_from_file = ( P ... )   ->
-  R = ( require 'fs' ).createReadStream  P...
-  return @_new_stream$wrap "✇⏵", R
+@_new_stream$read_from_file = ( path, settings )   ->
+  R = ( require 'fs' ).createReadStream path, settings
+  return @_rpr "*🖹 △", "FS read", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream$write_to_file = ( P ... )   ->
-  R = ( require 'fs' ).createWriteStream P...
-  return @_new_stream$wrap "✇⏺", R
+@_new_stream$write_to_file = ( path, settings )   ->
+  R = ( require 'fs' ).createWriteStream path, settings
+  return @_rpr "*🖹 ▼", "FS write", ( rpr path ), R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$append_to_file = ( path, settings )   ->
+  settings[ 'flags' ] = ( settings[ 'flags' ] ? '' ) + 'a'
+  R = ( require 'fs' ).createWriteStream path, settings
+  return @_rpr "*🖹 ⏬", "FS append", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$split_buffer = ( matcher ) ->
   R = ( require 'binary-split' ) matcher
-  return @_new_stream$wrap "✀ #{rpr matcher}", R
+  return @_rpr "*✀", "split", ( rpr matcher ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$throttle_bytes = ( bytes_per_second ) ->
   R = new ( require 'throttle' ) bytes_per_second
-  return @_new_stream$wrap "⏳ #{bytes_per_second} B/s", R
+  return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
+
+# #-----------------------------------------------------------------------------------------------------------
+# @_new_stream$wrap = ( sigil, stream ) ->
+#   throw new Error "***"
+#   ###
+#   T   through
+#   PT  pass through
+#   PL  pipeline (?)
+#   Fs  file system
+#     FsR  file read
+#     FsW  file write
+#   //\n// split
+#   SI  stdin
+#   SO  stdout
+#   SE  stderr
+#   ⏏⌘⏚⏫⏬⏭⏮⏯⏳⏴⏵⏶⏷⏸⏹⏺📖💻🖨✇✀
+#   ⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟
+#   ∑⎶〈〉《》【】
+#   🔵🔿🕀🗟🛈🖹
+#   ▲△▴▵▶▷▸▹►▼▽▾▿◀◁◂◃⯅⯆⯇⯈
+#   ▵▼
+#   ↔
+#   ↹  leftwards arrow to bar over rightwards arrow to bar Unicode code point: U+21B9
+#   ⇄  rightwards arrow over leftwards arrow Unicode code point: U+21C4
+#   ⇆  leftwards arrow over rightwards arrow Unicode code point: U+21C6
+#   ⇋  leftwards harpoon over rightwards harpoon Unicode code point: U+21CB
+#   ⇌  rightwards harpoon over leftwards harpoon Unicode code point: U+21CC
+
+#   ###
+#   r         = CND.lime.bind CND
+#   g         = CND.grey.bind CND
+#   if ( _inspect = stream.inspect )?
+#     inspect = -> ( r sigil ) + ( g " {" ) + _inspect() + ( g "}" ) + ( r() )
+#   else
+#     inspect = -> ( r sigil )                           #+ ( g "" )
+#   stream.inspect = inspect
+#   return stream
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream$wrap = ( sigil, stream ) ->
-  ###
-  T   through
-  PT  pass through
-  PL  pipeline (?)
-  Fs  file system
-    FsR  file read
-    FsW  file write
-  //\n// split
-  SI  stdin
-  SO  stdout
-  SE  stderr
-  ⏏⌘⏚⏫⏬⏭⏮⏯⏳⏴⏵⏶⏷⏸⏹⏺📖💻🖨✇✀
-  ⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟
-  ∑⎶〈〉《》【】
-  🔵🔿🕀🗟🛈
-  ###
-  r = CND.lime.bind CND
-  g = CND.grey.bind CND
-  if ( _inspect = stream.inspect )?
-    if CND.isa_function sigil then  inspect = -> ( r sigil() ) + ( g " [" ) + _inspect() + ( g "]," )
-    else                            inspect = -> ( r sigil   ) + ( g " [" ) + _inspect() + ( g "]," )
-  else
-    if CND.isa_function sigil then  inspect = -> ( r sigil() )                           + ( g "," )
-    else                            inspect = -> ( r sigil   )                           + ( g "," )
-  stream.inspect = inspect
+@_rpr = ( symbol, name, extra, stream ) ->
+  throw new Error "expected 4 arguments, got #{arity}" unless ( arity = arguments.length ) is 4
+  return @_rprx '(', symbol, name, extra, ')', stream
+
+#-----------------------------------------------------------------------------------------------------------
+@_rprx = ( start, symbol, name, extra, stop, stream ) ->
+  throw new Error "expected 6 arguments, got #{arity}" unless ( arity = arguments.length ) is 6
+  _symbols    = CND.yellow
+  gl          = CND.gold
+  gy          = CND.grey
+  _brackets   = CND.white
+  _inspect    = stream.inspect
+  show_names  = no
+  parts       = []
+  parts.push _brackets start
+  parts.push ' '
+  parts.push _symbols symbol  if symbol?
+  parts.push ' '              if symbol?
+  parts.push gy name          if show_names
+  parts.push ' '              if show_names
+  parts.push extra            if extra?
+  parts.push ' '              if extra?
+  parts.push _inspect()       if _inspect?
+  parts.push ' '              if _inspect?
+  parts.push _brackets stop
+  # parts.push gy ","
+  stream.inspect = -> parts.join ''
   return stream
 
 
@@ -192,7 +236,7 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream doesn't accept 'seed', got #{rpr seed}" if seed?
   throw new Error "_new_stream doesn't accept 'hints', got #{rpr hints}" if hints?
   throw new Error "_new_stream doesn't accept 'settings', got #{rpr settings}" if settings?
-  return @_new_stream$wrap 'P', MSP.through.obj()
+  return @_rpr "#", "plain", null, MSP.through.obj()
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
@@ -201,7 +245,7 @@ MSP                       = require 'mississippi'
     ( @$ ( data, send ) => send x )
     ( @new_stream 'write', path: '/dev/null' )
     ]
-  return @new_stream { pipeline, }
+  return @_rpr "⏚", "devnull", null, @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path = ( path, hints, settings ) ->
@@ -244,22 +288,31 @@ MSP                       = require 'mississippi'
         throw new Error "hints contain multiple encodings: #{rpr hints}" if encoding?
         encoding = key
   #.........................................................................................................
-  throw new Error "redefine with fewer pipelines"
   if role is 'read'
     if use_line_mode
-      pipeline.push @_new_stream$read_from_file path, settings
-      pipeline.push @$split { encoding, }
+      return @_rpr "🖹 △", "file-read", null, @new_stream pipeline: [
+        ( @_new_stream$read_from_file path, settings )
+        ( @$split { encoding, }                      )
+        ]
     else
       settings[ 'encoding' ]?= if encoding is 'buffer' then null else encoding
-      pipeline.push @_new_stream$read_from_file path, settings
+      return @_rpr "🖹 △", "file-read", null, @_new_stream$read_from_file path, settings
   #.........................................................................................................
-  else # role is write or append
-    if role is 'append' then settings[ 'flags' ] = 'a'
-    settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
-    pipeline.push @$as_line() if use_line_mode
-    pipeline.push @$bridge @_new_stream$write_to_file path, settings
+  settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
   #.........................................................................................................
-  return @new_stream { pipeline, }
+  if role is 'append'
+    R = @$bridge @_new_stream$append_to_file path, settings
+    if use_line_mode
+      return @_rpr "🖹 ⏬", "file-append", null, @new_stream pipeline: [ @$as_line(), R, ]
+    return @_rpr "🖹 ⏬", "file-append", null, R
+  #.........................................................................................................
+  ### role is write ###
+  R = @$bridge @_new_stream$write_to_file path, settings
+  if use_line_mode
+    return @_rpr "🖹 ▼", "file-write", null, @new_stream pipeline: [ @$as_line(), R, ]
+  return @_rpr "🖹 ▼", "file-write", null, R
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path._hints = [
@@ -286,10 +339,8 @@ MSP                       = require 'mississippi'
       else
         pipeline.unshift @$pass_through()
   #.........................................................................................................
-  inspect = ->
-    inner = ( insp p for p in pipeline ).join ' '
-    return "(≋ #{inner})"
-  return @_new_stream$wrap inspect, MSP.pipeline.obj pipeline...
+  inner = ( rpr p for p in pipeline ).join ' '
+  return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -350,7 +401,7 @@ MSP                       = require 'mississippi'
 @_new_stream_from_transform._hints = [ 'async', ]
 
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> @_new_stream$wrap '⦵', MSP.through.obj()
+@$pass_through = -> @_rpr "⦵", "pass-through", null, MSP.through.obj()
 
 
 #===========================================================================================================
@@ -390,7 +441,7 @@ MSP                       = require 'mississippi'
       method null
       callback()
     #.......................................................................................................
-    return @_new_stream$wrap "≒d", MSP.through.obj main, flush
+    return @_rpr "+", "$d", null, MSP.through.obj main, flush
   #.........................................................................................................
   if arity is 3
     flush = ( callback ) ->
@@ -428,8 +479,8 @@ MSP                       = require 'mississippi'
       callback() unless has_error
     return null
   #.....................................................................................................
-  x_sigil = if arity is 2 then 'ds' else 'dse'
-  return @_new_stream$wrap "≒#{x_sigil}", MSP.through.obj main, flush
+  return @_rpr "⧺", "$ds",  null, MSP.through.obj main, flush if arity is 2
+  return @_rpr "⧻", "$dse", null, MSP.through.obj main, flush
 
 #===========================================================================================================
 # SENDING DATA
@@ -468,12 +519,12 @@ MSP                       = require 'mississippi'
   encoding  = settings?[ 'encoding' ] ? 'utf-8'
   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
   R         = @_new_stream$split_buffer matcher
-  return R if encoding is 'buffer'
-  return @new_stream pipeline: [ R, ( @$decode encoding ), ]
+  return @_rpr "✀", "split", null, R if encoding is 'buffer'
+  return @_rpr "✀", "split", null, @new_stream pipeline: [ R, ( @$decode encoding ), ]
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->
-  return @_new_stream$wrap "?#{encoding}", @$ ( data, send ) =>
+  return @_rpr "?", "decode", encoding, @$ ( data, send ) =>
     return send data unless Buffer.isBuffer data
     send data.toString encoding
 
@@ -497,7 +548,7 @@ MSP                       = require 'mississippi'
     return -1 if a < b
     return  0
   #.........................................................................................................
-  return @_new_stream$wrap '∑ sort', @$ ( data, send, end ) =>
+  return @_rpr "⮃", "sort", null, @$ ( data, send, end ) =>
     collector.push data if data?
     if end?
       TIMSORT.sort collector, sorter
@@ -716,7 +767,7 @@ MSP                       = require 'mississippi'
 @$collect = ( on_end = null ) ->
   collector = []
   #.........................................................................................................
-  return @_new_stream$wrap "⚞", @$ ( data, send, end ) ->
+  return @_rpr "⚞", "collect", null, @$ ( data, send, end ) ->
     collector.push data if data?
     if end?
       send collector
@@ -726,7 +777,7 @@ MSP                       = require 'mississippi'
 @$spread = ( settings ) ->
   indexed   = settings?[ 'indexed'  ] ? no
   # end       = settings?[ 'end'      ] ? no
-  return @_new_stream$wrap "⚟", @$ ( data, send ) =>
+  return @_rpr "⚟", "spread", null, @$ ( data, send ) =>
     unless type = ( CND.type_of data ) is 'list'
       return send.error new Error "expected a list, got a #{rpr type}"
     for value, idx in data
@@ -909,7 +960,7 @@ pluck = ( x, key ) ->
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
   # return @new_stream pipeline: [ @$pass_through(), stream, ]
-  return @_new_stream$wrap 'bridge', @$ ( data, send, end ) =>
+  return @_rpr '↷', 'bridge', ( rpr stream ), @$ ( data, send, end ) =>
     if data?
       stream.write data
       send data

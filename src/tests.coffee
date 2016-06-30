@@ -1602,20 +1602,34 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) stream sigils" ] = ( T, done ) ->
-  help '001', D.new_stream()
-  help '002', D.new_stream file: '/tmp/foo'
-  help '003', D.new_stream 'lines', file: '/tmp/foo'
-  help '004', D.new_stream 'write', file: '/tmp/foo'
-  help '005', D.new_stream 'write', 'lines', file: '/tmp/foo'
-  help '006', D.new_stream pipeline: [ $ ( data ) => null ]
-  help '007', $ ( data ) => null
-  help '008', D.$split matcher: 'x'
-  help '009', D.$throttle_bytes 100
-  help '010', D.$sort()
-  help '011', D.$show()
-  help '012', D.$collect()
-  help '013', D.$spread()
-  help '014', D.new_stream pipeline: [
+  help ( CND.grey '001' ), $ ( d ) =>
+  help ( CND.grey '002' ), $ ( d, s ) =>
+  help ( CND.grey '003' ), $ ( d, s, e ) =>
+  help()
+  help ( CND.grey '004' ), D.new_stream()
+  help ( CND.grey '005' ), D.new_stream file: '/tmp/foo'
+  help ( CND.grey '006' ), D.new_stream 'lines', file: '/tmp/foo'
+  help()
+  help ( CND.grey '007' ), D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
+  help ( CND.grey '008' ), D.$bridge D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
+  help ( CND.grey '009' ), D.new_stream 'write', file: '/tmp/foo'
+  help ( CND.grey '010' ), D.new_stream 'write', 'lines', file: '/tmp/foo'
+  help()
+  help ( CND.grey '011' ), D.new_stream 'devnull'
+  help ( CND.grey '011' ), D.new_stream pipeline: [ ( D.new_stream file: '/tmp/foo' ), ( D.new_stream 'devnull' ), ]
+  help()
+  help ( CND.grey '012' ), D._new_stream$split_buffer '\n'
+  help ( CND.grey '013' ), D.$split matcher: '\n', encoding: 'buffer'
+  help ( CND.grey '014' ), D.$split matcher: '\n'
+  help()
+  help ( CND.grey '015' ), D.new_stream pipeline: [ $ ( data ) => null ]
+  help ( CND.grey '016' ), $ ( data ) => null
+  help ( CND.grey '017' ), D.$throttle_bytes 100
+  help ( CND.grey '018' ), D.$sort()
+  help ( CND.grey '019' ), D.$show()
+  help ( CND.grey '020' ), D.$collect()
+  help ( CND.grey '021' ), D.$spread()
+  help ( CND.grey '022' ), D.new_stream pipeline: [
     ( D.new_stream 'read', 'lines', file: '/tmp/input-foo' )
     ( D.$sort() )
     ( D.new_stream 'write', 'lines', file: '/tmp/output-foo' )
