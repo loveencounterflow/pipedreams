@@ -56,19 +56,21 @@ urge                      = CND.get_logger 'urge',      badge
   use_names         =       settings?[ 'names'      ] ? null
   comment_pattern   =       settings?[ 'comments'   ] ? '#'
   skip_comments     = not ( comment_pattern is no )
+  comment_pattern   = null if comment_pattern is no
   #.........................................................................................................
   $trim = => @$ ( line, send ) => send @$split_tsv._trim line
   #.........................................................................................................
   ### TAINT may want to specify empty lines, fields ###
   unless skip_empty_lines in [ true, false, ]
-    throw new Error "### MEH ###"
+    throw new Error "### MEH 1 ###"
   #.........................................................................................................
   switch type = CND.type_of comment_pattern
-    # when 'null', 'undefined'  then comments =  no; is_comment = ( text ) -> no
+    when 'null', 'undefined'  then comments =  no; is_comment = ( text ) -> no
+    # when yes                  then comments = yes; is_comment = ( text ) -> text.startsWith comment_pattern
     when 'text'               then comments = yes; is_comment = ( text ) -> text.startsWith comment_pattern
     when 'regex'              then comments = yes; is_comment = ( text ) -> comment_pattern.test text
     when 'function'           then comments = yes; is_comment = ( text ) -> not not comment_pattern text
-    else throw new Error "### MEH ###"
+    else throw new Error "expected `null`, a text, a RegEx or a function for 'comment', got a #{type}"
   #.........................................................................................................
   if skip_comments
     #.......................................................................................................
@@ -123,7 +125,7 @@ urge                      = CND.get_logger 'urge',      badge
       return R
   #.........................................................................................................
   # unless ( type_of_splitter = CND.type_of splitter ) in [ 'text', 'regex', 'function', ]
-  #   throw new Error "### MEH ###"
+  #   throw new Error "### MEH 3 ###"
   $split_line = =>
     return @$ ( line, send ) =>
       send line.split splitter
