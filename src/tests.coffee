@@ -17,8 +17,8 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 D                         = require './main'
 { $, $async, }            = D
-# $split_tsv                = require './transform-split-tsv'
-require './transform-split-tsv'
+#...........................................................................................................
+require './plugin-split-tsv'
 
 #...........................................................................................................
 ### TAINT for the time being, we create one global folder and keep it beyond process termination; this
