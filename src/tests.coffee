@@ -257,7 +257,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       return null
   #.........................................................................................................
   input
-    .pipe $split_tsv first: 'split', names: 'inline'
+    .pipe D.$split_tsv names: 'inline'
     .pipe sink_1
     .pipe $verify()
     .pipe sink_2
@@ -1177,8 +1177,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 @[ "(v4) $split_tsv (1)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe $split_tsv()
-    # .pipe $ ( data ) -> help JSON.stringify data if data?
+    .pipe D.$split_tsv()
+    .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
     .pipe D.$on_end => done()
@@ -1192,7 +1192,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     ["u-cjk/9e22","鸢","⿱弋鸟"]
     ["u-cjk/9e23","鸣","⿰口鸟"]
     ["u-cjk-xa/380b","㠋","(⿱山品亏)"]
-    ["㠋","(⿱山口咢) # first field is empty"]
+    ["","㠋","(⿱山口咢) # first field is empty"]
     ]
   text = []
   text.push "a\ttext"
@@ -1213,44 +1213,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $split_tsv (2)" ] = ( T, done ) ->
-  input = D.new_stream()
-  input
-    .pipe $split_tsv first: 'split'
-    # .pipe $ ( data ) -> help JSON.stringify data if data?
-    .pipe D.$collect()
-    .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_end => done()
-  matcher = [
-    ["u-cjk/9e1f","鸟","⿴乌丶"]
-    ["u-cjk/9e20","鸠","⿰九鸟"]
-    ["u-cjk/9e21","鸡","⿰又鸟 # this comment remains in output"]
-    ["u-cjk/9e22","鸢","⿱弋鸟"]
-    ["u-cjk-xa/380b","㠋","(⿱山品亏)"]
-    ["","㠋","(⿱山口咢) # first field is empty"]
-    ["u-cjk/9e23","鸣","⿰口鸟"]
-    ]
-  text = []
-  text.push "# This is a comment"
-  text.push "\t\t# two empty fields, comment"
-  text.push "u-cjk/9e1f\t鸟\t⿴乌丶"
-  text.push " "
-  text.push "u-cjk/9e20\t鸠\t⿰九鸟"
-  text.push "u-cjk/9e21\t鸡\t⿰又鸟 # this comment remains in output"
-  text.push ""
-  text.push "u-cjk/9e22\t鸢\t⿱弋鸟\t# this one will be removed"
-  text.push "u-cjk-xa/380b\t㠋\t(⿱山品亏)"
-  text.push "\t㠋\t(⿱山口咢) # first field is empty"
-  text.push "u-cjk/9e23\t鸣\t⿰口鸟"
-  D.send input, text.join '\n'
-  D.end input
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $split_tsv (3)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe $split_tsv first: 'split', names: [ 'fncr', 'glyph', 'formula', ]
+    .pipe D.$split_tsv names: [ 'fncr', 'glyph', 'formula', ]
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
@@ -1284,7 +1250,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 @[ "(v4) $split_tsv (4)" ] = ( T, done ) ->
   input = D.new_stream()
   input
-    .pipe $split_tsv first: 'split', names: 'inline'
+    .pipe D.$split_tsv names: 'inline'
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
@@ -1369,7 +1335,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   input
     # .pipe D.$split()
-    .pipe $split_tsv first: 'split', names: 'inline'
+    .pipe D.$split_tsv names: 'inline'
     .pipe $is_valid_fncr()
     .pipe $verify()
     # .pipe $ ( data ) -> help JSON.stringify data if data?
@@ -1390,7 +1356,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     ]
   input = MSP.pipeline.obj pipeline...
   input
-    # .pipe $split_tsv first: 'split', names: 'inline'
+    # .pipe D.$split_tsv first: 'split', names: 'inline'
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$show()
     # .pipe D.$collect()
@@ -1627,8 +1593,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     result_A  = result_A.replace ends_pattern, ''
     result_A  = result_A.replace  mid_pattern, '\t'
     result_B  = D.$split_tsv._trim probe
-    debug '8702', JSON.stringify [ probe, result_A, ]
-    debug '8702', JSON.stringify [ probe, result_B, ]
+    # debug '8702', JSON.stringify [ probe, result_A, ]
+    # debug '8702', JSON.stringify [ probe, result_B, ]
     debug()
     T.eq result_A, matcher
     T.eq result_B, matcher
@@ -1666,7 +1632,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   help ( CND.grey '019' ), D.$show()
   help ( CND.grey '020' ), D.$collect()
   help ( CND.grey '021' ), D.$spread()
-  help ( CND.grey '021' ), $split_tsv()
+  help ( CND.grey '021' ), D.$split_tsv()
   help ( CND.grey '022' ), D.new_stream pipeline: [
     ( D.new_stream 'read', 'lines', file: '/tmp/input-foo' )
     ( D.$sort() )
@@ -1708,54 +1674,54 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) fail to read when thru stream comes before read stream"
-    # # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) file stream events (1)"
-    # "(v4) file stream events (2)"
-    # "(v4) transforms below output receive data events (1)"
-    # "(v4) transforms below output receive data events (2)"
-    # "(v4) _new_stream_from_url"
-    # "(v4) new_stream README example (1)"
-    # "(v4) new_stream README example (2)"
-    # "(v4) new_stream README example (3)"
-    # "(v4) _new_stream_from_path with encodings"
-    # "(v4) _new_stream_from_path (raw)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_path (1)"
-    # "(v4) _new_stream_from_path (4)"
-    # "(v4) _new_stream_from_path (3)"
-    # "(v4) stream sigils"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $split_tsv (2)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) read TSV file (1)"
+    # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) fail to read when thru stream comes before read stream"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) file stream events (1)"
+    "(v4) file stream events (2)"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) _new_stream_from_url"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_path (4)"
+    "(v4) _new_stream_from_path (3)"
+    "(v4) stream sigils"
+    "(v4) $split_tsv (1)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) read TSV file (1)"
     "(v4) TSV whitespace trimming"
+    "(v4) $split_tsv (1)"
     ]
   @_prune()
   @_main()

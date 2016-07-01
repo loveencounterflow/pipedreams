@@ -804,33 +804,29 @@ see the binary-split project page).
 
 ## @$split_tsv = ( settings ) ->
 
-A fairly complex stream transform to help in reading files with data in
+A stream transform to help in reading files with data in
 [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
-format. It basically accepts a stream of buffers or text, splits it into
-lines, and splits each line into fields. In the process it can also skip empty
-and blank lines, omit comments, and name fields.
+format. It accepts a stream of buffers or text, splits it into
+lines, and splits each line into fields (using the tab character, U+0009). In the process
+it can also skip empty and blank lines, omit comments, and name fields.
 
-
-+ `comments` defines how to recognize a comment. If it is a string, lines (or fields, when `first:
-  'split'` has been specified) that start with the specified text are left out of the results.
-  It is also possible to use a RegEx or a custom function to recognize comments.
-
-+ `trim`: `false` for no trimming, `true` for trimming both ends of each line (with `first: 'trim'`)
-  or each field (with `first: 'split'`).
-
-+ `first`: either `'trim'` or `'split'`. No effect with `trim: false`; otherwise, indicates whether
-  first the line is trimmed (which means that leading and trailing tabs are also removed), or whether
-  we should first split into lines, and then trim each field individually. The `first: 'trim'` method—the
-  default—is faster, but it may conflate empty fields if there are any. The `first: 'split'` method
-  will first split each line using the `splitter` setting, and then trim all the fields individually.
-  This has the side-effect that comments (as field values on their own, not when tacked unto a non-comment
-  value) are reliably recognized and sorted out (when `comments` is set to a sensible value).
-
-+ `splitter` defines one or more characters to split each line into fields.
++ `comments` defines how to recognize a comment. If it is a string, lines and individual fields that start
+  with the specified text are left out of the results. It is also possible to use a RegEx or a custom
+  function to recognize comments.
 
 + When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
   left in the stream.
 
+* If `settings[ 'names' ]` is set to `'inline'`, field names are gleaned from the first non-discarded line
+  of input; if it is a list of `n` elements, it defines labels for the first `n` columns of data. Columns
+  with no defined name will be labelled as `'field-0'`, `'field-5'` and so on, depending on the zero-based
+  index of the respective column. Where naming of fields is used, each TSV data line will be turned into a
+  JS object with the appropriately named members, such as `{ name: 'John', age: 32, 'field-2': 'lawyer', }`;
+  where no naming is used, lists of values are sent into the stream, such as `[ 'John', 32, 'lawyer', ]`.
+
+Observe that `$split_tsv` has been (experimentally) factored out into a plugin of sorts; to use it, be sure
+to `require 'pipedreams/lib/plugin-split-tsv'` after your `D = require 'pipedreams'` statement. This import
+has no interesting return value, but will provide `D.$split_tsv` for you to use.
 
 ## @$spread
 ## @$stop_time

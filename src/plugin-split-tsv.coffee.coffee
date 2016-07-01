@@ -15,84 +15,84 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 # echo                      = CND.echo.bind CND
 
-### TAINT make `first: split` the default (always trim all fields) ###
-### TAINT remove or rename `first` option; too obscure, too complex ###
-### TAINT sanitize whitespace right after line read w/ RegEx, no need to iterate over fields ###
 
 #-----------------------------------------------------------------------------------------------------------
 @$split_tsv = ( settings ) ->
-  ### A fairly complex stream transform to help in reading files with data in
-  [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
-  format.
-
-  * `comments` defines how to recognize a comment. If it is a string, lines (or fields, when `first:
-    'split'` has been specified) that start with the specified text are left out of the results.
-    It is also possible to use a RegEx or a custom function to recognize comments.
-
-  * `trim`: `false` for no trimming, `true` for trimming both ends of each line (with `first: 'trim'`)
-    or each field (with `first: 'split'`).
-
-  * `first`: either `'trim'` or `'split'`. No effect with `trim: false`; otherwise, indicates whether
-    first the line is trimmed (which means that leading and trailing tabs are also removed), or whether
-    we should first split into lines, and then trim each field individually. The `first: 'trim'` method—the
-    default—is faster, but it may conflate empty fields if there are any. The `first: 'split'` method
-    will first split each line using the `splitter` setting, and then trim all the fields individually.
-    This has the side-effect that comments (as field values on their own, not when tacked unto a non-comment
-    value) are reliably recognized and sorted out (when `comments` is set to a sensible value).
-
-  * `splitter` defines one or more characters to split each line into fields.
-
-  * When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
-    left in the stream.
   ###
-  throw new Error "setting 'first' deprecated" if settings[ 'first' ]?
-  # throw new Error "setting 'trim' deprecated" if settings[ 'trim' ]?
-  first           =       settings?[ 'first'      ] ? 'trim' # or 'split'
-  trim            =       settings?[ 'trim'       ] ? yes
-  splitter        =       settings?[ 'splitter'   ] ? '\t'
-  skip_empty      = not ( settings?[ 'empty'      ] ? no )
-  comment_pattern =       settings?[ 'comments'   ] ? '#'
-  use_names       =       settings?[ 'names'      ] ? null
+
+  A stream transform to help in reading files with data in
+  [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
+  format. It accepts a stream of buffers or text, splits it into
+  lines, and splits each line into fields (using the tab character, U+0009). In the process
+  it can also skip empty and blank lines, omit comments, and name fields.
+
+  + `comments` defines how to recognize a comment. If it is a string, lines and individual fields that start
+    with the specified text are left out of the results. It is also possible to use a RegEx or a custom
+    function to recognize comments.
+
+  + When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
+    left in the stream.
+
+  * If `settings[ 'names' ]` is set to `'inline'`, field names are gleaned from the first non-discarded line
+    of input; if it is a list of `n` elements, it defines labels for the first `n` columns of data. Columns
+    with no defined name will be labelled as `'field-0'`, `'field-5'` and so on, depending on the zero-based
+    index of the respective column. Where naming of fields is used, each TSV data line will be turned into a
+    JS object with the appropriately named members, such as `{ name: 'John', age: 32, 'field-2': 'lawyer', }`;
+    where no naming is used, lists of values are sent into the stream, such as `[ 'John', 32, 'lawyer', ]`.
+
+  Observe that `$split_tsv` has been (experimentally) factored out into a plugin of sorts; to use it, be sure
+  to `require 'pipedreams/lib/plugin-split-tsv'` after your `D = require 'pipedreams'` statement. This import
+  has no interesting return value, but will provide `D.$split_tsv` for you to use.
+
+  ###
+  ### TAINT temporary clause ###
+  if settings?
+    throw new Error "setting 'first' deprecated" if settings[ 'first' ]?
+    throw new Error "setting 'trim' deprecated" if settings[ 'trim' ]?
+    throw new Error "setting 'splitter' not yet supported" if settings[ 'splitter' ]?
+  # splitter        =       settings?[ 'splitter'   ] ? '\t'
+  splitter          =       '\t'
+  skip_empty_lines  = not ( settings?[ 'empty'      ] ? no )
+  use_names         =       settings?[ 'names'      ] ? null
+  comment_pattern   =       settings?[ 'comments'   ] ? '#'
+  skip_comments     = not ( comment_pattern is no )
   #.........................................................................................................
-  if trim
-    $trim = => @$ ( fields, send ) =>
-      fields[ idx ] = field.trim() for field, idx in fields
-      send fields
+  $trim = => @$ ( line, send ) => send @$split_tsv._trim line
   #.........................................................................................................
   ### TAINT may want to specify empty lines, fields ###
-  unless skip_empty in [ true, false, ]
+  unless skip_empty_lines in [ true, false, ]
     throw new Error "### MEH ###"
   #.........................................................................................................
   switch type = CND.type_of comment_pattern
-    when 'null', 'undefined'  then comments =  no; is_comment = ( text ) -> no
+    # when 'null', 'undefined'  then comments =  no; is_comment = ( text ) -> no
     when 'text'               then comments = yes; is_comment = ( text ) -> text.startsWith comment_pattern
     when 'regex'              then comments = yes; is_comment = ( text ) -> comment_pattern.test text
     when 'function'           then comments = yes; is_comment = ( text ) -> not not comment_pattern text
     else throw new Error "### MEH ###"
   #.........................................................................................................
-  if first is 'trim'
-    $skip_comments = => @$ ( line, send ) =>
+  if skip_comments
+    #.......................................................................................................
+    $skip_line_comments = => @$ ( line, send ) =>
       send line unless is_comment line
-  else
-    $skip_comments = => @$ ( fields, send ) =>
+    #.......................................................................................................
+    $skip_field_comments = => @$ ( fields, send ) =>
       for field, idx in fields
         # urge '7765', idx, ( rpr field ), is_comment field
         continue unless is_comment field
         fields.length = idx
         break
-      send fields unless skip_empty and fields.length is 0
+      send fields unless skip_empty_lines and fields.length is 0
   #.........................................................................................................
-  if skip_empty
+  if skip_empty_lines
     $skip_empty_lines = => @$ ( line, send ) => send line if line.length > 0
     $skip_empty_lines = @_rpr 'skip-empty-lines', 'skip-empty-lines', null, $skip_empty_lines
-    if first is 'split'
-      $skip_empty_fields = => @$ ( fields, send ) =>
-        for field in fields
-          continue if field.length is 0
-          send fields
-          break
-        return null
-      $skip_empty_fields = @_rpr 'skip-empty-fields', 'skip-empty-fields', null, $skip_empty_fields
+    $skip_empty_fields = => @$ ( fields, send ) =>
+      for field in fields
+        continue if field.length is 0
+        send fields
+        break
+      return null
+    $skip_empty_fields = @_rpr 'skip-empty-fields', 'skip-empty-fields', null, $skip_empty_fields
   #.........................................................................................................
   use_names = null if use_names is no
   if use_names?
@@ -122,23 +122,21 @@ urge                      = CND.get_logger 'urge',      badge
         R[ names[ idx ] ? "field-#{idx}" ] = field
       return R
   #.........................................................................................................
-  unless ( type_of_splitter = CND.type_of splitter ) in [ 'text', 'regex', 'function', ]
-    throw new Error "### MEH ###"
-  throw new Error "splitter as function no yet implemented" if type_of_splitter is 'function'
+  # unless ( type_of_splitter = CND.type_of splitter ) in [ 'text', 'regex', 'function', ]
+  #   throw new Error "### MEH ###"
   $split_line = =>
     return @$ ( line, send ) =>
       send line.split splitter
   #.........................................................................................................
   pipeline = []
   pipeline.push @$split()
-  pipeline.push $trim()               if first is 'trim'
-  pipeline.push $skip_empty_lines()   if skip_empty
-  pipeline.push $skip_comments()      if first is 'trim' and comments
+  pipeline.push $trim()
+  pipeline.push $skip_empty_lines()     if skip_empty_lines
+  pipeline.push $skip_line_comments()   if skip_comments
   pipeline.push $split_line()
-  pipeline.push $trim()               if first is 'split'
-  pipeline.push $skip_comments()      if first is 'split' and comments
-  pipeline.push $skip_empty_fields()  if first is 'split' and skip_empty
-  pipeline.push $name_fields()        if use_names
+  pipeline.push $skip_field_comments()  if skip_comments
+  pipeline.push $skip_empty_fields()    if skip_empty_lines
+  pipeline.push $name_fields()          if use_names
   # pipeline.push @$ ( data ) => debug '3', JSON.stringify data if data?
   #.........................................................................................................
   return @_rpr "split-tsv", "split-tsv", null, @new_stream { pipeline, }
@@ -169,7 +167,6 @@ do ( self = @ ) ->
   D = require './main'
   for name, value of self
     D[ name ] = value
-# module.exports = @$split_tsv.bind require './main'
 
 
 
