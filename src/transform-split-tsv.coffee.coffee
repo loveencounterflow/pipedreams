@@ -45,7 +45,8 @@ urge                      = CND.get_logger 'urge',      badge
   * When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
     left in the stream.
   ###
-  # throw new Error "setting 'trim' deprecated" if settings[ 'first' ]?
+  throw new Error "setting 'first' deprecated" if settings[ 'first' ]?
+  # throw new Error "setting 'trim' deprecated" if settings[ 'trim' ]?
   first           =       settings?[ 'first'      ] ? 'trim' # or 'split'
   trim            =       settings?[ 'trim'       ] ? yes
   splitter        =       settings?[ 'splitter'   ] ? '\t'
@@ -53,21 +54,10 @@ urge                      = CND.get_logger 'urge',      badge
   comment_pattern =       settings?[ 'comments'   ] ? '#'
   use_names       =       settings?[ 'names'      ] ? null
   #.........................................................................................................
-  unless first in [ 'trim', 'split', ]
-    throw new Error "### MEH ###"
-  #.........................................................................................................
-  ### TAINT may want to allow custom function to do trimming ###
-  switch trim
-    when yes
-      if first is 'trim'
-        $trim = => @$ ( line, send ) =>
-          send line.trim()
-      else
-        $trim = => @$ ( fields, send ) =>
-          fields[ idx ] = field.trim() for field, idx in fields
-          send fields
-    when no then null
-    else throw new Error "### MEH ###"
+  if trim
+    $trim = => @$ ( fields, send ) =>
+      fields[ idx ] = field.trim() for field, idx in fields
+      send fields
   #.........................................................................................................
   ### TAINT may want to specify empty lines, fields ###
   unless skip_empty in [ true, false, ]
@@ -153,9 +143,35 @@ urge                      = CND.get_logger 'urge',      badge
   #.........................................................................................................
   return @_rpr "split-tsv", "split-tsv", null, @new_stream { pipeline, }
 
+#-----------------------------------------------------------------------------------------------------------
+@$split_tsv._trim = ( line ) =>
+  R = line
+  R = R.replace @$split_tsv._ends_pattern, ''
+  R = R.replace @$split_tsv._mid_pattern,  '\t'
+  return R
 
-############################################################################################################
-module.exports = @$split_tsv.bind require './main'
+#-----------------------------------------------------------------------------------------------------------
+@$split_tsv._ends_pattern = ///
+    (?: ^ [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]+   )
+    |
+    (?:   [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]+ $ )
+    ///g
+
+#-----------------------------------------------------------------------------------------------------------
+@$split_tsv._mid_pattern = ///
+    [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]*
+    \t
+    [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]*
+    ///g
+
+#-----------------------------------------------------------------------------------------------------------
+do ( self = @ ) ->
+  D = require './main'
+  for name, value of self
+    D[ name ] = value
+# module.exports = @$split_tsv.bind require './main'
+
+
 
 
 

@@ -17,7 +17,8 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 D                         = require './main'
 { $, $async, }            = D
-$split_tsv                = require './transform-split-tsv'
+# $split_tsv                = require './transform-split-tsv'
+require './transform-split-tsv'
 
 #...........................................................................................................
 ### TAINT for the time being, we create one global folder and keep it beyond process termination; this
@@ -1601,6 +1602,39 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "(v4) TSV whitespace trimming" ] = ( T, done ) ->
+  ends_pattern = ///
+    (?: ^ [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]+   )
+    |
+    (?:   [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]+ $ )
+    ///g
+  mid_pattern = ///
+    [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]*
+    \t
+    [\x20\f\n\r\v​\u00a0\u1680​\u180e\u2000-\u200a​\u2028\u2029\u202f\u205f​\u3000\ufeff]*
+    ///g
+  probes_and_matchers = [
+    ["helo world","helo world"]
+    ["helo\tworld","helo\tworld"]
+    ["helo\t  world","helo\tworld"]
+    ["helo\t  world ","helo\tworld"]
+    ["\u3000 helo\t　world\n\n","helo\tworld"]
+    ["\t\thelo\t　world\n\n","\t\thelo\tworld"]
+    ["\r\t\thelo   \t　world\n\n","\t\thelo\tworld"]
+    ]
+  for [ probe, matcher, ] in probes_and_matchers
+    result_A  = probe
+    result_A  = result_A.replace ends_pattern, ''
+    result_A  = result_A.replace  mid_pattern, '\t'
+    result_B  = D.$split_tsv._trim probe
+    debug '8702', JSON.stringify [ probe, result_A, ]
+    debug '8702', JSON.stringify [ probe, result_B, ]
+    debug()
+    T.eq result_A, matcher
+    T.eq result_B, matcher
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) stream sigils" ] = ( T, done ) ->
   help ( CND.grey '001' ), $ ( d ) =>
   help ( CND.grey '002' ), $ ( d, s ) =>
@@ -1716,11 +1750,12 @@ unless module.parent?
     # "(v4) _new_stream_from_path (4)"
     # "(v4) _new_stream_from_path (3)"
     # "(v4) stream sigils"
-    "(v4) $split_tsv (1)"
-    "(v4) $split_tsv (2)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) read TSV file (1)"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $split_tsv (2)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) read TSV file (1)"
+    "(v4) TSV whitespace trimming"
     ]
   @_prune()
   @_main()
