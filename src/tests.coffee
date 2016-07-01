@@ -150,9 +150,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   write_sample = ( handler ) =>
     input   = D.new_stream()
     output  = D.new_stream 'write', 'lines', path: path_1
+    D.on_finish output, handler
     input
       # .pipe $ ( line, send ) => send line + '\n'
-      .pipe D.$on_end => handler()
       .pipe output
     #.......................................................................................................
     D.send input, probe for probe in probes
@@ -183,22 +183,22 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   write_sample = ( handler ) =>
     input   = D.new_stream()
     output  = ( require 'fs' ).createWriteStream path_1
+    D.on_finish output, handler
     input
       .pipe D.$show()
       .pipe D.$as_line()
       .pipe D.$bridge output
-    D.on_finish output, handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
   #.........................................................................................................
   read_sample = ( handler ) =>
     input   = D.new_stream 'read', 'lines', path: path_1
+    D.on_finish input, handler
     input
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
-      .pipe D.$on_end => handler()
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -1624,7 +1624,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   help ( CND.grey '013' ), D.$split matcher: '\n', encoding: 'buffer'
   help ( CND.grey '014' ), D.$split matcher: '\n'
   help()
-  help ( CND.grey '015' ), D.new_stream pipeline: [ $ ( data ) => null ]
+  help ( CND.grey '015' ), D.new_stream pipeline: [ ( $ ( data ) => null ), ]
+  help ( CND.grey '015' ), D.new_stream pipeline: [ ( $ ( data ) => null ), ( $ ( data, send ) => null ), ]
   help ( CND.grey '016' ), $ ( data ) => null
   help ( CND.grey '017' ), D.$throttle_bytes 100
   help ( CND.grey '018' ), D.$sort()
@@ -1697,17 +1698,12 @@ unless module.parent?
     # "(v4) $lockstep fails on streams of unequal lengths without fallback"
     # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
     # "(v4) $batch and $spread"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $split_tsv (2)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
     # "(v4) streams as transforms and v/v (1)"
     # "(v4) streams as transforms and v/v (2)"
     # "(v4) file stream events (1)"
     # "(v4) file stream events (2)"
     # "(v4) transforms below output receive data events (1)"
     # "(v4) transforms below output receive data events (2)"
-    # "(v4) read TSV file (1)"
     # "(v4) _new_stream_from_url"
     # "(v4) new_stream README example (1)"
     # "(v4) new_stream README example (2)"
@@ -1719,7 +1715,12 @@ unless module.parent?
     # "(v4) _new_stream_from_path (1)"
     # "(v4) _new_stream_from_path (4)"
     # "(v4) _new_stream_from_path (3)"
-    "(v4) stream sigils"
+    # "(v4) stream sigils"
+    "(v4) $split_tsv (1)"
+    "(v4) $split_tsv (2)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) read TSV file (1)"
     ]
   @_prune()
   @_main()

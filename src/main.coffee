@@ -94,8 +94,8 @@ MSP                       = require 'mississippi'
   _brackets   = CND.white
   _sub        = CND.crimson
   _extra      = CND.orange
-  _inspect    = stream.inspect
-  show_subs   = no
+  sub_inspect = stream.inspect
+  show_subs   = yes
   show_names  = no
   parts       = []
   parts.push _brackets start
@@ -106,10 +106,10 @@ MSP                       = require 'mississippi'
   parts.push ' '              if show_names
   parts.push _extra extra     if extra?
   parts.push ' '              if extra?
-  parts.push _sub ' {='       if show_subs and _inspect?
-  parts.push _inspect()       if show_subs and _inspect?
-  parts.push _sub '=} '       if show_subs and _inspect?
-  # parts.push ' '              if _inspect?
+  parts.push _sub ' {='       if show_subs and sub_inspect?
+  parts.push sub_inspect()       if show_subs and sub_inspect?
+  parts.push _sub '=} '       if show_subs and sub_inspect?
+  # parts.push ' '              if sub_inspect?
   parts.push _brackets stop
   # parts.push gy ","
   stream.inspect = -> parts.join ''
@@ -509,8 +509,10 @@ MSP                       = require 'mississippi'
   encoding  = settings?[ 'encoding' ] ? 'utf-8'
   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
   R         = @_new_stream$split_buffer matcher
-  return @_rpr "✀", "split", ( rpr matcher ), R if encoding is 'buffer'
-  return @_rpr "✀", "split", ( rpr matcher ), @new_stream pipeline: [ R, ( @$decode encoding ), ]
+  extra     = rpr matcher
+  extra    += " #{encoding}" unless encoding is 'buffer'
+  return @_rpr "✀", "split", extra, R if encoding is 'buffer'
+  return @_rpr "✀", "split", extra, @new_stream pipeline: [ R, ( @$decode encoding ), ]
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->

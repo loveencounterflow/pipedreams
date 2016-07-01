@@ -15,6 +15,9 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 # echo                      = CND.echo.bind CND
 
+### TAINT make `first: split` the default (always trim all fields) ###
+### TAINT remove or rename `first` option; too obscure, too complex ###
+### TAINT sanitize whitespace right after line read w/ RegEx, no need to iterate over fields ###
 
 #-----------------------------------------------------------------------------------------------------------
 @$split_tsv = ( settings ) ->
@@ -42,6 +45,7 @@ urge                      = CND.get_logger 'urge',      badge
   * When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
     left in the stream.
   ###
+  # throw new Error "setting 'trim' deprecated" if settings[ 'first' ]?
   first           =       settings?[ 'first'      ] ? 'trim' # or 'split'
   trim            =       settings?[ 'trim'       ] ? yes
   splitter        =       settings?[ 'splitter'   ] ? '\t'
@@ -90,6 +94,7 @@ urge                      = CND.get_logger 'urge',      badge
   #.........................................................................................................
   if skip_empty
     $skip_empty_lines = => @$ ( line, send ) => send line if line.length > 0
+    $skip_empty_lines = @_rpr 'skip-empty-lines', 'skip-empty-lines', null, $skip_empty_lines
     if first is 'split'
       $skip_empty_fields = => @$ ( fields, send ) =>
         for field in fields
@@ -97,6 +102,7 @@ urge                      = CND.get_logger 'urge',      badge
           send fields
           break
         return null
+      $skip_empty_fields = @_rpr 'skip-empty-fields', 'skip-empty-fields', null, $skip_empty_fields
   #.........................................................................................................
   use_names = null if use_names is no
   if use_names?
