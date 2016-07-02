@@ -3,7 +3,7 @@
 
 # PipeDreams
 
-![stability-almost-stable-orange](https://img.shields.io/badge/stability-almost-stable-orange.svg)
+![stability-almost stable-orange](https://img.shields.io/badge/stability-almost%20stable-orange.svg)
 [![npm version](https://badge.fury.io/js/pipedreams.svg)](https://badge.fury.io/js/pipedreams)
 ![motivation-字面明快排字機-yellow](https://img.shields.io/badge/motivation-字面明快排字機-yellow.svg)
 
