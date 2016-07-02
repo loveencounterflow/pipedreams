@@ -1602,47 +1602,333 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) stream sigils" ] = ( T, done ) ->
-  help ( CND.grey '001' ), $ ( d ) =>
-  help ( CND.grey '002' ), $ ( d, s ) =>
-  help ( CND.grey '003' ), $ ( d, s, e ) =>
-  help()
-  help ( CND.grey '004' ), D.new_stream()
-  help ( CND.grey '005' ), D.new_stream file: '/tmp/foo'
-  help ( CND.grey '006' ), D.new_stream 'lines', file: '/tmp/foo'
-  help()
-  help ( CND.grey '007' ), D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
-  help ( CND.grey '007' ), D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
-  help ( CND.grey '008' ), D.$bridge D._new_stream$write_to_file '/tmp/foo', { encoding: 'utf-8', }
-  help ( CND.grey '009' ), D.new_stream 'write',          file: '/tmp/foo'
-  help ( CND.grey '009' ), D.new_stream 'write', 'utf-8', file: '/tmp/foo'
-  help ( CND.grey '010' ), D.new_stream 'write', 'lines', file: '/tmp/foo'
-  help()
-  help ( CND.grey '011' ), D.new_stream 'devnull'
-  help ( CND.grey '011' ), D.new_stream pipeline: [ ( D.new_stream file: '/tmp/foo' ), ( D.new_stream 'devnull' ), ]
-  help()
-  help ( CND.grey '012' ), D._new_stream$split_buffer '\n'
-  help ( CND.grey '013' ), D.$split matcher: '\n', encoding: 'buffer'
-  help ( CND.grey '014' ), D.$split matcher: '\n'
-  help()
-  help ( CND.grey '015' ), D.new_stream pipeline: [ ( $ ( data ) => null ), ]
-  help ( CND.grey '015' ), D.new_stream pipeline: [ ( $ ( data ) => null ), ( $ ( data, send ) => null ), ]
-  help ( CND.grey '016' ), $ ( data ) => null
-  help ( CND.grey '017' ), D.$throttle_bytes 100
-  help ( CND.grey '018' ), D.$sort()
-  help ( CND.grey '019' ), D.$show()
-  help ( CND.grey '020' ), D.$collect()
-  help ( CND.grey '021' ), D.$spread()
-  help ( CND.grey '022' ), D.new_stream pipeline: [
-    ( D.new_stream 'read', 'lines', file: '/tmp/input-foo' )
-    ( D.$sort() )
-    ( D.new_stream 'write', 'lines', file: '/tmp/output-foo' )
+#   ⏏⌘⏚⏫⏬⏭⏮⏯⏳⏴⏵⏶⏷⏸⏹⏺📖💻🖨✇✀
+#   ⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟
+#   ∑⎶〈〉《》【】
+#   🔵🔿🕀🗟🛈🖹
+#   ▲△▴▵▶▷▸▹►▼▽▾▿◀◁◂◃⯅⯆⯇⯈
+#   ▵▼
+#   ↔
+#   ↹  leftwards arrow to bar over rightwards arrow to bar Unicode code point: U+21B9
+#   ⇄  rightwards arrow over leftwards arrow Unicode code point: U+21C4
+#   ⇆  leftwards arrow over rightwards arrow Unicode code point: U+21C6
+#   ⇋  leftwards harpoon over rightwards harpoon Unicode code point: U+21CB
+#   ⇌  rightwards harpoon over leftwards harpoon Unicode code point: U+21CC
+  debug ( Array.from """
+    ⏳ ⎘ ⎚ ⎇
+    ␀␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟␠␡␢␣␤␥␦
+    ✁✂✃✄✆✇✈✉✌✍✎✏✐✑✒✓✔✕✖✗✘✙✚✛✜✝✞✟✠✡✢✣✤✥✦✧✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿❀❁❂❃❄❅❆❇❈❉❊❋❍❏❐❑
+    ❒❖❗❘❙❚❛❜❝❞❡❢❣❤❥❦❧❨❩❪❫❬❭❮❯❰❱❲❳❴❵❶❷❸❹❺❻❼❽❾❿➀➁➂➃➄➅➆➇➈➉➊➋➌➍➎➏➐➑➒➓➔➘➙➚➛➜➝➞➟➠➡➢➣➤
+    ➥➦➧➨➩➪➫➬➭➮➯➱➲➳➴➵➶➷➸➹➺➻➼➽➾✅✊✋✨❌❎❓❔❕❟❠➕➖➗➰➿✀
+    """ ).join ' '
+  path = resolve_temp_path 'sigils.txt'
+  input = D.new_stream { path, }
+  D.on_finish input, =>
+    help ( CND.grey '001' ), $ ( d ) =>
+    help ( CND.grey '002' ), $ ( d, s ) =>
+    help ( CND.grey '003' ), $ ( d, s, e ) =>
+    help()
+    help ( CND.grey '004' ), D.new_stream()
+    help ( CND.grey '005' ), D.new_stream file: path
+    help ( CND.grey '006' ), D.new_stream 'lines', file: path
+    help()
+    help ( CND.grey '007' ), D._new_stream$write_to_file path, { encoding: 'utf-8', }
+    help ( CND.grey '007' ), D._new_stream$write_to_file path, { encoding: 'utf-8', }
+    help ( CND.grey '008' ), D.$bridge D._new_stream$write_to_file path, { encoding: 'utf-8', }
+    help ( CND.grey '009' ), D.new_stream 'write',          file: path
+    help ( CND.grey '009' ), D.new_stream 'write', 'utf-8', file: path
+    help ( CND.grey '010' ), D.new_stream 'write', 'lines', file: path
+    help()
+    help ( CND.grey '011' ), D.new_stream 'devnull'
+    help ( CND.grey '011' ), D.new_stream pipeline: [ ( D.new_stream file: path ), ( D.new_stream 'devnull' ), ]
+    help()
+    help ( CND.grey '012' ), D._new_stream$split_buffer '\n'
+    help ( CND.grey '013' ), D.$split matcher: '\n', encoding: 'buffer'
+    help ( CND.grey '014' ), D.$split matcher: '\n'
+    help()
+    help ( CND.grey '015' ), D.new_stream pipeline: [ ( $ ( data ) => null ), ]
+    help ( CND.grey '015' ), D.new_stream pipeline: [ ( $ ( data ) => null ), ( $ ( data, send ) => null ), ]
+    help ( CND.grey '016' ), $ ( data ) => null
+    help ( CND.grey '017' ), D.$throttle_bytes 100
+    help ( CND.grey '018' ), D.$sort()
+    help ( CND.grey '019' ), D.$show()
+    help ( CND.grey '020' ), D.$collect()
+    help ( CND.grey '021' ), D.$spread()
+    help ( CND.grey '022' ), D.new_stream pipeline: [
+      ( D.new_stream 'read', 'lines', file: '/tmp/input-foo' )
+      ( D.$sort() )
+      ( D.new_stream 'write', 'lines', file: '/tmp/output-foo' )
+      ]
+    help()
+    help ( CND.grey '021' ), D.$split_tsv empty: no, comments: no
+    help ( CND.grey '021' ), D.$split_tsv empty: no
+    help ( CND.grey '021' ), D.$split_tsv comments: no
+    help ( CND.grey '021' ), D.$split_tsv()
+    debug '9970'
+    setImmediate => debug '3332'; done()
+  D.send    input "sample"
+  D.end     input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $join (1)" ] = ( T, done ) ->
+  #.........................................................................................................
+  source  = D.new_stream()
+  source
+    # .pipe D.$collect()
+    .pipe D.$join ', '
+    .pipe $ ( data, send ) =>
+      # debug '5540', JSON.stringify data
+      T.eq data, "い, ろ, は, に, ほ, へ, と"
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろはにほへと"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $join (2)" ] = ( T, done ) ->
+  #.........................................................................................................
+  source  = D.new_stream()
+  source
+    # .pipe D.$collect()
+    .pipe D.$join()
+    .pipe $ ( data, send ) =>
+      # debug '5540', JSON.stringify data
+      T.eq data, "い\nろ\nは\nに, ほ, へ, と\n諸\n行\n無\n常"
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろは"
+  D.send  source, Array.from "にほへと"
+  D.send  source, kana for kana in Array.from "諸行無常"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $join (3)" ] = ( T, done ) ->
+  #.........................................................................................................
+  source  = D.new_stream()
+  source
+    # .pipe D.$collect()
+    .pipe D.$join '—', '·'
+    .pipe $ ( data, send ) =>
+      # debug '5540', JSON.stringify data
+      T.eq data, "い—ろ—は—に·ほ·へ·と—諸—行—無—常"
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろは"
+  D.send  source, Array.from "にほへと"
+  D.send  source, kana for kana in Array.from "諸行無常"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $intersperse (1)" ] = ( T, done ) ->
+  intersperse = D.$intersperse ','
+  debug intersperse
+  source  = D.new_stream()
+  source
+    .pipe intersperse
+    .pipe D.$show '2'
+    .pipe D.$join ''
+    .pipe D.$show '4'
+    .pipe $ ( data, send ) =>
+      # debug '5540', JSON.stringify data
+      T.eq data, "い,ろ,は,に,ほ,へ,と"
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろはにほへと"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $intersperse (2)" ] = ( T, done ) ->
+  intersperse = D.$intersperse '|', ','
+  debug intersperse
+  source      = D.new_stream()
+  source
+    .pipe intersperse
+    .pipe D.$show '2'
+    .pipe D.$join ''
+    .pipe D.$show '4'
+    .pipe $ ( data, send ) =>
+      # debug '5540', JSON.stringify data
+      T.eq data, "|い,ろ,は,に,ほ,へ,と|"
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろはにほへと"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $intersperse (3)" ] = ( T, done ) ->
+  intersperse = D.$intersperse '[', ',', ']'
+  debug intersperse
+  source      = D.new_stream()
+  source
+    .pipe D.$stringify()
+    .pipe intersperse
+    .pipe D.$join ''
+    .pipe $ ( data, send ) =>
+      # debug '5540', JSON.stringify data
+      T.eq data, '["い","ろ","は","に","ほ","へ","と"]'
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろはにほへと"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $intersperse (3a)" ] = ( T, done ) ->
+  intersperse = D.$intersperse '[\n  ', ',\n  ', '\n  ]\n'
+  debug intersperse
+  source      = D.new_stream()
+  source
+    .pipe D.$stringify()
+    .pipe intersperse
+    .pipe D.$join ''
+    .pipe $ ( data, send ) =>
+      info '\n' + data
+      # debug '5540', rpr data
+      T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろはにほへと"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $as_json_list (1)" ] = ( T, done ) ->
+  as_json_list  = D.$as_json_list()
+  debug as_json_list
+  source        = D.new_stream()
+  source
+    .pipe as_json_list
+    .pipe $ ( data, send ) =>
+      info '\n' + data
+      # debug '5540', rpr data
+      T.eq data, '["い","ろ","は","に","ほ","へ","と"]'
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろはにほへと"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $as_json_list (2)" ] = ( T, done ) ->
+  as_json_list  = D.$as_json_list 'pretty'
+  debug as_json_list
+  source        = D.new_stream()
+  source
+    .pipe as_json_list
+    .pipe $ ( data, send ) =>
+      info '\n' + data
+      # debug '5540', rpr data
+      T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, kana for kana in Array.from "いろはにほへと"
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $as_json_list (3)" ] = ( T, done ) ->
+  source        = D.new_stream()
+  source
+    .pipe D.$as_json_list 'pretty'
+    .pipe $ ( data, send ) =>
+      info '\n' + data
+      # debug '5540', rpr data
+      T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
+  debug '5540', Symbol.for 'XXXXXXXX'
+  debug '5540', Symbol.for 'null'
+  #.........................................................................................................
+  D.on_finish source, done
+  D.send  source, "many"
+  D.send  source, "lines"
+  D.send  source, "are"
+  D.send  source, "fancier"
+  D.send  source, 'XXXXXXXX'
+  D.send  source, Symbol 'XXXXXXXX'
+  D.send  source, Symbol 'null'
+  D.send  source, 42
+  D.send  source, true
+  D.send  source, { frob: true, gnarl: 'meh', }
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) symbols as data events (1)" ] = ( T, done ) ->
+  source        = D.new_stream()
+  source
+    # .pipe D.$collect()
+    .pipe do =>
+      idx = -1
+      return $ ( data, send ) =>
+        idx += +1
+        info data
+        T.eq data, probe[ idx ]
+  #.........................................................................................................
+  D.on_finish source, done
+  probe = [
+    "a text"
+    Symbol.for 'XXXXXXXX'
+    42
+    Symbol.for 'null'
+    true
+    [ 'foo', 'bar', ]
     ]
-  help()
-  help ( CND.grey '021' ), D.$split_tsv empty: no, comments: no
-  help ( CND.grey '021' ), D.$split_tsv empty: no
-  help ( CND.grey '021' ), D.$split_tsv comments: no
-  help ( CND.grey '021' ), D.$split_tsv()
-  done()
+  D.send  source, element for element in probe
+  D.end   source
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) symbols as data events (2)" ] = ( T, done ) ->
+  source        = D.new_stream()
+  source
+    .pipe D.$stringify()
+    # .pipe D.$show()
+    # .pipe D.$collect()
+    .pipe do =>
+      idx = -1
+      return $ ( data, send ) =>
+        idx += +1
+        # info data
+        T.eq data, matchers[ idx ]
+  #.........................................................................................................
+  D.on_finish source, done
+  probes = [
+    "a text"
+    Symbol.for 'XXXXXXXX'
+    42
+    Symbol.for 'null'
+    true
+    [ 'foo', 'bar', ]
+    ]
+  matchers = [
+    '"a text"'
+    '{"~isa":"symbol","value":"XXXXXXXX"}'
+    '42'
+    'null'
+    'true'
+    '["foo","bar"]'
+    ]
+  D.send  source, element for element in probes
+  D.end   source
+  #.........................................................................................................
+  return null
+
+
 
 #===========================================================================================================
 # HELPERS
@@ -1678,54 +1964,68 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) fail to read when thru stream comes before read stream"
-    # "(v4) _new_stream_from_text doesn't work synchronously"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) README demo (1)"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 2"
-    "(v4) $async with method arity 3"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
-    "(v4) file stream events (1)"
-    "(v4) file stream events (2)"
-    "(v4) transforms below output receive data events (1)"
-    "(v4) transforms below output receive data events (2)"
-    "(v4) _new_stream_from_url"
-    "(v4) new_stream README example (1)"
-    "(v4) new_stream README example (2)"
-    "(v4) new_stream README example (3)"
-    "(v4) _new_stream_from_path with encodings"
-    "(v4) _new_stream_from_path (raw)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) _new_stream_from_path (4)"
-    "(v4) _new_stream_from_path (3)"
-    "(v4) $split_tsv (1)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) read TSV file (1)"
-    "(v4) TSV whitespace trimming"
-    "(v4) $split_tsv (1)"
-    "(v4) stream sigils"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # # "(v4) fail to read when thru stream comes before read stream"
+    # # "(v4) _new_stream_from_text doesn't work synchronously"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) README demo (1)"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 2"
+    # "(v4) $async with method arity 3"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) file stream events (1)"
+    # "(v4) file stream events (2)"
+    # "(v4) transforms below output receive data events (1)"
+    # "(v4) transforms below output receive data events (2)"
+    # "(v4) _new_stream_from_url"
+    # "(v4) new_stream README example (1)"
+    # "(v4) new_stream README example (2)"
+    # "(v4) new_stream README example (3)"
+    # "(v4) _new_stream_from_path with encodings"
+    # "(v4) _new_stream_from_path (raw)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) _new_stream_from_path (4)"
+    # "(v4) _new_stream_from_path (3)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) read TSV file (1)"
+    # "(v4) TSV whitespace trimming"
+    # "(v4) $split_tsv (1)"
+    # "(v4) stream sigils"
+    # "(v4) $intersperse (1)"
+    # "(v4) $intersperse (2)"
+    # "(v4) $intersperse (3)"
+    # "(v4) $intersperse (3a)"
+    # "(v4) $intersperse (4)"
+    # "(v4) $intersperse (5)"
+    # "(v4) $intersperse (6)"
+    # "(v4) $join (1)"
+    # "(v4) $join (2)"
+    # "(v4) $join (3)"
+    # "(v4) $as_json_list (1)"
+    # "(v4) $as_json_list (2)"
+    # "(v4) $as_json_list (3)"
+    "(v4) symbols as data events (1)"
+    "(v4) symbols as data events (2)"
     ]
   @_prune()
   @_main()
@@ -1733,10 +2033,3 @@ unless module.parent?
 
   # debug '5562', JSON.stringify key for key in Object.keys @
 
-  debug ( Array.from """
-    ⏳ ⎘ ⎚ ⎇
-    ␀␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟␠␡␢␣␤␥␦
-    ✁✂✃✄✆✇✈✉✌✍✎✏✐✑✒✓✔✕✖✗✘✙✚✛✜✝✞✟✠✡✢✣✤✥✦✧✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿❀❁❂❃❄❅❆❇❈❉❊❋❍❏❐❑
-    ❒❖❗❘❙❚❛❜❝❞❡❢❣❤❥❦❧❨❩❪❫❬❭❮❯❰❱❲❳❴❵❶❷❸❹❺❻❼❽❾❿➀➁➂➃➄➅➆➇➈➉➊➋➌➍➎➏➐➑➒➓➔➘➙➚➛➜➝➞➟➠➡➢➣➤
-    ➥➦➧➨➩➪➫➬➭➮➯➱➲➳➴➵➶➷➸➹➺➻➼➽➾✅✊✋✨❌❎❓❔❕❟❠➕➖➗➰➿✀
-    """ ).join ' '

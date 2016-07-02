@@ -66,18 +66,11 @@ MSP                       = require 'mississippi'
   R = new ( require 'throttle' ) bytes_per_second
   return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
 
-#   ⏏⌘⏚⏫⏬⏭⏮⏯⏳⏴⏵⏶⏷⏸⏹⏺📖💻🖨✇✀
-#   ⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟
-#   ∑⎶〈〉《》【】
-#   🔵🔿🕀🗟🛈🖹
-#   ▲△▴▵▶▷▸▹►▼▽▾▿◀◁◂◃⯅⯆⯇⯈
-#   ▵▼
-#   ↔
-#   ↹  leftwards arrow to bar over rightwards arrow to bar Unicode code point: U+21B9
-#   ⇄  rightwards arrow over leftwards arrow Unicode code point: U+21C4
-#   ⇆  leftwards arrow over rightwards arrow Unicode code point: U+21C6
-#   ⇋  leftwards harpoon over rightwards harpoon Unicode code point: U+21CB
-#   ⇌  rightwards harpoon over leftwards harpoon Unicode code point: U+21CC
+
+#===========================================================================================================
+# CONSTANTS
+#-----------------------------------------------------------------------------------------------------------
+@NULL = Symbol.for 'null'
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -491,14 +484,22 @@ MSP                       = require 'mississippi'
 #===========================================================================================================
 # SPLITTING, JOINING, SORTING
 #-----------------------------------------------------------------------------------------------------------
-@$join = ( joiner = '\n' ) ->
-  ### Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
-  of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
-  well. ###
-  return @new_stream pipeline: [
-    @$ ( x ) => throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of x ) is 'text'
+@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->
+  ### Join all strings and lists in the stream. `$join` accepts two arguments, an `outer_joiner` and an
+  `inner_joiner`. Joining works in three steps: First, all list encountered in the stream are joined using
+  the `inner_joiner`, turning each list into a string as a matter of course. In the second step, the entire
+  stream data is collected into a list (using PipeDreams `$collect`). In the last step, that collection is
+  turned into a single string by joining them with the `outer_joiner`. The `outer_joiner` defaults to a
+  newline, the `inner_joiner` to a comma and a space. ###
+  $f = => @$ ( data, send ) =>
+    switch type = CND.type_of data
+      when 'text' then send data
+      when 'list' then send data.join inner_joiner
+      else throw new Error "expected a text or a list, got a #{type}"
+  return @_rpr "join", "join", "#{rpr outer_joiner} #{rpr inner_joiner}",  @new_stream pipeline: [
+    $f()
     @$collect()
-    @$ ( collection, send ) => send collection.join joiner
+    @$ ( collection, send ) => send collection.join outer_joiner
     ]
   return null
 
@@ -562,9 +563,25 @@ MSP                       = require 'mississippi'
   `illegal non-buffer` issues. ###
   stringify ?= JSON.stringify
   return @$ ( data, send ) ->
-    return send null if data is null
     return send stringify data unless CND.isa_text data
     send data
+
+#-----------------------------------------------------------------------------------------------------------
+@$stringify = ( stringify ) ->
+  ### Turn all data items into their JSON representations. ###
+  if stringify?
+    return @$ ( data, send ) =>
+      data = stringify data
+      unless ( type = CND.type_of data ) in [ 'null', 'text', ]
+        return send.error new Error "expected a text or `null`, got a #{type}"
+  return @$ ( data, send ) =>
+    return send 'null' if data is @NULL
+    if ( CND.type_of data ) is 'symbol'
+      data = { '~isa': 'symbol', value: ( data.toString().replace /^Symbol\((.*)\)$/, '$1' ) }
+    send JSON.stringify data
+
+#-----------------------------------------------------------------------------------------------------------
+@$transform = ( method ) -> @$ ( data, send ) -> send method data
 
 #-----------------------------------------------------------------------------------------------------------
 @$as_line = ( stringify ) ->
@@ -575,28 +592,77 @@ MSP                       = require 'mississippi'
   return @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
-@$parse_csv = ( options ) ->
-  throw new Error "$parse_csv is on hold; investigating other libraries and extensibility"
-  # field_names = null
-  # options    ?= {}
-  # headers     = options[ 'headers'    ] ? true
-  # delimiter   = options[ 'delimiter'  ] ? ','
-  # qualifier   = options[ 'qualifier'  ] ? '"'
-  # ### http://stringjs.com ###
-  # stringfoo   = require 'string'
-  # #.........................................................................................................
-  # return @$ ( record, send ) =>
-  #   if record?
-  #     values = ( stringfoo record ).parseCSV delimiter, qualifier, '\\'
-  #     if headers
-  #       if field_names is null
-  #         field_names = values
-  #       else
-  #         record = {}
-  #         record[ field_names[ idx ] ] = value for value, idx in values
-  #         send record
-  #     else
-  #       send values
+@$intersperse = ( joiners... ) ->
+  ### Similar to `$join`,
+  ###
+  throw new Error "expected 1 to 3 joiners, got #{arity}" unless 1 <= ( arity = arguments.length ) <= 3
+  #.........................................................................................................
+  cache             = null
+  call_joiner       = no
+  first_joiner      = null
+  mid_joiner        = null
+  last_joiner       = null
+  call_first_joiner = no
+  call_mid_joiner   = no
+  call_last_joiner  = no
+  #.........................................................................................................
+  do =>
+    for joiner, idx in joiners
+      switch type = CND.type_of joiner
+        when 'text' then null
+        when 'function' then call_joiner = yes
+        else throw new Error "expected a text or a function, got a #{type}"
+      switch idx
+        when 0
+          mid_joiner          = joiner
+          call_mid_joiner     = type is 'function'
+        when 1
+          first_joiner        = last_joiner      = mid_joiner
+          call_first_joiner   = call_last_joiner = call_mid_joiner
+          mid_joiner          = joiner
+          call_mid_joiner     = type is 'function'
+        when 2
+          last_joiner         = joiner
+          call_last_joiner    = type is 'function'
+  #.........................................................................................................
+  R = @$ ( data, send, end ) =>
+    if data?
+      if cache?
+        send cache
+        send if call_mid_joiner then ( mid_joiner data, cache ) else mid_joiner
+      else
+        if first_joiner?
+          send if call_first_joiner then ( first_joiner null, data ) else first_joiner
+      cache = data
+    if end?
+      if cache?
+        send cache
+        if last_joiner?
+          send if call_last_joiner then ( last_joiner null, data ) else last_joiner
+      cache = null
+      end()
+  #.........................................................................................................
+  extra = []
+  extra.push rpr first_joiner if first_joiner?
+  extra.push rpr mid_joiner   if   mid_joiner?
+  extra.push rpr last_joiner  if  last_joiner?
+  extra = extra.join ' '
+  return @_rpr "intersperse", "intersperse", extra, R
+
+#-----------------------------------------------------------------------------------------------------------
+@$as_json_list = ( tags... ) ->
+  if ( pretty = 'pretty' in tags ) and ( arity = tags.length ) > 1
+    throw new Error "expected at most single tag 'pretty', go #{rpr tags}"
+  if pretty then  intersperse = @$intersperse '[\n  ', ',\n  ', '\n  ]\n'
+  else            intersperse = @$intersperse '[', ',', ']'
+  translate_null  = @$ ( data, send ) => send if data is NULL then 'null' else data
+  R = @new_stream pipeline: [
+    ( @$stringify()   )
+    ( intersperse     )
+    ( translate_null  )
+    ( @$show()  )
+    ( @$join ''       ) ]
+  return @_rpr "as_json_list", "as_json_list", ( if pretty then "pretty" else null ), R
 
 
 #===========================================================================================================

@@ -692,7 +692,35 @@ $async ( data, send, end ) -> ...
 
 # PipeDreams v4 API
 
+> **Note** In the below, headings show the exact signature of each method as
+> defined in the source. `@` is CoffeeScript's symbol for JavaScript's
+> `this`—replace it with whatever your favorite import symbol for the PipeDreams
+> library may be. In the explanatory texts, that is `D` as in the rest of this
+> document.
+
 ## @$
+
+## @$as_json_list = ( tags... ) ->
+
+Turn a stream of data into a JSON list. The source of `$as_json_list` demonstrates
+the usefulness of transform combinations:
+
+```coffee
+@$as_json_list = ( tags... ) ->
+  if ( pretty = 'pretty' in tags ) and ( arity = tags.length ) > 1
+    throw new Error "expected at most single tag 'pretty', go #{rpr tags}"
+  if pretty then  intersperse = @$intersperse '[\n  ', ',\n  ', '\n  ]\n'
+  else            intersperse = @$intersperse '[', ',', ']'
+  return @new_stream pipeline: [
+    ( @$stringify()   )
+    ( intersperse     )
+    ( @$join ''       ) ]
+```
+
+`$as_json_list` accepts a single argument; when present, that must be the string `'pretty'`
+to turn the result from a one-liner (for small amounts of data) to a one-record-per-line JSON
+representation.
+
 
 ## @$as_text = ( stringify ) ->
 Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings
@@ -724,10 +752,26 @@ won't work:
 ## @$decode = ( encoding = 'utf-8' ) ->
 ## @$filter
 
-## @$join = ( joiner = '\n' ) ->
-Join all strings in the stream using a `joiner`, which defaults to newline, so `$join` is the inverse
-of `$split()`. The current version only supports strings, but buffers could conceivably be made to work as
-well.
+## @$intersperse = ( joiners... ) ->
+
+Similar to `$join`, `$intersperse` allows to put extra data in between each pair
+of original data; in contradistinction to `$join`, however, `$intersperse` does
+not stringify any data, but keeps the insertions as separate events.
+
+
+The single
+argument, `joiner`, may be a string or a function; in the latter case, it will
+be called as `joiner a, b`, where `a` and `b` are two consecutive data events.
+
+
+## @$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->
+
+Join all strings and lists in the stream. `$join` accepts two arguments, an `outer_joiner` and an
+`inner_joiner`. Joining works in three steps: First, all list encountered in the stream are joined using
+the `inner_joiner`, turning each list into a string as a matter of course. In the second step, the entire
+stream data is collected into a list (using PipeDreams `$collect`). In the last step, that collection is
+turned into a single string by joining them with the `outer_joiner`. The `outer_joiner` defaults to a
+newline, the `inner_joiner` to a comma and a space.
 
 ## @$lockstep
 ## @$on_end
@@ -830,8 +874,28 @@ has no interesting return value, but will provide `D.$split_tsv` for you to use.
 
 ## @$spread
 ## @$stop_time
+
+## @$stringify = ( stringify ) ->
+
+Turns all data events into their respective JSON representations. The method
+recognizes JS `Symbol`s and turns them into plain old dictionaries (a.k.a. JS
+objects or 'PODs'); when sending `Symbol.for 'abc'`, this will result in the
+string `{"~isa":"symbol","value":"abc"}`. Only `Symbol.for null` is special—it
+will be turned into the string `null`, so you can sort-of have `null`s in your
+datra stream (at least as far as JSON output is concerned).
+
+If `stringify` is given, `D.$stringify f` is little more that `D.$transform f`, except the
+return value is type-checked to be either `null` or a text.
+
 ## @$throttle_bytes
 ## @$throttle_items
+
+## @$transform = ( method ) ->
+
+Does nothing but `@$ ( data, send ) -> send method data`—in other words, turns a synchronous function
+into a stream transform. Will send everything as received, so don't return `null` unless you want to
+end the stream.
+
 
 ## @end = ( me ) ->
 
