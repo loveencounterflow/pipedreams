@@ -3,9 +3,9 @@
 
 # PipeDreams
 
-![stability-almost stable-orange](https://img.shields.io/badge/stability-almost%20stable-orange.svg)
+![stability-almost stable](https://img.shields.io/badge/stability-almost%20stable-orange.svg)
 [![npm version](https://badge.fury.io/js/pipedreams.svg)](https://badge.fury.io/js/pipedreams)
-![slogan-NodeJS streams made rad easy-yellow](https://img.shields.io/badge/slogan-NodeJS%20streams%20made%20rad%20easy-blue.svg)
+![slogan-NodeJS streams made rad easy](https://img.shields.io/badge/slogan-NodeJS%20streams%20made%20rad%20easy-blue.svg)
 
 
 Install as `npm install --save pipedreams2`.
