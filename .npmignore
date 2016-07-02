@@ -27,3 +27,5 @@ node_modules
 
 # npmignore
 art
+old
+test-data

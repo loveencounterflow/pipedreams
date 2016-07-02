@@ -1,0 +1,33 @@
+
+# some CJK glyph formulas
+
+# note that some errors were introduced
+# for testing purposes
+
+fncr	glyph	formula
+
+u-cjk/5229	利	⿰禾刂
+u-cjk/522a	刪	⿰冊刂
+u-cjk/522f	别	⿰另刂	# wrong fncr
+u-cjk/522c	刬	⿰戋刂
+u-cjk/522d	刭	⿰𢀖刂
+u-cjk/522e	刮	⿰舌刂
+u-cjk/522f	刯	⿰亘刂
+u-cjk/5230	到	⿰至刂
+u-cjk/5231	刱	⿰井刅
+u-cjk/5232	刲	⿰圭刂
+u-cjk/5233	刳	⿰夸刂
+u-cjk/5234	刴	⿰朶刂
+u-cjk/5235	刵	⿰耳刂
+
+u-cjk-xb/21e2d	𡸭	⿱&jzr#xe25a;山
+u-cjk-xb/21e2e	𡸮	⿰山录
+u-cjk-xb/21e2f	𡸰	⿰山采	# wrong glyph
+u-cjk-xb/21e30	𡸰	⿰山房
+u-cjk-xb/21e31	𡸱	(⿱山火日)
+u-cjk-xb/21e32	𡸲	⿱山軋
+u-cjk-xb/21e33	𡸳	⿰山尭
+u-cjk-xb/21e34	𡸴	⿰山㑒
+u-cjk-xb/21e35	𡸵	⿱山爭
+
+u-cjk-sym/3013	〓	●
