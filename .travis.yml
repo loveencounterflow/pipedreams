@@ -8,7 +8,7 @@ node_js:
   # - "iojs"
   # - "iojs-v1.0.4"
 
-script: npm test
+script: npm test-travis
 
 
 
