@@ -33,45 +33,45 @@ Install as `npm install --save pipedreams2`.
     - [Using Events instead of Data Items](#using-events-instead-of-data-items)
     - [Using a Symbolic Value for Null](#using-a-symbolic-value-for-null)
 - [PipeDreams v4 API](#pipedreams-v4-api)
-  - [@$](#@)
-  - [@$as_json_list = ( tags... ) ->](#@as_json_list---tags---)
-  - [@$as_text = ( stringify ) ->](#@as_text---stringify---)
-  - [@$async](#@async)
-  - [@$batch](#@batch)
-  - [@$bridge = ( stream ) ->](#@bridge---stream---)
-  - [@$collect](#@collect)
-  - [@$count](#@count)
-  - [@$decode = ( encoding = 'utf-8' ) ->](#@decode---encoding--utf-8---)
-  - [@$filter](#@filter)
-  - [@$intersperse = ( joiners... ) ->](#@intersperse---joiners---)
-  - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#@join---outer_joiner--%5Cn-inner_joiner------)
-  - [@$lockstep](#@lockstep)
-  - [@$on_end](#@on_end)
-  - [@$on_first, @$on_last, @$on_start, @$on_stop](#@on_first-@on_last-@on_start-@on_stop)
-  - [@$on_finish, @on_finish = ( stream, handler ) ->](#@on_finish-@on_finish---stream-handler---)
-  - [@$parse_csv](#@parse_csv)
-  - [@$pass_through](#@pass_through)
-  - [@$sample = ( p = 0.5, options ) ->](#@sample---p--05-options---)
-  - [@$show](#@show)
-  - [@$sort](#@sort)
-  - [@$sort = ( sorter, settings ) ->](#@sort---sorter-settings---)
-  - [@$split = ( matcher, mapper, settings ) ->](#@split---matcher-mapper-settings---)
-  - [@$split_tsv = ( settings ) ->](#@split_tsv---settings---)
-  - [@$spread](#@spread)
-  - [@$stop_time](#@stop_time)
-  - [@$stringify = ( stringify ) ->](#@stringify---stringify---)
-  - [@$throttle_bytes](#@throttle_bytes)
-  - [@$throttle_items](#@throttle_items)
-  - [@$transform = ( method ) ->](#@transform---method---)
-  - [@end = ( me ) ->](#@end---me---)
-  - [@isa_stream](#@isa_stream)
-  - [@isa_readable_stream = ( x ) ->](#@isa_readable_stream---x---)
-  - [@isa_writable_stream = ( x ) ->](#@isa_writable_stream---x---)
-  - [@isa_duplex_stream = ( x ) ->](#@isa_duplex_stream---x---)
-  - [@new_stream](#@new_stream)
-  - [@remit, @$, @remit_async, @$async](#@remit-@-@remit_async-@async)
-  - [@run](#@run)
-  - [@send = ( me, data ) ->](#@send---me-data---)
+  - [@$](#)
+  - [@$as_json_list = ( tags... ) ->](#as_json_list---tags---)
+  - [@$as_text = ( stringify ) ->](#as_text---stringify---)
+  - [@$async](#async)
+  - [@$batch](#batch)
+  - [@$bridge = ( stream ) ->](#bridge---stream---)
+  - [@$collect](#collect)
+  - [@$count](#count)
+  - [@$decode = ( encoding = 'utf-8' ) ->](#decode---encoding--utf-8---)
+  - [@$filter](#filter)
+  - [@$intersperse = ( joiners... ) ->](#intersperse---joiners---)
+  - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#join---outer_joiner--%5Cn-inner_joiner------)
+  - [@$lockstep](#lockstep)
+  - [@$on_end](#on_end)
+  - [@$on_first, @$on_last, @$on_start, @$on_stop](#on_first-on_last-on_start-on_stop)
+  - [@$on_finish, @on_finish = ( stream, handler ) ->](#on_finish-on_finish---stream-handler---)
+  - [@$parse_csv](#parse_csv)
+  - [@$pass_through](#pass_through)
+  - [@$sample = ( p = 0.5, options ) ->](#sample---p--05-options---)
+  - [@$show](#show)
+  - [@$sort](#sort)
+  - [@$sort = ( sorter, settings ) ->](#sort---sorter-settings---)
+  - [@$split = ( matcher, mapper, settings ) ->](#split---matcher-mapper-settings---)
+  - [@$split_tsv = ( settings ) ->](#split_tsv---settings---)
+  - [@$spread](#spread)
+  - [@$stop_time](#stop_time)
+  - [@$stringify = ( stringify ) ->](#stringify---stringify---)
+  - [@$throttle_bytes](#throttle_bytes)
+  - [@$throttle_items](#throttle_items)
+  - [@$transform = ( method ) ->](#transform---method---)
+  - [@end = ( me ) ->](#end---me---)
+  - [@isa_stream](#isa_stream)
+  - [@isa_readable_stream = ( x ) ->](#isa_readable_stream---x---)
+  - [@isa_writable_stream = ( x ) ->](#isa_writable_stream---x---)
+  - [@isa_duplex_stream = ( x ) ->](#isa_duplex_stream---x---)
+  - [@new_stream](#new_stream)
+  - [@remit, @$, @remit_async, @$async](#remit--remit_async-async)
+  - [@run](#run)
+  - [@send = ( me, data ) ->](#send---me-data---)
 - [TL;DR: Things to Keep in Mind](#tldr-things-to-keep-in-mind)
   - [Never Assume a Stream to be Synchronous](#never-assume-a-stream-to-be-synchronous)
   - [Always Use D.on_finish to Detect End of Stream](#always-use-don_finish-to-detect-end-of-stream)
@@ -79,12 +79,6 @@ Install as `npm install --save pipedreams2`.
   - [Don't Use a Pass Thru Stream in Front of a Read Stream](#dont-use-a-pass-thru-stream-in-front-of-a-read-stream)
   - [Always Use an Output and Wait for it](#always-use-an-output-and-wait-for-it)
   - [Beware of Incompatible Libraries](#beware-of-incompatible-libraries)
-- [Backmatter](#backmatter)
-  - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
-    - [Through2](#through2)
-    - [Mississippi](#mississippi)
-    - [Binary Split](#binary-split)
-  - [What's in a Name?](#whats-in-a-name)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -187,7 +181,7 @@ write_sample = ( handler ) =>
   input
     .pipe D.$show()
     .pipe output
-    .pipe D.$on_end => handler()
+    .pipe D.$on_stop ( send ) => handler()
   #.......................................................................................................
   D.send input, data for data in [ 'foo', 'bar', 'baz', ]
   D.end input
@@ -196,7 +190,7 @@ write_sample = ( handler ) =>
 (BTW, using PipeDreams streams, it's possible to attach stream transforms to a pipeline *after* piping into
 a write-stream; see [Streams are Transforms, Transforms are
 Streams](#streams-are-transforms-transforms-are-streams)). Stress tests have shown this pattern to produce a
-certain percentage (1 in 10, but that might depend on details of the writing process).
+certain percentage of failures (1 in 10, but that might depend on details of the writing process).
 
 On the other hand, the pattern below passes tests; here, we use the PipeDreams `on_finish` method and pass
 in the output stream (and the callback to be called when processing has completed):
@@ -217,23 +211,7 @@ write_sample = ( handler ) =>
 Observe that `on_finish` uses `setImmediate` to delay calling the callback handler until the next tick of
 the event loop; this too, helps to prevent prematurely leaving the writing procedure.
 
-In cases where there is no proper output stream, it is recommended to use `sink = D.new_stream 'devnull'`
-and `D.on_finish sink, handler` instead:
-
-```coffee
-write_sample = ( handler ) =>
-  input   = D.new_stream file: 'bar.txt'
-  sink    = D.new_stream 'devnull'
-  input
-    .pipe D.$show()
-    .pipe sink
-  D.on_finish sink, handler
-```
-
-**Note** While you technically *can* attach further stream transforms below a PipeDreams `devnull` sink,
-you're not guaranteed to be able to read any piece of meaningful data, so see to it that you put `devnull`
-to the very end of your pipeline.
-
+In cases where there is no proper output stream, it is recommended to use `D.on_finish input` instead.
 
 ## remit (aka $) and remit_async (aka $async)
 
