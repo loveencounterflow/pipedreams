@@ -699,6 +699,201 @@ be prepared for an empty stream where it is called once with `data` being
 $async ( data, send, end ) -> ...
 ```
 
+## How to Send Null Without Ending the Stream
+
+Had NodeJS streams be conceived at a point in time where JavaScript had already had
+[Symbols](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Symbol), and if the
+more modern, broader view of 'streams of anything' (as opposed to the more narrow view that 'all streams are
+bytestreams'), chances are that using `send null` from within a stream transform would be just like sending
+any other value, and something like `send Symbol.for 'end'` would've been used to signal the stream's end.
+
+But this is not how it happened; streams were conceived as a bytes-only thing, and JavaScript had no symbols
+at the time streams were added to NodeJS. As a result, some value other than a buffer had to be used, and
+the most natural choice was `null`—after all, `null` represents 'no value', and when you send data, you will
+never want to 'send no value' when you can instead 'not send a value', right? Turns out that's wrong.
+`null`s are everywhere, like it or not: they appear in databases; they are a legal JSON value (I'd even
+claim: the root value of JSON); they appear in configuration files—`null`s are everybody's favorite
+Nothing-Be-Here placeholders.
+
+Let's say you have a stream of values that you want to construct a JSON file from (demo code;
+consider to use `$as_json_list` and/or `$intersperse` instead):
+
+```coffee
+f = ( path, handler ) ->
+  source  = D.new_stream()
+  output  = D.new_stream 'write', { path, }
+  D.on_finish output, handler
+  source
+    .pipe $ ( data, send ) => send ( JSON.stringify data ); send ','
+    .pipe D.$on_start ( send ) => send '['
+    .pipe D.$on_last ( data, send ) => send ']\n'
+    .pipe output
+  #.........................................................................................................
+  D.send  source, 42
+  D.send  source, 'a string'
+  # D.send  source, null # uncomment to test
+  D.send  source, false
+  D.end   source
+```
+
+calling `f` will duly print `[42,"a string",false]` into the file specified. However, trying the same after
+uncommenting the line that sends `null` into the stream will break with `stream.push() after EOF`; this is
+because sending `null` causes the stream to close down. Don't do that unless you want to end the stream.
+
+There are two ways to tunnel `null` values through stream pipelines: One is to move on from simple data
+items to events; the other, to use a symbolic value in place of `null` data.
+
+> Yet another conceivable solution lies in rewriting a number of PipeDreams methods so they write a special
+> value whenever they see `null`, and send `null` whenever they see the special value for the 'end stream'
+> signal. At the time of this writing, I believe it's better to stick to established conventions; after all,
+> PipeDreams mission is to lower the threshold, avoid surprises, and level the learning curve.
+
+### Using Events instead of Data Items
+
+In my experience, writing 'something streamy' to process whatever data often starts out as an idea how to
+`send transform_this data`, then `send transform_that data`—as a sketch where those stream transforms all
+receive bits of raw business source data in a piecemeal fashion, and emit bits of business data in the
+targetted format.
+
+There's nothing wrong with that approach, and the simplicity of it sure helps to get started. On the
+downside, sending raw business data scales not so nicely; it tends to break down the very moment you realize
+that at some point in your stream you want to communicate facts that are not part of the business data
+itself, but belong to a meta level. It is then that moving from 'data items' to 'events' is appropriate.
+
+Using events means nothing but wrapping each piece of data into a container object. JavaScript's simplest
+container is the list (a.k.a. the Array type), so one way of wrapping data is to always send pairs
+`[ event_name, event_value, ]`. Here's what a rewritten stream transform might look like:
+
+```coffee
+f = ( path, handler ) ->
+  #.......................................................................................................
+  $serialize = =>
+    return $ ( event, send ) =>
+      [ kind, value, ] = event
+      return send event unless kind is 'data'
+      send [ 'json', ( JSON.stringify value ), ]
+  #.......................................................................................................
+  $insert_delimiters = =>
+    return $ ( event, send ) =>
+      [ kind, value, ] = event
+      send event
+      return unless kind is 'json'
+      send [ 'command', 'delimiter', ]
+  #.......................................................................................................
+  $start_list = => D.$on_start (        send ) => send [ 'command', 'start-list', ]
+  $stop_list  = => D.$on_last  ( event, send ) => send [ 'command', 'stop-list',  ]
+  #.......................................................................................................
+  $as_text = =>
+    return $ ( event, send ) =>
+      [ kind, value, ] = event
+      return send value     if kind is 'json'
+      return send event unless kind is 'command'
+      ### Here I take the liberty to insert newlines so as to render multi-line JSON: ###
+      switch command = value
+        when 'delimiter' then send ',\n'
+        when 'start-list' then send '[\n'
+        when 'stop-list'  then send '\n]\n'
+        else send.error new Error "unknown command #{rpr command}"
+      return null
+  #.......................................................................................................
+  source  = D.new_stream()
+  output  = D.new_stream 'write', { path, }
+  D.on_finish output, handler
+  source
+    .pipe $serialize()
+    .pipe $insert_delimiters()
+    .pipe $start_list()
+    .pipe $stop_list()
+    .pipe $as_text()
+    .pipe output
+  #.........................................................................................................
+  D.send  source, [ 'data', 42,         ]
+  D.send  source, [ 'data', 'a string', ]
+  D.send  source, [ 'data', null,       ]
+  D.send  source, [ 'data', false,      ]
+  D.end   source
+#.........................................................................................................
+f '/tmp/foo.json', ( error ) =>
+  throw error if error?
+  done()
+#.........................................................................................................
+return null
+```
+
+This is, admittedly, a lot of code for such a simple task; however, when applications get more complex, it
+often pays to deal with slightly more abstracted objects that carry richer semantics. Depending on
+circumstances, one might opt for `{ named: 'values', }` instead of modelling events as `[ 'tuples', ]`, as
+PODs afford more code self-documentation and extensibility. But even within the limits of this small
+example, the added complexity of the event-based approach does have some justification: nowhere in the code
+did we have to pay attention whether or not some piece of data is or is not `null`—wrapping *all* the data
+freed us from having to treat this special value in any special ways (we traded that with the obligation to
+deal with different kinds of events, to be sure).
+
+
+### Using a Symbolic Value for Null
+
+If you don't want to wrap your data into event objects, an easy way to tunnel `null`s through a pipeline
+is to replace it with some other value. If you know all your business data consists of wither chunks of text
+or `null`s, you can any time just send a `0` (number zero) and still keep the distinction clear. Keeping
+things *that* simple, however, quickly breaks down as soon as the first user of your code does send series
+of numbers into the stream.
+
+A much more robust solution is offered by JavaScript symbols. Symbols are a new primitive data type in JS;
+they have been specifically designed to be used everywhere where single values are needed that do not
+conflict with existing values or APIs. They come in two flavors: private and global.
+
+A private symbol is created as `d = Symbol 'xy'`, where `'xy'` is a text of your own choosing; it is just
+used to identify the symbol, to give it some human-readable semantics. Each private symbol has its own
+identity, even when the same string is used for its creation, so `( Symbol 'A' ) != ( Symbol 'A' )` always
+holds. This makes private symbols great for lots of uses where a value of distinct identity—a singleton—is
+needed, a value that can not (or, depending on use, is pretty hard to) be reproduced from any part of code
+outside the very place where the original was instantiated.
+
+On the other hand, a global symbol is created as `d = Symbol.for 'xy'`; the difference to private symbols is
+in the availability, as it were, of the corresponding value. For all code running within the same code
+context (i.e. normally the same process), `( Symbol a ) == ( Symbol b )` holds exactly when `a === b` (and
+both values are strings).
+
+In other words, a stream transform that wants to check for the occurrence of a *global* symbol for a given
+string `'foo'` can just compare stream data items by saying `if data is Symbol.for 'foo'`. If it wants to
+check for a *private* symbol `'foo'`, on the other hand, it **must** have access to some property of some
+object that holds a reference to that symbol.
+
+In an effort to establish standard procedures to make dealing with `null` data items easier, the PipeDreams
+library provides a reference the *global* symbol for the string `'null'` as `D.NULL = Symbol.for 'null'`;
+therefore, stream transforms are free to check for either `if data is D.NULL` or `if data is Symbol.for
+'null'` with no difference in semantics whatsoever. The beauty of this approach: no 'ordinary / business
+data type' is used, but a 'meta data type' (so chances of accidental collisions are minimized), and that
+client code can insert and check for 'meta `null`s' without having to specifically reference `D.NULL`.
+What's more, patterns like
+
+```coffee
+if data is Symbol.for 'null' then send "found a null!"
+```
+
+are not only memorable to the writer, they're about as readable as programming languages can get.
+
+Let's have a look at how to use the `null` symbol:
+
+```coffee
+f = ( path, handler ) ->
+  source  = D.new_stream()
+  output  = D.new_stream 'write', { path, }
+  D.on_finish output, handler
+  source
+    .pipe $ ( data, send ) => if data is Symbol.for 'null' then send 'null' else send JSON.stringify data
+    .pipe $ ( data, send ) => send data; send ','
+    .pipe D.$on_start (       send ) => send '['
+    .pipe D.$on_last  ( data, send ) => send ']\n'
+    .pipe output
+  #.........................................................................................................
+  data_items = [ 42, 'a string', null, false, ]
+  for data in data_items
+    D.send source, if data is null then Symbol.for 'null' else data
+  D.end source
+```
+
+
 # PipeDreams v4 API
 
 > **Note** In the below, headings show the exact signature of each method as
@@ -784,10 +979,12 @@ newline, the `inner_joiner` to a comma and a space.
 
 ## @$lockstep
 ## @$on_end
-## @$on_first
-## @$on_start
 
-## @on_finish = ( stream, handler ) ->
+**DEPRECATED**
+
+## @$on_first, @$on_last, @$on_start, @$on_stop
+
+## @$on_finish, @on_finish = ( stream, handler ) ->
 
 This is the preferred way to detect when your stream has finished writing. If you have any ouput stream
 (say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in `D.on_finish output,
@@ -948,6 +1145,9 @@ Given a stream and some data, send / write / push that data into the stream.
 ## Never Assume a Stream to be Synchronous
 
 ## Always Use D.on_finish to Detect End of Stream
+
+## Never Use Null to Send, Unless You Want the Stream to End
+
 
 ## Don't Use a Pass Thru Stream in Front of a Read Stream
 

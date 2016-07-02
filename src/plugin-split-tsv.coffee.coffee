@@ -62,7 +62,7 @@ urge                      = CND.get_logger 'urge',      badge
   #.........................................................................................................
   ### TAINT may want to specify empty lines, fields ###
   unless skip_empty_lines in [ true, false, ]
-    throw new Error "### MEH 1 ###"
+    throw new Error "expected `true` or `false`, got a #{CND.type_of skip_empty_lines}"
   #.........................................................................................................
   switch type = CND.type_of comment_pattern
     when 'null', 'undefined'  then comments =  no; is_comment = ( text ) -> no

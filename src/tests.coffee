@@ -26,8 +26,8 @@ allows to inspect folder contents after tests have terminated. It would probably
 the `keep: yes` setting at a later point in time. ###
 TMP                       = require 'tmp'
 TMP.setGracefulCleanup()
-_temp_thing               = TMP.dirSync keep: yes, unsafeCleanup: no, prefix: 'pipedreams-'
-# _temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
+# _temp_thing               = TMP.dirSync keep: yes, unsafeCleanup: no, prefix: 'pipedreams-'
+_temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
 temp_home                 = _temp_thing[ 'name' ]
 resolve_path              = ( require 'path' ).resolve
 resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.\/]/g, '' for p in P )...
@@ -1840,28 +1840,142 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $as_json_list (2a)" ] = ( T, done ) ->
+  #.........................................................................................................
+  f = ( path, handler ) ->
+    source  = D.new_stream()
+    output  = D.new_stream 'write', { path, }
+    D.on_finish output, handler
+    source
+      # .pipe D.$as_json_list()
+      .pipe $ ( data, send ) => send ( JSON.stringify data ); send ','
+      .pipe D.$on_start ( send ) => send '['
+      .pipe D.$on_last ( data, send ) => send ']\n'
+      .pipe output
+    #.........................................................................................................
+    D.send  source, 42
+    D.send  source, 'a string'
+    # D.send  source, null # uncomment to test
+    D.send  source, false
+    D.end   source
+  #.........................................................................................................
+  # f ( resolve_temp_path '$as_json_list (2a)' ), ( error ) =>
+  f '/tmp/foo.json', ( error ) =>
+    throw error if error?
+    done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $as_json_list (2b)" ] = ( T, done ) ->
+  f = ( path, handler ) ->
+    #.......................................................................................................
+    $serialize = =>
+      return $ ( event, send ) =>
+        [ kind, value, ] = event
+        return send event unless kind is 'data'
+        send [ 'json', ( JSON.stringify value ), ]
+    #.......................................................................................................
+    $insert_delimiters = =>
+      return $ ( event, send ) =>
+        [ kind, value, ] = event
+        send event
+        return unless kind is 'json'
+        send [ 'command', 'delimiter', ]
+    #.......................................................................................................
+    $start_list = => D.$on_start (        send ) => send [ 'command', 'start-list', ]
+    $stop_list  = => D.$on_last  ( event, send ) => send [ 'command', 'stop-list',  ]
+    #.......................................................................................................
+    $as_text = =>
+      return $ ( event, send ) =>
+        [ kind, value, ] = event
+        return send value     if kind is 'json'
+        return send event unless kind is 'command'
+        switch command = value
+          when 'delimiter' then send ',\n'
+          when 'start-list' then send '[\n'
+          when 'stop-list'  then send '\n]\n'
+          else send.error new Error "unknown command #{rpr command}"
+        return null
+    #.......................................................................................................
+    source  = D.new_stream()
+    output  = D.new_stream 'write', { path, }
+    D.on_finish output, handler
+    source
+      .pipe $serialize()
+      .pipe $insert_delimiters()
+      .pipe $start_list()
+      .pipe $stop_list()
+      .pipe $as_text()
+      .pipe output
+    #.........................................................................................................
+    D.send  source, [ 'data', 42,         ]
+    D.send  source, [ 'data', 'a string', ]
+    D.send  source, [ 'data', null,       ]
+    D.send  source, [ 'data', false,      ]
+    D.end   source
+  #.........................................................................................................
+  # f ( resolve_temp_path '$as_json_list (2a)' ), ( error ) =>
+  f '/tmp/foo.json', ( error ) =>
+    throw error if error?
+    done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $as_json_list (2c)" ] = ( T, done ) ->
+  #.........................................................................................................
+  f = ( path, handler ) ->
+    source  = D.new_stream()
+    output  = D.new_stream 'write', { path, }
+    D.on_finish output, handler
+    source
+      .pipe $ ( data, send ) => if data is Symbol.for 'null' then send 'null' else send JSON.stringify data
+      .pipe $ ( data, send ) => send data; send ','
+      .pipe D.$on_start (       send ) => send '['
+      .pipe D.$on_last  ( data, send ) => send ']\n'
+      .pipe output
+    #.........................................................................................................
+    data_items = [ 42, 'a string', null, false, ]
+    for data in data_items
+      D.send source, if data is null then Symbol.for 'null' else data
+    D.end source
+  #.........................................................................................................
+  # f ( resolve_temp_path '$as_json_list (2a)' ), ( error ) =>
+  f '/tmp/foo.json', ( error ) =>
+    throw error if error?
+    done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $as_json_list (3)" ] = ( T, done ) ->
   source        = D.new_stream()
   source
     .pipe D.$as_json_list 'pretty'
     .pipe $ ( data, send ) =>
       info '\n' + data
-      # debug '5540', rpr data
-      T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
-  debug '5540', Symbol.for 'XXXXXXXX'
-  debug '5540', Symbol.for 'null'
-  #.........................................................................................................
+      debug '5540', rpr data
+      T.eq data, '[\n  "a text",\n  {"~isa":"symbol","value":"XXXXXXXX"},\n  42,\n  null,\n  true,\n  ["foo","bar"]\n  ]\n'
   D.on_finish source, done
-  D.send  source, "many"
-  D.send  source, "lines"
-  D.send  source, "are"
-  D.send  source, "fancier"
-  D.send  source, 'XXXXXXXX'
-  D.send  source, Symbol 'XXXXXXXX'
-  D.send  source, Symbol 'null'
-  D.send  source, 42
-  D.send  source, true
-  D.send  source, { frob: true, gnarl: 'meh', }
+  #.........................................................................................................
+  probes = [
+    "a text"
+    Symbol.for 'XXXXXXXX'
+    42
+    Symbol.for 'null'
+    true
+    [ 'foo', 'bar', ]
+    ]
+  matcher = [
+    '"a text"'
+    '{"~isa":"symbol","value":"XXXXXXXX"}'
+    '42'
+    'null'
+    'true'
+    '["foo","bar"]'
+    ]
+  D.send  source, probe for probe in probes
   D.end   source
   #.........................................................................................................
   return null
@@ -2011,21 +2125,24 @@ unless module.parent?
     # "(v4) TSV whitespace trimming"
     # "(v4) $split_tsv (1)"
     # "(v4) stream sigils"
-    # "(v4) $intersperse (1)"
-    # "(v4) $intersperse (2)"
-    # "(v4) $intersperse (3)"
-    # "(v4) $intersperse (3a)"
-    # "(v4) $intersperse (4)"
-    # "(v4) $intersperse (5)"
-    # "(v4) $intersperse (6)"
+    "(v4) $intersperse (1)"
+    "(v4) $intersperse (2)"
+    "(v4) $intersperse (3)"
+    "(v4) $intersperse (3a)"
+    "(v4) $intersperse (4)"
+    "(v4) $intersperse (5)"
+    "(v4) $intersperse (6)"
     # "(v4) $join (1)"
     # "(v4) $join (2)"
     # "(v4) $join (3)"
     # "(v4) $as_json_list (1)"
     # "(v4) $as_json_list (2)"
+    "(v4) $as_json_list (2a)"
+    "(v4) $as_json_list (2b)"
+    "(v4) $as_json_list (2c)"
     # "(v4) $as_json_list (3)"
-    "(v4) symbols as data events (1)"
-    "(v4) symbols as data events (2)"
+    # "(v4) symbols as data events (1)"
+    # "(v4) symbols as data events (2)"
     ]
   @_prune()
   @_main()

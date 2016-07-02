@@ -470,8 +470,9 @@ MSP                       = require 'mississippi'
 #-----------------------------------------------------------------------------------------------------------
 @send = ( me, data ) ->
   ### Given a stream and some data, send / write / push that data into the stream. ###
-  me.write data
-  # me.push data
+  ### NOTE using `push` over `write` since `push null` does work as expected. ###
+  # me.write data
+  me.push data
   return me
 
 #-----------------------------------------------------------------------------------------------------------
@@ -655,12 +656,11 @@ MSP                       = require 'mississippi'
     throw new Error "expected at most single tag 'pretty', go #{rpr tags}"
   if pretty then  intersperse = @$intersperse '[\n  ', ',\n  ', '\n  ]\n'
   else            intersperse = @$intersperse '[', ',', ']'
-  translate_null  = @$ ( data, send ) => send if data is NULL then 'null' else data
+  translate_null  = @$ ( data, send ) => send if data is @NULL then 'null' else data
   R = @new_stream pipeline: [
     ( @$stringify()   )
     ( intersperse     )
     ( translate_null  )
-    ( @$show()  )
     ( @$join ''       ) ]
   return @_rpr "as_json_list", "as_json_list", ( if pretty then "pretty" else null ), R
 
@@ -862,25 +862,26 @@ MSP                       = require 'mississippi'
 #===========================================================================================================
 # STREAM START & END DETECTION
 #-----------------------------------------------------------------------------------------------------------
-@$on_end = ( method ) ->
-  unless 0 <= ( arity = method.length ) <= 1
-    throw new Error "expected method with 0 or 1 argument, got #{arity}"
-  return @$ ( data, send, end ) ->
-    send data
-    if end?
-      if arity is 1
-        method end
-      else
-        method()
-        end()
-
-#-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
   is_first = yes
   return @$ ( data, send ) ->
     method send if is_first
     is_first = no
     send data
+
+#-----------------------------------------------------------------------------------------------------------
+@$on_stop = ( method ) ->
+  unless ( arity = method.length ) is 1
+    throw new Error "expected method with 1 argument, got one with #{arity}"
+  cache = null
+  return @$ ( data, send, end ) ->
+    if data?
+      send cache if cache?
+      cache = data
+    if end?
+      send cache if cache?
+      method send
+      end()
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_first = ( method ) ->
@@ -895,6 +896,20 @@ MSP                       = require 'mississippi'
       send data
 
 #-----------------------------------------------------------------------------------------------------------
+@$on_last = ( method ) ->
+  unless ( arity = method.length ) is 2
+    throw new Error "expected method with 2 argument, got one with #{arity}"
+  cache = null
+  return @$ ( data, send, end ) ->
+    if data?
+      send cache if cache?
+      cache = data
+    if end?
+      # send cache if cache?
+      method cache, send
+      end()
+
+#-----------------------------------------------------------------------------------------------------------
 @on_finish = ( stream, handler ) ->
   stream.on 'finish', => setImmediate handler
 
@@ -904,6 +919,19 @@ MSP                       = require 'mississippi'
   @on_finish R, method
   return R
 
+#-----------------------------------------------------------------------------------------------------------
+@$on_end = ( method ) ->
+  unless 0 <= ( arity = method.length ) <= 1
+    throw new Error "expected method with 0 or 1 argument, got #{arity}"
+  return @$ ( data, send, end ) ->
+    alert "Use of PipeDreams `$on_end` is discouraged; use `$on_stop`/`$on_last` instead"
+    send data
+    if end?
+      if arity is 1
+        method end
+      else
+        method()
+        end()
 
 #===========================================================================================================
 # FILTERING
