@@ -4,7 +4,7 @@
 # PipeDreams
 
 ![stability-almost stable](https://img.shields.io/badge/stability-almost%20stable-orange.svg)
-[![npm version](https://badge.fury.io/js/pipedreams.svg)](https://badge.fury.io/js/pipedreams)
+[![npm version](https://badge.fury.io/js/pipedreams.svg)](https://www.npmjs.com/package/pipedreams)
 ![slogan-NodeJS streams made rad easy](https://img.shields.io/badge/slogan-NodeJS%20streams%20made%20rad%20easy-blue.svg)
 
 
