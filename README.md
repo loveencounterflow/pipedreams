@@ -4,7 +4,7 @@
 # PipeDreams
 
 ![stability-experimental-red](https://img.shields.io/badge/stability-experimental-red.svg)
-![npm-0.2.5-yellowgreen](https://img.shields.io/badge/npm-0.2.5-yellowgreen.svg)
+[![npm version](https://badge.fury.io/js/pipedreams.svg)](https://badge.fury.io/js/pipedreams)
 ![motivation-字面明快排字機-yellow](https://img.shields.io/badge/motivation-字面明快排字機-yellow.svg)
 
 A library to make creating NodeJS streams and transforms sort-of simple.
@@ -878,8 +878,8 @@ it can also skip empty and blank lines, omit comments, and name fields.
   where no naming is used, lists of values are sent into the stream, such as `[ 'John', 32, 'lawyer', ]`.
 
 Observe that `$split_tsv` has been (experimentally) factored out into a plugin of sorts; to use it, be sure
-to `require 'pipedreams/lib/plugin-split-tsv'` after your `D = require 'pipedreams'` statement. This import
 has no interesting return value, but will provide `D.$split_tsv` for you to use.
+to `require 'pipedreams/lib/plugin-split-tsv'` after your `D = require 'pipedreams'` statement. This import
 
 ## @$spread
 ## @$stop_time
