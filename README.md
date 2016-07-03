@@ -33,45 +33,45 @@ Install as `npm install --save pipedreams2`.
     - [Using Events instead of Data Items](#using-events-instead-of-data-items)
     - [Using a Symbolic Value for Null](#using-a-symbolic-value-for-null)
 - [PipeDreams v4 API](#pipedreams-v4-api)
-  - [`@$`](#)
-  - [`@$as_json_list = ( tags... ) ->`](#as_json_list---tags---)
-  - [`@$as_text = ( stringify ) ->`](#as_text---stringify---)
-  - [`@$async`](#async)
-  - [`@$batch`](#batch)
-  - [`@$bridge = ( stream ) ->`](#bridge---stream---)
-  - [`@$collect`](#collect)
-  - [`@$count`](#count)
-  - [`@$decode = ( encoding = 'utf-8' ) ->`](#decode---encoding--utf-8---)
-  - [`@$filter`](#filter)
-  - [`@$intersperse = ( joiners... ) ->`](#intersperse---joiners---)
-  - [`@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->`](#join---outer_joiner--%5Cn-inner_joiner------)
-  - [`@$lockstep`](#lockstep)
-  - [`@$on_end`](#on_end)
-  - [`@$on_first, @$on_last, @$on_start, @$on_stop`](#on_first-on_last-on_start-on_stop)
-  - [`@$on_finish, @on_finish = ( stream, handler ) ->`](#on_finish-on_finish---stream-handler---)
-  - [`@$parse_csv`](#parse_csv)
-  - [`@$pass_through`](#pass_through)
-  - [`@$sample = ( p = 0.5, options ) ->`](#sample---p--05-options---)
-  - [`@$show`](#show)
-  - [`@$sort`](#sort)
-  - [`@$sort = ( sorter, settings ) ->`](#sort---sorter-settings---)
-  - [`@$split = ( matcher, mapper, settings ) ->`](#split---matcher-mapper-settings---)
-  - [`@$split_tsv = ( settings ) ->`](#split_tsv---settings---)
-  - [`@$spread`](#spread)
-  - [`@$stop_time`](#stop_time)
-  - [`@$stringify = ( stringify ) ->`](#stringify---stringify---)
-  - [`@$throttle_bytes`](#throttle_bytes)
-  - [`@$throttle_items`](#throttle_items)
-  - [`@$transform = ( method ) ->`](#transform---method---)
-  - [`@end = ( me ) ->`](#end---me---)
-  - [`@isa_stream`](#isa_stream)
-  - [`@isa_readable_stream = ( x ) ->`](#isa_readable_stream---x---)
-  - [`@isa_writable_stream = ( x ) ->`](#isa_writable_stream---x---)
-  - [`@isa_duplex_stream = ( x ) ->`](#isa_duplex_stream---x---)
-  - [`@new_stream`](#new_stream)
-  - [`@remit, @$, @remit_async, @$async`](#remit--remit_async-async)
-  - [`@run`](#run)
-  - [`@send = ( me, data ) ->`](#send---me-data---)
+  - [@$](#)
+  - [@$as_json_list = ( tags... ) ->](#as_json_list---tags---)
+  - [@$as_text = ( stringify ) ->](#as_text---stringify---)
+  - [@$async](#async)
+  - [@$batch](#batch)
+  - [@$bridge = ( stream ) ->](#bridge---stream---)
+  - [@$collect](#collect)
+  - [@$count](#count)
+  - [@$decode = ( encoding = 'utf-8' ) ->](#decode---encoding--utf-8---)
+  - [@$filter](#filter)
+  - [@$intersperse = ( joiners... ) ->](#intersperse---joiners---)
+  - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#join---outer_joiner--%5Cn-inner_joiner------)
+  - [@$lockstep](#lockstep)
+  - [@$on_end](#on_end)
+  - [@$on_first, @$on_last, @$on_start, @$on_stop](#on_first-on_last-on_start-on_stop)
+  - [@$on_finish, @on_finish = ( stream, handler ) ->](#on_finish-on_finish---stream-handler---)
+  - [@$parse_csv](#parse_csv)
+  - [@$pass_through](#pass_through)
+  - [@$sample = ( p = 0.5, options ) ->](#sample---p--05-options---)
+  - [@$show](#show)
+  - [@$sort](#sort)
+  - [@$sort = ( sorter, settings ) ->](#sort---sorter-settings---)
+  - [@$split = ( matcher, mapper, settings ) ->](#split---matcher-mapper-settings---)
+  - [@$split_tsv = ( settings ) ->](#split_tsv---settings---)
+  - [@$spread](#spread)
+  - [@$stop_time](#stop_time)
+  - [@$stringify = ( stringify ) ->](#stringify---stringify---)
+  - [@$throttle_bytes](#throttle_bytes)
+  - [@$throttle_items](#throttle_items)
+  - [@$transform = ( method ) ->](#transform---method---)
+  - [@end = ( me ) ->](#end---me---)
+  - [@isa_stream](#isa_stream)
+  - [@isa_readable_stream = ( x ) ->](#isa_readable_stream---x---)
+  - [@isa_writable_stream = ( x ) ->](#isa_writable_stream---x---)
+  - [@isa_duplex_stream = ( x ) ->](#isa_duplex_stream---x---)
+  - [@new_stream](#new_stream)
+  - [@remit, @$, @remit_async, @$async](#remit--remit_async-async)
+  - [@run](#run)
+  - [@send = ( me, data ) ->](#send---me-data---)
 - [TL;DR: Things to Keep in Mind](#tldr-things-to-keep-in-mind)
   - [Never Assume a Stream to be Synchronous](#never-assume-a-stream-to-be-synchronous)
   - [Always Use D.on_finish to Detect End of Stream](#always-use-don_finish-to-detect-end-of-stream)
@@ -882,9 +882,9 @@ f = ( path, handler ) ->
 > library may be. In the explanatory texts, that is `D` as in the rest of this
 > document.
 
-## `@$`
+## @$
 
-## `@$as_json_list = ( tags... ) ->`
+## @$as_json_list = ( tags... ) ->
 
 Turn a stream of data into a JSON list. The source of `$as_json_list` demonstrates
 the usefulness of transform combinations:
@@ -906,7 +906,7 @@ to turn the result from a one-liner (for small amounts of data) to a one-record-
 representation.
 
 
-## `@$as_text = ( stringify ) ->`
+## @$as_text = ( stringify ) ->
 Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings
 in the data stream is passed through unaffected. Observe that buffers in the stream will very probably not
 come out the way you'd expect them; this is because there's no way to know for the method what kind of
@@ -915,10 +915,10 @@ data they represent.
 This method is handy to put as a safeguard right in front of a `.pipe output_file` clause to avoid
 `illegal non-buffer` issues.
 
-## `@$async`
-## `@$batch`
+## @$async
+## @$batch
 
-## `@$bridge = ( stream ) ->`
+## @$bridge = ( stream ) ->
 
 Make it so that the pipeline may be continued even below a writable but not
 readable stream. Conceivably, this method could have be named `tunnel` as
@@ -931,12 +931,12 @@ won't work:
   return @new_stream pipeline: [ @$pass_through(), stream, ]
 
 
-## `@$collect`
-## `@$count`
-## `@$decode = ( encoding = 'utf-8' ) ->`
-## `@$filter`
+## @$collect
+## @$count
+## @$decode = ( encoding = 'utf-8' ) ->
+## @$filter
 
-## `@$intersperse = ( joiners... ) ->`
+## @$intersperse = ( joiners... ) ->
 
 Similar to `$join`, `$intersperse` allows to put extra data in between each pair
 of original data; in contradistinction to `$join`, however, `$intersperse` does
@@ -948,7 +948,7 @@ argument, `joiner`, may be a string or a function; in the latter case, it will
 be called as `joiner a, b`, where `a` and `b` are two consecutive data events.
 
 
-## `@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->`
+## @$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->
 
 Join all strings and lists in the stream. `$join` accepts two arguments, an `outer_joiner` and an
 `inner_joiner`. Joining works in three steps: First, all list encountered in the stream are joined using
@@ -957,14 +957,14 @@ stream data is collected into a list (using PipeDreams `$collect`). In the last 
 turned into a single string by joining them with the `outer_joiner`. The `outer_joiner` defaults to a
 newline, the `inner_joiner` to a comma and a space.
 
-## `@$lockstep`
-## `@$on_end`
+## @$lockstep
+## @$on_end
 
 **DEPRECATED**
 
-## `@$on_first, @$on_last, @$on_start, @$on_stop`
+## @$on_first, @$on_last, @$on_start, @$on_stop
 
-## `@$on_finish, @on_finish = ( stream, handler ) ->`
+## @$on_finish, @on_finish = ( stream, handler ) ->
 
 This is the preferred way to detect when your stream has finished writing. If you have any ouput stream
 (say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in `D.on_finish output,
@@ -972,10 +972,10 @@ callback`. Terminating stream processing from handlers for other event  (e.g. `'
 of the pipeline (including the `D.$on_end` transform) may lead to hard-to-find bugs. Observe that
 `on_finish` calls `handler` in an asynchronous fashion.
 
-## `@$parse_csv`
-## `@$pass_through`
+## @$parse_csv
+## @$pass_through
 
-## `@$sample = ( p = 0.5, options ) ->`
+## @$sample = ( p = 0.5, options ) ->
 
 Given a `0 <= p <= 1`, interpret `p` as the *p*robability to *p*ick a given record and otherwise toss
 it, so that `$sample 1` will keep all records, `$sample 0` will toss all records, and
@@ -1018,21 +1018,21 @@ sample whenever you re-run your piping application with the same stream and the 
 property of the predictable sample is that—everything else being the same—a sample with a smaller `p`
 will always be a subset of a sample with a bigger `p` and vice versa.
 
-## `@$show`
-## `@$sort`
+## @$show
+## @$sort
 
-## `@$sort = ( sorter, settings ) ->`
+## @$sort = ( sorter, settings ) ->
 
 Uses [github.com/mziccard/node-timsort](https://github.com/mziccard/node-timsort) for an
 efficient, and, importantly, stable sort.
 
-## `@$split = ( matcher, mapper, settings ) ->`
+## @$split = ( matcher, mapper, settings ) ->
 
 Uses [github.com/maxogden/binary-split](https://github.com/maxogden/binary-split) to split
 a stream of buffers or texts into lines (in the default setting; for details
 see the binary-split project page).
 
-## `@$split_tsv = ( settings ) ->`
+## @$split_tsv = ( settings ) ->
 
 A stream transform to help in reading files with data in
 [Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
@@ -1058,10 +1058,10 @@ Observe that `$split_tsv` has been (experimentally) factored out into a plugin o
 has no interesting return value, but will provide `D.$split_tsv` for you to use.
 to `require 'pipedreams/lib/plugin-split-tsv'` after your `D = require 'pipedreams'` statement. This import
 
-## `@$spread`
-## `@$stop_time`
+## @$spread
+## @$stop_time
 
-## `@$stringify = ( stringify ) ->`
+## @$stringify = ( stringify ) ->
 
 Turns all data events into their respective JSON representations. The method
 recognizes JS `Symbol`s and turns them into plain old dictionaries (a.k.a. JS
@@ -1073,47 +1073,47 @@ datra stream (at least as far as JSON output is concerned).
 If `stringify` is given, `D.$stringify f` is little more that `D.$transform f`, except the
 return value is type-checked to be either `null` or a text.
 
-## `@$throttle_bytes`
-## `@$throttle_items`
+## @$throttle_bytes
+## @$throttle_items
 
-## `@$transform = ( method ) ->`
+## @$transform = ( method ) ->
 
 Does nothing but `@$ ( data, send ) -> send method data`—in other words, turns a synchronous function
 into a stream transform. Will send everything as received, so don't return `null` unless you want to
 end the stream.
 
 
-## `@end = ( me ) ->`
+## @end = ( me ) ->
 
 Given a stream, end it.
 
-## `@isa_stream`
+## @isa_stream
 
 Return whether `x` is a stream.
 
-## `@isa_readable_stream = ( x ) ->`
+## @isa_readable_stream = ( x ) ->
 
 Return whether `x` is a stream that is readable.
 
-## `@isa_writable_stream = ( x ) ->`
+## @isa_writable_stream = ( x ) ->
 
 Return whether `x` is a stream that is writable.
 
-## `@isa_duplex_stream = ( x ) ->`
+## @isa_duplex_stream = ( x ) ->
 
 Return whether `x` is a stream that is both readable and writable.
 
-## `@new_stream`
+## @new_stream
 `@_new_stream_from_path`, `@_new_stream_from_pipeline`, `@_new_stream_from_text`,
 
-## `@remit, @$, @remit_async, @$async`
+## @remit, @$, @remit_async, @$async
 
 See the extensive [section on the Remit and Remit-Async Methods](#the-remit-and-remit-async-methods),
 above.
 
-## `@run`
+## @run
 
-## `@send = ( me, data ) ->`
+## @send = ( me, data ) ->
 
 Given a stream and some data, send / write / push that data into the stream.
 
