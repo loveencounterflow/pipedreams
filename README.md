@@ -910,9 +910,10 @@ the usefulness of transform combinations:
     ( @$join ''       ) ]
 ```
 
-`$as_json_list` accepts a single argument; when present, that must be the string `'pretty'`
-to turn the result from a one-liner (for small amounts of data) to a one-record-per-line JSON
-representation.
+`$as_json_list` accepts a single argument; when present, that must be the string `'pretty'` to turn the
+result from a one-liner (for small amounts of data) to a one-record-per-line JSON representation.
+'Pretty-printed' JSON files are great because they lend themselves both to be edited in your favorite text
+editor and to be efficiently processed in a linewise fashion.
 
 
 ## @$as_text = ( stringify ) ->
@@ -966,15 +967,65 @@ input
 
 ## @$intersperse = ( joiners... ) ->
 
-Similar to `$join`, `$intersperse` allows to put extra data in between each pair
-of original data; in contradistinction to `$join`, however, `$intersperse` does
-not stringify any data, but keeps the insertions as separate events.
+Similar to `$join`, `$intersperse` allows to put extra data in between each pair of original data; in
+contradistinction to `$join`, however, `$intersperse` does not stringify any data, but keeps the insertions
+as separate events.
 
+`$intersperse` expects between one and three argument, each one of which may be a function or an arbitrary
+piece of data. If it receives a single argument, that value will be used as a 'mid joiner', i.e. it will be
+emitted in between any two events in the stream.
 
-The single
-argument, `joiner`, may be a string or a function; in the latter case, it will
-be called as `joiner a, b`, where `a` and `b` are two consecutive data events.
+If `$intersperse` is called with two arguments, it will insert the value of the first argument before the
+first and after the last event in the stream. If called with three, the first argument goes to the
+beginning, the second to all the in-betweens, and the last to the end of the stream. In case one of the
+joiners is `null`, it will not be applied, and the same goes for joiners that are functions: if a
+joiner function returns `null`, no extra data item will be sent.
 
+This simple test case provides an overview:
+
+```coffee
+demo = ( x..., handler ) =>
+  input = D.new_stream()
+  input
+    .pipe D.$intersperse x...
+    .pipe D.$collect()
+    .pipe $ ( data ) ->
+      if data?
+        help x, data.join ''
+  D.on_finish input, handler
+  D.send input, 'a'
+  D.send input, 'b'
+  D.send input, 'c'
+  D.end input
+```
+
+Here's a rundown of what resulta to expect with which kinds of signatures; it's probably best to stick to
+the starred call patterns for clarity:
+
+```coffee
+### 1 way to call with 0 arguments ###
+D.$intersperse()                   # 'abc'      — No-Op
+#.......................................................................................................
+### 2 ways to call with 1 arguments ###
+D.$intersperse null                # 'abc'      — No-Op
+D.$intersperse '—'                 # 'a—b—c'    — mid                   *
+#.......................................................................................................
+### 4 ways to call with 2 arguments ###
+D.$intersperse null,  null         # 'abc'      — No-Op
+D.$intersperse null,  '—'          # 'a—b—c'    — mid
+D.$intersperse '{',   null         # '{abc{'    — start == stop
+D.$intersperse '{',   '—'          # '{a—b—c{'  — mid, start == stop
+#.......................................................................................................
+### 8 ways to call with 3 arguments ###
+D.$intersperse null,  null, null   # 'abc'      — No-Op
+D.$intersperse null,  null, '}'    # 'abc}'     — stop                  *
+D.$intersperse null,  '—',  null   # 'a—b—c'    — mid
+D.$intersperse null,  '—',  '}'    # 'a—b—c}'   — mid, stop             *
+D.$intersperse '{',   null, null   # '{abc'     — start                 *
+D.$intersperse '{',   null, '}'    # '{abc}'    — start, stop           *
+D.$intersperse '{',   '—',  null   # '{a—b—c'   — start, mid            *
+D.$intersperse '{',   '—',  '}'    # '{a—b—c}'  — start, mid, stop      *
+```
 
 ## @$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->
 
@@ -1047,7 +1098,6 @@ property of the predictable sample is that—everything else being the same—a 
 will always be a subset of a sample with a bigger `p` and vice versa.
 
 ## @$show
-## @$sort
 
 ## @$sort = ( sorter, settings ) ->
 

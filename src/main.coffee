@@ -523,7 +523,7 @@ MSP                       = require 'mississippi'
     send data.toString encoding
 
 #-----------------------------------------------------------------------------------------------------------
-@$sort = ( sorter, settings ) ->
+@$sort = ( sorter ) ->
   ### https://github.com/mziccard/node-timsort ###
   TIMSORT = require 'timsort'
   switch arity = arguments.length
@@ -552,6 +552,15 @@ MSP                       = require 'mississippi'
         send x for x in collector
         collector.length = 0
       end()
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$sort.from_keys = ( keys... ) ->
+  R = ( a, b ) =>
+    for key in keys
+      return +1 if a[ key ] > b[ key ]
+      return -1 if a[ key ] < b[ key ]
+    return 0
 
 #-----------------------------------------------------------------------------------------------------------
 @$as_text = ( stringify ) ->
@@ -594,9 +603,10 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$intersperse = ( joiners... ) ->
-  ### Similar to `$join`,
-  ###
-  throw new Error "expected 1 to 3 joiners, got #{arity}" unless 1 <= ( arity = arguments.length ) <= 3
+  ### Similar to `$join`, but inserts events between (and around) existing events. ###
+  throw new Error "expected 0 to 3 joiners, got #{arity}" unless 0 <= ( arity = arguments.length ) <= 3
+  return @$pass_through() if arity is 0
+  return @$pass_through() if joiners[ 0 ] == ( joiners[ 1 ] ? null ) == ( joiners[ 2 ] ? null )
   #.........................................................................................................
   cache             = null
   call_joiner       = no
@@ -606,40 +616,47 @@ MSP                       = require 'mississippi'
   call_first_joiner = no
   call_mid_joiner   = no
   call_last_joiner  = no
+  _first_joiner     = null
+  _mid_joiner       = null
+  _last_joiner      = null
   #.........................................................................................................
   do =>
     for joiner, idx in joiners
-      switch type = CND.type_of joiner
-        when 'text' then null
-        when 'function' then call_joiner = yes
-        else throw new Error "expected a text or a function, got a #{type}"
       switch idx
         when 0
           mid_joiner          = joiner
-          call_mid_joiner     = type is 'function'
+          call_mid_joiner     = CND.isa_function joiner
         when 1
           first_joiner        = last_joiner      = mid_joiner
           call_first_joiner   = call_last_joiner = call_mid_joiner
           mid_joiner          = joiner
-          call_mid_joiner     = type is 'function'
+          call_mid_joiner     = CND.isa_function joiner
         when 2
           last_joiner         = joiner
-          call_last_joiner    = type is 'function'
+          call_last_joiner    = CND.isa_function joiner
+  #.........................................................................................................
+  _first_joiner     = ( ( send, a, b ) => if ( Z = first_joiner a, b )? then send Z ) if call_first_joiner
+  _mid_joiner       = ( ( send, a, b ) => if ( Z = mid_joiner   a, b )? then send Z ) if call_mid_joiner
+  _last_joiner      = ( ( send, a, b ) => if ( Z = last_joiner  a, b )? then send Z ) if call_last_joiner
   #.........................................................................................................
   R = @$ ( data, send, end ) =>
     if data?
       if cache?
         send cache
-        send if call_mid_joiner then ( mid_joiner data, cache ) else mid_joiner
+        if mid_joiner?
+          if call_mid_joiner    then _mid_joiner send, cache, data
+          else                       send mid_joiner
       else
         if first_joiner?
-          send if call_first_joiner then ( first_joiner null, data ) else first_joiner
+          if call_first_joiner  then _first_joiner send, null, data
+          else                       send first_joiner
       cache = data
     if end?
       if cache?
         send cache
         if last_joiner?
-          send if call_last_joiner then ( last_joiner null, data ) else last_joiner
+          if call_last_joiner   then _last_joiner send, data, null
+          else                       send last_joiner
       cache = null
       end()
   #.........................................................................................................
