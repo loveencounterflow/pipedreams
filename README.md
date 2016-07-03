@@ -730,17 +730,22 @@ items to events; the other, to use a symbolic value in place of `null` data.
 
 ### Using Events instead of Data Items
 
-In my experience, writing 'something streamy' to process whatever data often starts out as an idea how to
-`send transform_this data`, then `send transform_that data`—as a sketch where those stream transforms all
-receive bits of raw business source data in a piecemeal fashion, and emit bits of business data in the
-targetted format.
+In my experience, writing 'something streamy' to process whatever data often
+starts out as an idea how to `send transform_this data`, then `send
+transform_that data`—as a sketch where those stream transforms all receive bits
+of raw business source data in a piecemeal fashion, and emit bits of business
+data in the targetted format. Quite often the result will look like the last
+code snippet, above: lots of simple, unnamed stream transforms whose definitions
+are put right in the middle of the pipeline.
 
-There's nothing wrong with that approach, and the simplicity of it sure helps to get started. On the
-downside, sending raw business data scales not so nicely; it tends to break down the very moment you realize
-that at some point in your stream you want to communicate facts that are not part of the business data
-itself, but belong to a meta level. It is then that moving from 'data items' to 'events' is appropriate.
+There's nothing wrong with that approach, and the simplicity of it sure helps to
+get started. On the downside, sending raw business data doesn't scale very far;
+it tends to break down the very moment you realize that at some point in your
+stream you want to communicate facts that are not part of the business data
+itself, but belong to a meta level. It is then that moving from 'data items' to
+'events' is appropriate.
 
-Using events means nothing but wrapping each piece of data into a container object. JavaScript's simplest
+'Using events' just means wrapping each piece of data into a container object. JavaScript's simplest
 container is the list (a.k.a. the Array type), so one way of wrapping data is to always send pairs
 `[ event_name, event_value, ]`. Here's what a rewritten stream transform might look like:
 
