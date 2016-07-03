@@ -166,31 +166,28 @@ D.new_stream 'read', file: 'foo.txt'
   .pipe D.new_stream 'write', file: 'copy-3.txt'
 ```
 
-## When to Call it a Day: Always Use an Output and Wait for it
+## When to Call it a Day: Always Use On_Finish
 
 Given the asynchronous nature of NodeJS' I/O handling, stream end detection can be a fickle thing and hard
-to get right. For example, when writing into a file, one might be tempted to attach an ´$on_end`
-transform to detect the point in time when all data has been written to disk and it's safe to continue
-with other stuff:
+to get right. For example, when writing into a file, one might be tempted to wait for an `end` event:
 
 ```coffee
 ### TAINT Counter-example; don't do it this way ###
 write_sample = ( handler ) =>
-  input   = D.new_stream()
-  output  = D.new_stream 'write', 'lines', { file: path_1, }
-  input
+  input     = D.new_stream()
+  output    = D.new_stream 'write', 'lines', { file: path_1, }
+  pipeline  = input
     .pipe D.$show()
     .pipe output
-    .pipe D.$on_stop ( send ) => handler()
+  #.......................................................................................................
+  pipeline.on 'end', handler
   #.......................................................................................................
   D.send input, data for data in [ 'foo', 'bar', 'baz', ]
   D.end input
 ```
 
-(BTW, using PipeDreams streams, it's possible to attach stream transforms to a pipeline *after* piping into
-a write-stream; see [Streams are Transforms, Transforms are
-Streams](#streams-are-transforms-transforms-are-streams)). Stress tests have shown this pattern to produce a
-certain percentage of failures (1 in 10, but that might depend on details of the writing process).
+Stress tests have shown this pattern to produce a certain percentage of failures (1 in 10, but that might
+depend on details of the writing process).
 
 On the other hand, the pattern below passes tests; here, we use the PipeDreams `on_finish` method and pass
 in the output stream (and the callback to be called when processing has completed):
@@ -202,6 +199,7 @@ write_sample = ( handler ) =>
   input
     .pipe D.$show()
     .pipe output
+  #.......................................................................................................
   D.on_finish output, handler
   #.......................................................................................................
   D.send input, data for data in [ 'foo', 'bar', 'baz', ]
@@ -930,7 +928,7 @@ readable stream. Conceivably, this method could have be named `tunnel` as
 well. Something to get you across, you get the meaning. Useful for NodeJS
 writable streams which do not normally allow you to pipe something out of—in
 other words, when you pipe something into, say, `fs.createWriteStream
-'/tmp/foo.txt'`, you'can't take that stream and pipe it somewhere else. This
+'/tmp/foo.txt'`, you can't take that stream and pipe it somewhere else. This
 won't work:
 
 ```coffee
@@ -947,7 +945,7 @@ input
   .pipe D.$bridge ( require 'fs' ).createWriteStream 'bar.txt'
 ```
 
-and this will work, too; all PipeDreams streams allow being piped from:
+... and this will work, too; all PipeDreams streams allow being piped from:
 
 ```coffee
 input
@@ -992,9 +990,9 @@ newline, the `inner_joiner` to a comma and a space.
 
 This is the preferred way to detect when your stream has finished writing. If you have any ouput stream
 (say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in `D.on_finish output,
-callback`. Terminating stream processing from handlers for other event  (e.g. `'end'`) and/or of other parts
-of the pipeline (including the `D.$on_end` transform) may lead to hard-to-find bugs. Observe that
-`on_finish` calls `handler` in an asynchronous fashion.
+callback`. Terminating stream processing from handlers for other events (e.g. `'end'`) and/or of other parts
+of the pipeline may lead to hard-to-find bugs. Observe that `on_finish` calls `handler` only upon the
+following turn of the JavaScript event loop.
 
 ## @$parse_csv
 ## @$pass_through
