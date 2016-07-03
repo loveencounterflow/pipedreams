@@ -728,9 +728,11 @@ MSP                       = require 'mississippi'
   #   buffer_2.push data_2
   #   flush()
   #.........................................................................................................
-  input.pipe @$on_end ( end ) =>
-    _end_2 = end
-    flush()
+  input.pipe @$ ( data, send, end ) =>
+    send data if data
+    if end?
+      _end_2 = end
+      flush()
   #.........................................................................................................
   return @$ ( data_1, send, end ) =>
     _send   = send
@@ -871,7 +873,7 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_stop = ( method ) ->
-  unless ( arity = method.length ) is 1
+  unless 0 <= ( arity = method.length ) is 1
     throw new Error "expected method with 1 argument, got one with #{arity}"
   cache = null
   return @$ ( data, send, end ) ->
@@ -880,7 +882,7 @@ MSP                       = require 'mississippi'
       cache = data
     if end?
       send cache if cache?
-      method send
+      if arity is 0 then method() else method send
       end()
 
 #-----------------------------------------------------------------------------------------------------------

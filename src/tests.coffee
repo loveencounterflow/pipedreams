@@ -161,11 +161,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   read_sample = ( handler ) =>
     input   = D.new_stream 'read', 'lines', path: path_1
+    D.on_finish input, handler
     input
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
-      .pipe D.$on_end => handler()
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -359,11 +359,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   read_sample = ( handler ) =>
     input   = D.new_stream 'read', 'lines', path: path_1
+    D.on_finish input, handler
     input
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
-      .pipe D.$on_end => handler()
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -408,38 +408,15 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) file stream events (2)" ] = ( T, done ) ->
-  path_1      = resolve_temp_path '(v4) file stream events (1).txt'
-  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  #.........................................................................................................
-  read_sample = ( handler ) =>
-    input   = D.new_stream 'utf-8', file: path_1
-    pipeline = input
-      .pipe D.$show()
-      .pipe D.$on_end =>
-        debug CND.white 'transform 3 end'
-        handler()
-    input.on    'end',    -> debug CND.lime 'input end'
-    input.on    'finish', -> debug CND.lime 'input finish'
-    pipeline.on 'end',    -> debug CND.blue 'pipeline end'
-    pipeline.on 'finish', -> debug CND.blue 'pipeline finish'
-  #.........................................................................................................
-  read_sample ( error ) =>
-    throw error if error?
-    setImmediate => done()
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) streams as transforms and v/v (1)" ] = ( T, done ) ->
   probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
   matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
   input       = $ ( data ) ->
+  D.on_finish input, done
   input
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( lines ) => T.eq lines, matcher if lines?
-    .pipe D.$on_end => done()
   #.........................................................................................................
   D.send  input, probe for probe in probes
   D.end   input
@@ -455,11 +432,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     else                    send line
     return null
   input       = $ ( data ) ->
+  D.on_finish input, done
   input
     .pipe D.new_stream { transform, }
     .pipe D.$collect()
     .pipe D.new_stream transform: ( ( lines ) => T.eq lines, matcher if lines? )
-    .pipe D.$on_end => done()
   #.........................................................................................................
   D.send  input, probe for probe in probes
   D.end   input
@@ -580,10 +557,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe $ ( data, send ) =>
         results.push data
         send data
-      #.....................................................................................................
-      .pipe D.$on_end =>
-        T.eq results, matchers
-        done()
+    #.......................................................................................................
+    D.on_finish frob, =>
+      T.eq results, matchers
+      done()
     #.......................................................................................................
     frob.write n for n in probes
     frob.end()
@@ -662,9 +639,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( line, send ) =>
       send line
       collector.push line
-    .pipe D.$on_end =>
-      T.eq collector, [ "first line", "second line", ]
-      done()
+  D.on_finish input, =>
+    T.eq collector, [ "first line", "second line", ]
+    done()
   input.write "first line\nsecond line"
   input.end()
 
@@ -684,10 +661,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
             received_null = yes
           else
             T.fail "received #{rpr data}, shouldn't happen"
-    .pipe D.$on_end =>
-      T.fail "expected to receive null in observer transform" unless received_null
-      T.eq collector, [ "helo", "world", ]
-      done()
+  D.on_finish input, =>
+    T.fail "expected to receive null in observer transform" unless received_null
+    T.eq collector, [ "helo", "world", ]
+    done()
   input.write "helo"
   input.write "world"
   input.end()
@@ -742,7 +719,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     # .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
     .pipe $verify()
     .pipe $summarize "position #2:"
-    .pipe D.$on_end => done()
+  D.on_finish input, done
 
   #.........................................................................................................
   for n in [ 4, 7, 9, 3, 5, 6, ]
@@ -811,7 +788,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     # .pipe D.$observe ( line ) => whisper rpr line
     .pipe MSP.through.obj t2_settings, transform_main, transform_flush
     .pipe D.$show()
-    .pipe D.$on_end => T_done()
+    .pipe $ ( data, send, end ) =>
+      send data if data?
+      if end?
+        end()
+        T_done()
   #.........................................................................................................
   return null
 
@@ -911,7 +892,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $collect                S
     .pipe D.$show()
     .pipe $finalize               S
-    # .pipe D.$on_end => T_done()
   #.........................................................................................................
   ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ###
   ### TAINT this test causes a timeout for unknown reasons; postponing ###
@@ -986,7 +966,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 4, 5, 6, 14, 15, 16, 24, 25, 26, ] if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   #.........................................................................................................
   D.send input, 5
   D.send input, 15
@@ -1033,7 +1013,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ [ 4, 5, 6, ], [ 14, 15, 16, ], [ 24, 25, 26, ], ] if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   #.........................................................................................................
   D.send input, 5
   D.send input, 15
@@ -1051,7 +1031,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -1063,7 +1043,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect collect: yes
     .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -1079,7 +1059,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ] if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -1094,7 +1074,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$sort sorter, collect: yes
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ] if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -1107,7 +1087,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_end => done()
+  D.on_finish input_1, done
   # D.send input_1, word for word in "do re mi fa so la ti".split /\s+/
   matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
               [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], ]
@@ -1127,7 +1107,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe D.$collect()
       # .pipe D.$show()
     #   .pipe $ ( data ) -> T.eq data, matcher if data?
-    #   .pipe D.$on_end => done()
     # # D.send input_1, word for word in "do re mi fa so la ti".split /\s+/
     # matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
     #             [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ] ]
@@ -1149,7 +1128,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_end => done()
+  D.on_finish input_1, done
   matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
               [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], [ '千', null ], ]
   D.send input_1, word for word in "以 呂 波 耳 本 部 止 千".split /\s+/
@@ -1167,7 +1146,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   matcher = [ [ 0, '以' ], [ 1, '呂' ], [ 2, '波' ], [ 0, '耳' ], [ 1, '本' ], [ 2, '部' ], [ 0, '止' ] ]
   D.send input, word for word in "以 呂 波 耳 本 部 止".split /\s+/
   D.end input
@@ -1181,7 +1160,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   matcher = [
     ["a","text"]
     ["with","a number"]
@@ -1220,7 +1199,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   matcher = [
     {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
     {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
@@ -1254,7 +1233,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_end => done()
+  D.on_finish input, done
   matcher = [
     {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
     {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
@@ -1361,7 +1340,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     # .pipe D.$collect()
     # .pipe D.$show()
-    # .pipe D.$on_end => debug 'transform end'; done()
   input.on    'end',    => debug CND.lime 'input end'
   input.on    'finish', => debug CND.lime 'input finish'
   MSP.finished input, ( error ) =>
@@ -2105,7 +2083,6 @@ unless module.parent?
     "(v4) streams as transforms and v/v (1)"
     "(v4) streams as transforms and v/v (2)"
     "(v4) file stream events (1)"
-    "(v4) file stream events (2)"
     "(v4) transforms below output receive data events (1)"
     "(v4) transforms below output receive data events (2)"
     "(v4) _new_stream_from_url"

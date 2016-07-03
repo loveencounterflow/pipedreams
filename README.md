@@ -933,8 +933,27 @@ other words, when you pipe something into, say, `fs.createWriteStream
 '/tmp/foo.txt'`, you'can't take that stream and pipe it somewhere else. This
 won't work:
 
-  return @new_stream pipeline: [ @$pass_through(), stream, ]
+```coffee
+input
+  .pipe ( require 'fs' ).createWriteStream 'foo.txt'
+  .pipe ( require 'fs' ).createWriteStream 'bar.txt'
+```
 
+... but this works ...
+
+```coffee
+input
+  .pipe D.$bridge ( require 'fs' ).createWriteStream 'foo.txt'
+  .pipe D.$bridge ( require 'fs' ).createWriteStream 'bar.txt'
+```
+
+and this will work, too; all PipeDreams streams allow being piped from:
+
+```coffee
+input
+  .pipe D.new_stream 'write', path: 'foo.txt'
+  .pipe D.new_stream 'write', path: 'bar.txt'
+```
 
 ## @$collect
 ## @$count
