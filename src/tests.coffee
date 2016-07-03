@@ -1599,9 +1599,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     ❒❖❗❘❙❚❛❜❝❞❡❢❣❤❥❦❧❨❩❪❫❬❭❮❯❰❱❲❳❴❵❶❷❸❹❺❻❼❽❾❿➀➁➂➃➄➅➆➇➈➉➊➋➌➍➎➏➐➑➒➓➔➘➙➚➛➜➝➞➟➠➡➢➣➤
     ➥➦➧➨➩➪➫➬➭➮➯➱➲➳➴➵➶➷➸➹➺➻➼➽➾✅✊✋✨❌❎❓❔❕❟❠➕➖➗➰➿✀
     """ ).join ' '
-  path = resolve_temp_path 'sigils.txt'
-  input = D.new_stream { path, }
-  D.on_finish input, =>
+  output_path = resolve_temp_path 'sigils-output.txt'
+  path        = resolve_temp_path 'sigils.txt'
+  output      = D.new_stream 'write', { path, }
+  D.on_finish output, =>
     help ( CND.grey '001' ), $ ( d ) =>
     help ( CND.grey '002' ), $ ( d, s ) =>
     help ( CND.grey '003' ), $ ( d, s, e ) =>
@@ -1633,9 +1634,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     help ( CND.grey '020' ), D.$collect()
     help ( CND.grey '021' ), D.$spread()
     help ( CND.grey '022' ), D.new_stream pipeline: [
-      ( D.new_stream 'read', 'lines', file: '/tmp/input-foo' )
+      ( D.new_stream 'read', 'lines', file: path )
       ( D.$sort() )
-      ( D.new_stream 'write', 'lines', file: '/tmp/output-foo' )
+      ( D.new_stream 'write', 'lines', file: output_path )
       ]
     help()
     help ( CND.grey '021' ), D.$split_tsv empty: no, comments: no
@@ -1644,8 +1645,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     help ( CND.grey '021' ), D.$split_tsv()
     debug '9970'
     setImmediate => debug '3332'; done()
-  D.send    input "sample"
-  D.end     input
+  D.send output, 'x'
+  D.end output
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $join (1)" ] = ( T, done ) ->
@@ -1933,7 +1934,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$as_json_list 'pretty'
     .pipe $ ( data, send ) =>
       info '\n' + data
-      debug '5540', rpr data
+      # debug '5540', rpr data
       T.eq data, '[\n  "a text",\n  {"~isa":"symbol","value":"XXXXXXXX"},\n  42,\n  null,\n  true,\n  ["foo","bar"]\n  ]\n'
   D.on_finish source, done
   #.........................................................................................................
@@ -2105,9 +2106,6 @@ unless module.parent?
     "(v4) $intersperse (2)"
     "(v4) $intersperse (3)"
     "(v4) $intersperse (3a)"
-    "(v4) $intersperse (4)"
-    "(v4) $intersperse (5)"
-    "(v4) $intersperse (6)"
     "(v4) $join (1)"
     "(v4) $join (2)"
     "(v4) $join (3)"
@@ -2119,7 +2117,7 @@ unless module.parent?
     "(v4) $as_json_list (3)"
     "(v4) symbols as data events (1)"
     "(v4) symbols as data events (2)"
-    # "(v4) stream sigils"
+    "(v4) stream sigils"
     ]
   @_prune()
   @_main()
