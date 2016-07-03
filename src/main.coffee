@@ -523,44 +523,80 @@ MSP                       = require 'mississippi'
     send data.toString encoding
 
 #-----------------------------------------------------------------------------------------------------------
-@$sort = ( sorter ) ->
+@$sort = ( settings ) ->
   ### https://github.com/mziccard/node-timsort ###
-  TIMSORT = require 'timsort'
+  TIMSORT   = require 'timsort'
+  direction = 'ascending'
+  sorter    = null
+  key       = null
   switch arity = arguments.length
-    when 0, 2
-      null
+    when 0 then null
     when 1
-      unless CND.isa_function sorter
-        settings  = sorter
-        sorter    = null
-    else throw new Error "expected 0 to 2 arguments, got #{arity}"
+      direction = settings[ 'direction' ] ? 'ascending'
+      sorter    = settings[ 'sorter'    ] ? null
+      key       = settings[ 'key'       ] ? null
+    else throw new Error "expected 0 or 1 arguments, got #{arity}"
   #.........................................................................................................
-  collector = []
-  collect   = settings?[ 'collect' ] ? no
-  sorter   ?= ( a, b ) =>
-    return +1 if a > b
-    return -1 if a < b
-    return  0
+  unless direction in [ 'ascending', 'descending', ]
+    throw new Error "expected 'ascending' or 'descending' for direction, got #{rpr direction}"
   #.........................................................................................................
-  return @_rpr "⮃", "sort", null, @$ ( data, send, end ) =>
-    collector.push data if data?
-    if end?
-      TIMSORT.sort collector, sorter
-      if collect
-        send collector
+  unless sorter?
+    #.......................................................................................................
+    type_of = ( x ) =>
+      R = CND.type_of x
+      return if R is 'infinity' then 'number' else R
+    #.......................................................................................................
+    validate_type = ( type_a, type_b, include_list = no ) =>
+      unless type_a is type_b
+        throw new Error "unable to compare a #{type_a} with a #{type_b}"
+      if include_list
+        unless type_a in [ 'number', 'infinity', 'text', 'list', ]
+          throw new Error "unable to compare values of type #{type_a}"
       else
+        unless type_a in [ 'number', 'infinity', 'text', ]
+          throw new Error "unable to compare values of type #{type_a}"
+      return null
+    #.......................................................................................................
+    if key?
+      sorter = ( a, b ) =>
+        a = a[ key ]
+        b = b[ key ]
+        validate_type ( type_of a ), ( type_of b ), no
+        return +1 if ( if direction is 'ascending' then a > b else a < b )
+        return -1 if ( if direction is 'ascending' then a < b else a > b )
+        return  0
+    #.......................................................................................................
+    else
+      sorter = ( a, b ) =>
+        validate_type ( type_a = type_of a ), ( type_b = type_of b ), yes
+        if type_a is 'list'
+          a = a[ 0 ]
+          b = b[ 0 ]
+          validate_type ( type_of a ), ( type_of b ), no
+        return +1 if ( if direction is 'ascending' then a > b else a < b )
+        return -1 if ( if direction is 'ascending' then a < b else a > b )
+        return  0
+  #.........................................................................................................
+  $sort = =>
+    collector = []
+    return @$ ( data, send, end ) =>
+      collector.push data if data?
+      if end?
+        TIMSORT.sort collector, sorter
         send x for x in collector
         collector.length = 0
-      end()
-    return null
+        end()
+      return null
+  #.........................................................................................................
+  return @_rpr "⮃", "sort", null, $sort()
 
-#-----------------------------------------------------------------------------------------------------------
-@$sort.from_keys = ( keys... ) ->
-  R = ( a, b ) =>
-    for key in keys
-      return +1 if a[ key ] > b[ key ]
-      return -1 if a[ key ] < b[ key ]
-    return 0
+# #-----------------------------------------------------------------------------------------------------------
+# @$sort.from_keys = ( keys... ) ->
+#   R = ( a, b ) =>
+#     for key in keys
+#       return +1 if a[ key ] > b[ key ]
+#       return -1 if a[ key ] < b[ key ]
+#     return 0
 
 #-----------------------------------------------------------------------------------------------------------
 @$as_text = ( stringify ) ->
