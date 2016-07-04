@@ -543,6 +543,7 @@ MSP                       = require 'mississippi'
   unless sorter?
     #.......................................................................................................
     type_of = ( x ) =>
+      ### NOTE for the purposes of magnitude comparison, `Infinity` can be treated as a number: ###
       R = CND.type_of x
       return if R is 'infinity' then 'number' else R
     #.......................................................................................................
@@ -550,10 +551,10 @@ MSP                       = require 'mississippi'
       unless type_a is type_b
         throw new Error "unable to compare a #{type_a} with a #{type_b}"
       if include_list
-        unless type_a in [ 'number', 'infinity', 'text', 'list', ]
+        unless type_a in [ 'number', 'date', 'text', 'list', ]
           throw new Error "unable to compare values of type #{type_a}"
       else
-        unless type_a in [ 'number', 'infinity', 'text', ]
+        unless type_a in [ 'number', 'date', 'text', ]
           throw new Error "unable to compare values of type #{type_a}"
       return null
     #.......................................................................................................

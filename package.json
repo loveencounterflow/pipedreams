@@ -36,6 +36,7 @@
     "lodash.clonedeep": "^4.3.2",
     "mississippi": "^1.2.0",
     "split2": "^2.1.0",
+    "table": "^3.7.8",
     "throttle": "^1.0.3",
     "timsort": "^0.2.1",
     "tmp": "0.0.28"
