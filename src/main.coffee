@@ -215,10 +215,13 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
-  x = new Buffer "data\n"
+  x     = new Buffer "data\n"
+  plug  = @new_stream()
   pipeline = [
-    ( @$ ( data, send ) => send x )
+    ( @$ ( data, send ) => send x; @send plug, data )
     ( @new_stream 'write', file: '/dev/null' )
+    ( @$ ( data, send ) => null )
+    plug
     ]
   return @_rpr "⏚", "devnull", null, @new_stream { pipeline, }
 
@@ -967,11 +970,17 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @on_finish = ( stream, handler ) ->
-  stream.on 'finish', => setImmediate handler
+  # stream.on 'finish', => setImmediate handler
+  stream.on 'finish', => setImmediate => handler()
+
+#-----------------------------------------------------------------------------------------------------------
+@$finish = -> @$on_finish ->
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_finish = ( method ) ->
-  R = @new_stream()
+  ### NOTE For reason not well understood, using `@new_stream()` here instead ov a `devnull` stream
+  will in some cases not work, as the finish event never fires. ###
+  R = @new_stream 'devnull'
   @on_finish R, method
   return R
 

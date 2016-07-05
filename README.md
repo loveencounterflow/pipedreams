@@ -33,45 +33,45 @@ Install as `npm install --save pipedreams2`.
     - [Using Events instead of Data Items](#using-events-instead-of-data-items)
     - [Using a Symbolic Value for Null](#using-a-symbolic-value-for-null)
 - [PipeDreams v4 API](#pipedreams-v4-api)
-  - [@$](#@)
-  - [@$as_json_list = ( tags... ) ->](#@as_json_list---tags---)
-  - [@$as_text = ( stringify ) ->](#@as_text---stringify---)
-  - [@$async](#@async)
-  - [@$batch](#@batch)
-  - [@$bridge = ( stream ) ->](#@bridge---stream---)
-  - [@$collect](#@collect)
-  - [@$count](#@count)
-  - [@$decode = ( encoding = 'utf-8' ) ->](#@decode---encoding--utf-8---)
-  - [@$filter](#@filter)
-  - [@$intersperse = ( joiners... ) ->](#@intersperse---joiners---)
-  - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#@join---outer_joiner--%5Cn-inner_joiner------)
-  - [@$lockstep](#@lockstep)
-  - [@$on_end](#@on_end)
-  - [@$on_first, @$on_last, @$on_start, @$on_stop](#@on_first-@on_last-@on_start-@on_stop)
-  - [@$on_finish, @on_finish = ( stream, handler ) ->](#@on_finish-@on_finish---stream-handler---)
-  - [@$parse_csv](#@parse_csv)
-  - [@$pass_through](#@pass_through)
-  - [@$sample = ( p = 0.5, options ) ->](#@sample---p--05-options---)
-  - [@$show](#@show)
-  - [@$sort](#@sort)
-  - [@$sort = ( sorter, settings ) ->](#@sort---sorter-settings---)
-  - [@$split = ( matcher, mapper, settings ) ->](#@split---matcher-mapper-settings---)
-  - [@$split_tsv = ( settings ) ->](#@split_tsv---settings---)
-  - [@$spread](#@spread)
-  - [@$stop_time](#@stop_time)
-  - [@$stringify = ( stringify ) ->](#@stringify---stringify---)
-  - [@$throttle_bytes](#@throttle_bytes)
-  - [@$throttle_items](#@throttle_items)
-  - [@$transform = ( method ) ->](#@transform---method---)
-  - [@end = ( me ) ->](#@end---me---)
-  - [@isa_stream](#@isa_stream)
-  - [@isa_readable_stream = ( x ) ->](#@isa_readable_stream---x---)
-  - [@isa_writable_stream = ( x ) ->](#@isa_writable_stream---x---)
-  - [@isa_duplex_stream = ( x ) ->](#@isa_duplex_stream---x---)
-  - [@new_stream](#@new_stream)
-  - [@remit, @$, @remit_async, @$async](#@remit-@-@remit_async-@async)
-  - [@run](#@run)
-  - [@send = ( me, data ) ->](#@send---me-data---)
+  - [@$](#)
+  - [@$as_json_list = ( tags... ) ->](#as_json_list---tags---)
+  - [@$as_text = ( stringify ) ->](#as_text---stringify---)
+  - [@$async](#async)
+  - [@$batch](#batch)
+  - [@$bridge = ( stream ) ->](#bridge---stream---)
+  - [@$collect](#collect)
+  - [@$count](#count)
+  - [@$decode = ( encoding = 'utf-8' ) ->](#decode---encoding--utf-8---)
+  - [@$filter](#filter)
+  - [@$finish = ->](#finish---)
+  - [@$intersperse = ( joiners... ) ->](#intersperse---joiners---)
+  - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#join---outer_joiner--%5Cn-inner_joiner------)
+  - [@$lockstep](#lockstep)
+  - [@$on_end](#on_end)
+  - [@$on_first, @$on_last, @$on_start, @$on_stop](#on_first-on_last-on_start-on_stop)
+  - [@$on_finish, @on_finish = ( stream, handler ) ->](#on_finish-on_finish---stream-handler---)
+  - [@$parse_csv](#parse_csv)
+  - [@$pass_through](#pass_through)
+  - [@$sample = ( p = 0.5, options ) ->](#sample---p--05-options---)
+  - [@$show](#show)
+  - [@$sort = ( sorter, settings ) ->](#sort---sorter-settings---)
+  - [@$split = ( matcher, mapper, settings ) ->](#split---matcher-mapper-settings---)
+  - [@$split_tsv = ( settings ) ->](#split_tsv---settings---)
+  - [@$spread](#spread)
+  - [@$stop_time](#stop_time)
+  - [@$stringify = ( stringify ) ->](#stringify---stringify---)
+  - [@$throttle_bytes](#throttle_bytes)
+  - [@$throttle_items](#throttle_items)
+  - [@$transform = ( method ) ->](#transform---method---)
+  - [@end = ( me ) ->](#end---me---)
+  - [@isa_stream](#isa_stream)
+  - [@isa_readable_stream = ( x ) ->](#isa_readable_stream---x---)
+  - [@isa_writable_stream = ( x ) ->](#isa_writable_stream---x---)
+  - [@isa_duplex_stream = ( x ) ->](#isa_duplex_stream---x---)
+  - [@new_stream](#new_stream)
+  - [@remit, @$, @remit_async, @$async](#remit--remit_async-async)
+  - [@run](#run)
+  - [@send = ( me, data ) ->](#send---me-data---)
 - [TL;DR: Things to Keep in Mind](#tldr-things-to-keep-in-mind)
   - [Never Assume a Stream to be Synchronous](#never-assume-a-stream-to-be-synchronous)
   - [Always Use D.on_finish to Detect End of Stream](#always-use-don_finish-to-detect-end-of-stream)
@@ -79,12 +79,6 @@ Install as `npm install --save pipedreams2`.
   - [Don't Use a Pass Thru Stream in Front of a Read Stream](#dont-use-a-pass-thru-stream-in-front-of-a-read-stream)
   - [Always Use an Output and Wait for it](#always-use-an-output-and-wait-for-it)
   - [Beware of Incompatible Libraries](#beware-of-incompatible-libraries)
-- [Backmatter](#backmatter)
-  - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
-    - [Through2](#through2)
-    - [Mississippi](#mississippi)
-    - [Binary Split](#binary-split)
-  - [What's in a Name?](#whats-in-a-name)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -195,7 +189,7 @@ write_sample = ( handler ) =>
 Stress tests have shown this pattern to produce a certain percentage of failures (1 in 10, but that might
 depend on details of the writing process).
 
-On the other hand, the pattern below passes tests; here, we use the PipeDreams `on_finish` method and pass
+On the other hand, the pattern below passes tests; here, we use the PipeDreams `$on_finish` method and pass
 in the output stream (and the callback to be called when processing has completed):
 
 ```coffee
@@ -205,17 +199,15 @@ write_sample = ( handler ) =>
   input
     .pipe D.$show()
     .pipe output
-  #.......................................................................................................
-  D.on_finish output, handler
+    .pipe D.$on_finish handler
   #.......................................................................................................
   D.send input, data for data in [ 'foo', 'bar', 'baz', ]
   D.end input
 ```
 
-Observe that `on_finish` uses `setImmediate` to delay calling the callback handler until the next tick of
+Observe that `$on_finish` uses `setImmediate` to delay calling the callback handler until the next tick of
 the event loop; this too, helps to prevent prematurely leaving the writing procedure.
 
-In cases where there is no proper output stream, it is recommended to use `D.on_finish input` instead.
 
 ## remit (aka $) and remit_async (aka $async)
 
@@ -262,14 +254,12 @@ surprise, since nothing in the code suggests that the thing should not work in a
 still valid
 
 In order for the code to meet expectations, remember to always grab your results from within a stream
-transform or from a stream `finish` handler; commonly, this is either done by using a [Synchronous Transform
-With Stream End Detection](#synchronous-transform-with-stream-end-detection), or `D.on_finish`:
+transform or from a stream `finish` handler; commonly, this is done with `D.$on_finish`:
 
 ```coffee
 @[ "(v4) new_stream_from_text (2)" ] = ( T, done ) ->
   collector = []
   input     = D.new_stream()
-  D.on_finish input, done
   input
     .pipe D.$split()
     .pipe $ ( line, send, end ) =>
@@ -279,6 +269,7 @@ With Stream End Detection](#synchronous-transform-with-stream-end-detection), or
       if end?
         T.eq collector, [ "first line", "second line", ]
         end()
+    .pipe D.$on_finish handler
   input.write "first line\nsecond line"
   input.end()
 ```
@@ -329,8 +320,8 @@ f = ( done ) ->
   input
     .pipe D.$split()
     .pipe thruput
-    .pipe D.$on_finish done
     .pipe output
+    .pipe D.$on_finish done
   #.........................................................................................................
   thruput
     .pipe $ ( data ) -> log 'thruput', rpr data
@@ -706,12 +697,12 @@ consider to use `$as_json_list` and/or `$intersperse` instead):
 f = ( path, handler ) ->
   source  = D.new_stream()
   output  = D.new_stream 'write', { path, }
-  D.on_finish output, handler
   source
     .pipe $ ( data, send ) => send ( JSON.stringify data ); send ','
     .pipe D.$on_start ( send ) => send '['
     .pipe D.$on_last ( data, send ) => send ']\n'
     .pipe output
+    .pipe D.$on_finish handler
   #.........................................................................................................
   D.send  source, 42
   D.send  source, 'a string'
@@ -787,7 +778,6 @@ f = ( path, handler ) ->
   #.......................................................................................................
   source  = D.new_stream()
   output  = D.new_stream 'write', { path, }
-  D.on_finish output, handler
   source
     .pipe $serialize()
     .pipe $insert_delimiters()
@@ -795,6 +785,7 @@ f = ( path, handler ) ->
     .pipe $stop_list()
     .pipe $as_text()
     .pipe output
+    .pipe D.$on_finish handler
   #.........................................................................................................
   D.send  source, [ 'data', 42,         ]
   D.send  source, [ 'data', 'a string', ]
@@ -868,13 +859,13 @@ Let's have a look at how to use the `null` symbol:
 f = ( path, handler ) ->
   source  = D.new_stream()
   output  = D.new_stream 'write', { path, }
-  D.on_finish output, handler
   source
     .pipe $ ( data, send ) => if data is Symbol.for 'null' then send 'null' else send JSON.stringify data
     .pipe $ ( data, send ) => send data; send ','
     .pipe D.$on_start (       send ) => send '['
     .pipe D.$on_last  ( data, send ) => send ']\n'
     .pipe output
+    .pipe D.$on_finish handler
   #.........................................................................................................
   data_items = [ 42, 'a string', null, false, ]
   for data in data_items
@@ -965,6 +956,10 @@ input
 ## @$decode = ( encoding = 'utf-8' ) ->
 ## @$filter
 
+## @$finish = ->
+
+Used at the end of a pipeline to make sure data is correctly streamed till the very last item. Onle needed in some cases.
+
 ## @$intersperse = ( joiners... ) ->
 
 Similar to `$join`, `$intersperse` allows to put extra data in between each pair of original data; in
@@ -992,7 +987,7 @@ demo = ( x..., handler ) =>
     .pipe $ ( data ) ->
       if data?
         help x, data.join ''
-  D.on_finish input, handler
+    .pipe D.$on_finish handler
   D.send input, 'a'
   D.send input, 'b'
   D.send input, 'c'
@@ -1045,11 +1040,35 @@ newline, the `inner_joiner` to a comma and a space.
 
 ## @$on_finish, @on_finish = ( stream, handler ) ->
 
-This is the preferred way to detect when your stream has finished writing. If you have any ouput stream
-(say, `output = fs.createWriteStream 'a.txt'`) in your pipeline, use that one as in `D.on_finish output,
-callback`. Terminating stream processing from handlers for other events (e.g. `'end'`) and/or of other parts
-of the pipeline may lead to hard-to-find bugs. Observe that `on_finish` calls `handler` only upon the
-following turn of the JavaScript event loop.
+The recommended way to detect write completion in a piped stream is to tack a `.pipe @$on_finish handler`
+transform unto the end of your pipeline:
+
+```coffee
+f = ( handler ) ->
+  ...
+  input
+    .pipe $do_this()
+    .pipe $do_that()
+    .pipe output
+    .pipe D.$on_finish handler
+```
+
+Alternatively, if you have an explicit ouput stream (say, `output`) in your
+pipeline, you can also call `D.on_finish output, handler`. Terminating stream
+processing from handlers for other events (e.g. `'end'`) and/or of other parts
+of the pipeline may lead to hard-to-find bugs. Observe that `on_finish` and
+`$on_finish` call `handler` only upon the following turn of the JavaScript event
+loop.
+
+Also see [@$finish](#finish---).
+
+**Note** You should **not** attach anything in the pipeline after a
+`D.$on_finish` transform, since the behavior of such a transform is not well
+defined. When the `finish` event is fired, then all the stream components have
+already packed their bags and are ready to return home. The very moment that
+`handler` is called, the show is over, and the last batch of events may or may
+not make it to any given transform below `$on_finish`.
+
 
 ## @$parse_csv
 ## @$pass_through
@@ -1202,7 +1221,7 @@ Given a stream and some data, send / write / push that data into the stream.
 
 ## Never Assume a Stream to be Synchronous
 
-## Always Use D.on_finish to Detect End of Stream
+## Always Use D.$on_finish to Detect End of Stream
 
 ## Never Use Null to Send, Unless You Want the Stream to End
 
