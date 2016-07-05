@@ -26,8 +26,8 @@ allows to inspect folder contents after tests have terminated. It would probably
 the `keep: yes` setting at a later point in time. ###
 TMP                       = require 'tmp'
 TMP.setGracefulCleanup()
-# _temp_thing               = TMP.dirSync keep: yes, unsafeCleanup: no, prefix: 'pipedreams-'
-_temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
+_temp_thing               = TMP.dirSync keep: yes, unsafeCleanup: no, prefix: 'pipedreams-'
+# _temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
 temp_home                 = _temp_thing[ 'name' ]
 resolve_path              = ( require 'path' ).resolve
 resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.\/]/g, '' for p in P )...
@@ -352,7 +352,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe D.$as_line()
       .pipe D.new_stream pipeline: [ ( D.$bridge output ), D.$show(), ]
       .pipe D.$on_finish handler
-    # output.on 'finish', => setImmediate => handler()
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -361,7 +360,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input   = D.new_stream 'read', 'lines', path: path_1
     input
       .pipe D.$collect()
-      # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
       .pipe D.$on_finish handler
   #.........................................................................................................
@@ -1242,6 +1240,97 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     yield sort [ 'ascending', 'size', ], null, resume
     yield sort [ 'ascending', 'name', ], null, resume
     yield sort [ 'descending', 'date', ], [ 'descending', 'size', ], [ 'ascending', 'name', ], null, resume
+    done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $as_tsv" ] = ( T, done ) ->
+  { step }            = require 'coffeenode-suspend'
+  { to_width }        = require 'to-width'
+  # path                = resolve_temp_path '$as_tsv'
+  path                = '/tmp/$as_tsv.tsv'
+  #.........................................................................................................
+  f = ->
+    @$as_tsv = ( names..., settings ) ->
+      if CND.isa_text settings
+        names.push settings
+        settings = null
+      #.....................................................................................................
+      stringify = settings?[ 'stringify' ] ? null
+      #.....................................................................................................
+      unless stringify?
+        stringify = ( x ) =>
+          R = x
+          if CND.isa_text R
+            R = R.replace /\\/g, "\\\\"
+            R = R.replace /\n/g, "\\n"
+            R = R.replace /\t/g, "\\t"
+          else
+            R = JSON.stringify x
+          return R
+      #.....................................................................................................
+      return @new_stream pipeline: [
+        ( @$ ( row, send ) => send ( ( ( stringify value ) for value in row ).join '\t' ) + '\n' )
+        # ( @$on_start ( send ) => send ( names.join '\t' ) + '\n' )
+        ]
+    #.......................................................................................................
+    @$as_tsv = @_rpr "as-tsv", "as-tsv", null, @$as_tsv
+  f.apply D
+  #.........................................................................................................
+  write = ( handler ) =>
+    input     = D.new_stream()
+    output    = D.new_stream 'write', { path, }
+    input
+      .pipe D.$show '1'
+      .pipe D.$as_list 'date', 'size', 'name'
+      .pipe D.$show '2'
+      .pipe D.$as_tsv  'date', 'size', 'name'
+      .pipe D.$show '3'
+      .pipe D.$finish output, handler
+    for probe in probes
+      D.send input, probe
+    D.end input
+  #.........................................................................................................
+  probes = [
+    { date: '2016 Apr 19', size:  1069547520, name: "ubuntu-14.04.4-desktop-amd64.iso",                       }
+    { date: '2016 Apr 20', size:     1216498, name: "Vermeer-view-of-delft.jpg",                              }
+    { date: '2016 Feb  4', size:    28121472, name: "actions.pdf",                                            }
+    { date: '2016 Feb 19', size:       61140, name: "rss.opml",                                               }
+    { date: '2016 Jan 16', size:   126810054, name: "Inside Star Trek Voyager.mp4",                           }
+    { date: '2016 Jan 16', size:   300421011, name: "Star Trek Secrets of the Universe.mp4",                  }
+    { date: '2016 Jan 30', size:     8645163, name: "rack-experiment.zip",                                    }
+    { date: '2016 Jun  9', size:    71511772, name: "Software Defined Networking - Computerphile.mp4",        }
+    { date: '2016 Jun 12', size:   444219478, name: "Syntaxation • Douglas Crockford.mp4",                    }
+    { date: '2016 Jun 16', size:   194876109, name: "Another Go at Language Design.mp4",                      }
+    { date: '2015 Oct 22', size:   369306221, name: "北京位於華北平原的西北边缘.mp4",                            }
+    { date: '2016 Jun 16', size:   452146120, name: "Go for Pythonistas.mp4",                                 }
+    { date: '2016 Jun 16', size:   238955286, name: "Building Services in Go.mp4",                            }
+    { date: '2016 Jun 16', size:    29880564, name: "Is Glass a Liquid.mp4",                                  }
+    { date: '2016 Jun 16', size:    70266384, name: "Celsius Didn't Invent Celsius.mp4",                      }
+    { date: '2016 Jun 16', size:    89684342, name: "INSIDE a Spherical Mirror.mp4",                          }
+    { date: '2016 Jun 16', size:   146666578, name: "How Earth Moves.mp4",                                    }
+    { date: '2016 Jun 16', size:   131406982, name: "Dynamic Languages Strike Back.mp4",                      }
+    { date: '2016 May  4', size:  1537474560, name: "manjaro-xfce-15.12-x86_64.iso",                          }
+    { date: '2016 May  6', size:  1828716544, name: "antergos-2016.04.22-x86_64.iso",                         }
+    { date: '2016 May  6', size:  1485881344, name: "ubuntu-16.04-desktop-amd64.iso",                         }
+    { date: '2016 May  8', size:    12292718, name: "CJK Character Component Standard 20150112165337190.pdf", }
+    { date: '2016 May 21', size:     1313746, name: "2015_Logography_and_the_classification_o.pdf",           }
+    { date: '2004 Aug  4', size:    10500792, name: "simsun.ttc",                                             }
+    { date: '2015 Dec 20', size:     7740439, name: "Ricci, Mnemotechnics, btv1b9006393v.pdf",                }
+    { date: '2015 Apr 18', size:    26073977, name: "Perfect Numbers and Mersenne Primes - Numberphile.mp4",  }
+    { date: '2015 Nov  1', size:    70623822, name: "atom-amd64(1).deb",                                      }
+    { date: '2015 Nov  2', size:    70040746, name: "atom-amd64(2).deb",                                      }
+    { date: '2015 Nov 18', size:      362700, name: "CharlesBabbageLawsOfMechanicalNotation.pdf",             }
+    { date: '2015 Oct 17', size:    19351620, name: "Legge1899.pdf",                                          }
+    { date: '2015 Oct 22', size:    69957572, name: "atom-amd64.deb",                                         }
+    { date: '2015 Oct 22', size:   369306221, name: "The Big Bang Theory - Best of Star Trek.mp4",            }
+    ]
+  #.........................................................................................................
+  for probe in probes
+    probe[ 'date' ] = ( new Date probe[ 'date' ] )
+    # probe[ 'size' ] = parseInt 10 ** parseInt Math.log10 probe[ 'size' ]
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write resume
     done()
 
 #-----------------------------------------------------------------------------------------------------------
@@ -2295,70 +2384,71 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) fail to read when thru stream comes before read stream"
-    # "(v4) _new_stream_from_text doesn't work synchronously"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) README demo (1)"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 2"
-    "(v4) $async with method arity 3"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
-    "(v4) file stream events (1)"
-    "(v4) transforms below output receive data events (1)"
-    "(v4) transforms below output receive data events (2)"
-    "(v4) _new_stream_from_url"
-    "(v4) new_stream README example (1)"
-    "(v4) new_stream README example (2)"
-    "(v4) new_stream README example (3)"
-    "(v4) _new_stream_from_path with encodings"
-    "(v4) _new_stream_from_path (raw)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) _new_stream_from_path (4)"
-    "(v4) _new_stream_from_path (3)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) read TSV file (1)"
-    "(v4) TSV whitespace trimming"
-    "(v4) $split_tsv (1)"
-    "(v4) $intersperse (1)"
-    "(v4) $intersperse (2)"
-    "(v4) $intersperse (3)"
-    "(v4) $intersperse (3a)"
-    "(v4) $intersperse (4)"
-    "(v4) $join (1)"
-    "(v4) $join (2)"
-    "(v4) $join (3)"
-    "(v4) $as_json_list (1)"
-    "(v4) $as_json_list (2)"
-    "(v4) $as_json_list (2a)"
-    "(v4) $as_json_list (2b)"
-    "(v4) $as_json_list (2c)"
-    "(v4) $as_json_list (3)"
-    "(v4) symbols as data events (1)"
-    "(v4) symbols as data events (2)"
-    "(v4) stream sigils"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $sort 5"
-    "(v4) $sort 6"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # # "(v4) fail to read when thru stream comes before read stream"
+    # # "(v4) _new_stream_from_text doesn't work synchronously"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) README demo (1)"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 2"
+    # "(v4) $async with method arity 3"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) file stream events (1)"
+    # "(v4) transforms below output receive data events (1)"
+    # "(v4) transforms below output receive data events (2)"
+    # "(v4) _new_stream_from_url"
+    # "(v4) new_stream README example (1)"
+    # "(v4) new_stream README example (2)"
+    # "(v4) new_stream README example (3)"
+    # "(v4) _new_stream_from_path with encodings"
+    # "(v4) _new_stream_from_path (raw)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) _new_stream_from_path (4)"
+    # "(v4) _new_stream_from_path (3)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) read TSV file (1)"
+    # "(v4) TSV whitespace trimming"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $intersperse (1)"
+    # "(v4) $intersperse (2)"
+    # "(v4) $intersperse (3)"
+    # "(v4) $intersperse (3a)"
+    # "(v4) $intersperse (4)"
+    # "(v4) $join (1)"
+    # "(v4) $join (2)"
+    # "(v4) $join (3)"
+    # "(v4) $as_json_list (1)"
+    # "(v4) $as_json_list (2)"
+    # "(v4) $as_json_list (2a)"
+    # "(v4) $as_json_list (2b)"
+    # "(v4) $as_json_list (2c)"
+    # "(v4) $as_json_list (3)"
+    # "(v4) symbols as data events (1)"
+    # "(v4) symbols as data events (2)"
+    # "(v4) stream sigils"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $sort 5"
+    # "(v4) $sort 6"
+    "(v4) $as_tsv"
     ]
   @_prune()
   @_main()

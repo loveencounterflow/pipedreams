@@ -906,6 +906,9 @@ result from a one-liner (for small amounts of data) to a one-record-per-line JSO
 'Pretty-printed' JSON files are great because they lend themselves both to be edited in your favorite text
 editor and to be efficiently processed in a linewise fashion.
 
+## @$as_list = ( names... ) ->
+Turn named attributes into list of values.
+
 
 ## @$as_text = ( stringify ) ->
 Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings

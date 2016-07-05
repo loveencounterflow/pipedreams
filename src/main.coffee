@@ -603,6 +603,13 @@ MSP                       = require 'mississippi'
 #     return 0
 
 #-----------------------------------------------------------------------------------------------------------
+@$as_list = ( names... ) ->
+  ### Turn named attributes into list of values. ###
+  return @$ ( data, send ) ->
+    send ( data[ name ] for name in names )
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
 @$as_text = ( stringify ) ->
   ### Turn all data items into texts using `JSON.stringify` or a custom stringifier. `null` and any strings
   in the data stream is passed through unaffected. Observe that buffers in the stream will very probably not
@@ -974,7 +981,9 @@ MSP                       = require 'mississippi'
   stream.on 'finish', => setImmediate => handler()
 
 #-----------------------------------------------------------------------------------------------------------
-@$finish = -> @$on_finish ->
+@$finish = ( stream, handler ) ->
+  @on_finish stream, handler
+  return stream
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_finish = ( method ) ->

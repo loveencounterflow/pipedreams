@@ -39,7 +39,7 @@
     "throttle": "^1.0.3",
     "timsort": "^0.2.1",
     "tmp": "0.0.28",
-    "to-width": "^1.0.2"
+    "to-width": "^1.0.1"
   },
   "devDependencies": {
     "guy-test": "^1.2.1"
