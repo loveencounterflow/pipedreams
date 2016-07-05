@@ -1055,7 +1055,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     return  0
   input = D.new_stream()
   input
-    .pipe D.$sort sorter
+    .pipe D.$sort { sorter, }
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ] if data?
@@ -1160,42 +1160,16 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $sort 6" ] = ( T, done ) ->
   step                = ( require 'coffeenode-suspend' ).step
-  TABLE               = require 'table'
-  # CND.dir TABLE
-  _new_table_stream   = TABLE.createStream
-  table_settings      =
-    border:           TABLE.getBorderCharacters 'void'
-    drawJoin:         => no
-    columnDefault:
-      width:          50
-      paddingLeft:  0
-      paddingRight: 1
-    columnCount: 3
-    columns:
-        0:
-          width:      40
-          alignment:  'left'
-          truncate:   40
-        1:
-          width:      10
-          alignment:  'right'
-        2:
-          width:      30
-          alignment:  'left'
-          truncate:   30
   #.........................................................................................................
   sort = ( directions_and_keys..., matcher, handler ) =>
-    new_table_stream = =>
-      table_stream = _new_table_stream table_settings
-      return $ ( data, send ) => table_stream.write data; send data
-    urge directions_and_keys
-    input = D.new_stream()
-    pipeline = ( D.$sort { direction, key, } for [ direction, key, ] in directions_and_keys ).reverse()
+    help directions_and_keys
+    input     = D.new_stream()
+    pipeline  = ( D.$sort { direction, key, } for [ direction, key, ] in directions_and_keys )
+    pipeline  = pipeline.reverse()
     input
       .pipe D.new_stream { pipeline, }
-      # .pipe $ ( data ) => info JSON.stringify data if data?
+      .pipe $ ( data ) => info JSON.stringify data if data?
       .pipe $ ( data, send ) => send [ data[ 'date' ], data[ 'size' ], data[ 'name' ], ]
-      .pipe new_table_stream()
       # .pipe D.$collect()
       # .pipe $ ( data ) -> T.eq data, matcher if data? and matcher?
     D.on_finish input, handler
@@ -2300,69 +2274,69 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) fail to read when thru stream comes before read stream"
-    # # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) file stream events (1)"
-    # "(v4) transforms below output receive data events (1)"
-    # "(v4) transforms below output receive data events (2)"
-    # "(v4) _new_stream_from_url"
-    # "(v4) new_stream README example (1)"
-    # "(v4) new_stream README example (2)"
-    # "(v4) new_stream README example (3)"
-    # "(v4) _new_stream_from_path with encodings"
-    # "(v4) _new_stream_from_path (raw)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_path (1)"
-    # "(v4) _new_stream_from_path (4)"
-    # "(v4) _new_stream_from_path (3)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) read TSV file (1)"
-    # "(v4) TSV whitespace trimming"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $intersperse (1)"
-    # "(v4) $intersperse (2)"
-    # "(v4) $intersperse (3)"
-    # "(v4) $intersperse (3a)"
-    # "(v4) $intersperse (4)"
-    # "(v4) $join (1)"
-    # "(v4) $join (2)"
-    # "(v4) $join (3)"
-    # "(v4) $as_json_list (1)"
-    # "(v4) $as_json_list (2)"
-    # "(v4) $as_json_list (2a)"
-    # "(v4) $as_json_list (2b)"
-    # "(v4) $as_json_list (2c)"
-    # "(v4) $as_json_list (3)"
-    # "(v4) symbols as data events (1)"
-    # "(v4) symbols as data events (2)"
-    # "(v4) stream sigils"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $sort 5"
+    # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) fail to read when thru stream comes before read stream"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) file stream events (1)"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) _new_stream_from_url"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_path (4)"
+    "(v4) _new_stream_from_path (3)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) read TSV file (1)"
+    "(v4) TSV whitespace trimming"
+    "(v4) $split_tsv (1)"
+    "(v4) $intersperse (1)"
+    "(v4) $intersperse (2)"
+    "(v4) $intersperse (3)"
+    "(v4) $intersperse (3a)"
+    "(v4) $intersperse (4)"
+    "(v4) $join (1)"
+    "(v4) $join (2)"
+    "(v4) $join (3)"
+    "(v4) $as_json_list (1)"
+    "(v4) $as_json_list (2)"
+    "(v4) $as_json_list (2a)"
+    "(v4) $as_json_list (2b)"
+    "(v4) $as_json_list (2c)"
+    "(v4) $as_json_list (3)"
+    "(v4) symbols as data events (1)"
+    "(v4) symbols as data events (2)"
+    "(v4) stream sigils"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $sort 5"
     "(v4) $sort 6"
     ]
   @_prune()
