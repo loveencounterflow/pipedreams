@@ -151,21 +151,21 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   write_sample = ( handler ) =>
     input   = D.new_stream()
     output  = D.new_stream 'write', 'lines', path: path_1
-    D.on_finish output, handler
     input
       # .pipe $ ( line, send ) => send line + '\n'
       .pipe output
+      .pipe D.$on_finish handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
   #.........................................................................................................
   read_sample = ( handler ) =>
     input   = D.new_stream 'read', 'lines', path: path_1
-    D.on_finish input, handler
     input
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_finish handler
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -184,22 +184,22 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   write_sample = ( handler ) =>
     input   = D.new_stream()
     output  = ( require 'fs' ).createWriteStream path_1
-    D.on_finish output, handler
     input
       .pipe D.$show()
       .pipe D.$as_line()
       .pipe D.$bridge output
+      .pipe D.$on_finish handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
   #.........................................................................................................
   read_sample = ( handler ) =>
     input   = D.new_stream 'read', 'lines', path: path_1
-    D.on_finish input, handler
     input
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_finish handler
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -232,7 +232,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe output
     .pipe D.$show()
     .pipe $verify()
-  D.on_finish output, => help 'done'; done()
+    .pipe D.$on_finish => help 'done'; done()
   #.......................................................................................................
   for probe in probes
     do ( probe ) =>
@@ -310,9 +310,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   write_sample = ( handler ) =>
     input   = D.new_stream()
     output  = D.new_stream 'write', 'lines', { file: path_1, }
-    D.on_finish output, handler
     input
       .pipe output
+      .pipe D.$on_finish handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -351,7 +351,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input
       .pipe D.$as_line()
       .pipe D.new_stream pipeline: [ ( D.$bridge output ), D.$show(), ]
-    D.on_finish output, handler
+      .pipe D.$on_finish handler
     # output.on 'finish', => setImmediate => handler()
     #.......................................................................................................
     D.send input, probe for probe in probes
@@ -359,11 +359,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   read_sample = ( handler ) =>
     input   = D.new_stream 'read', 'lines', path: path_1
-    D.on_finish input, handler
     input
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_finish handler
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -412,11 +412,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
   matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
   input       = $ ( data ) ->
-  D.on_finish input, done
   input
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( lines ) => T.eq lines, matcher if lines?
+    .pipe D.$on_finish done
   #.........................................................................................................
   D.send  input, probe for probe in probes
   D.end   input
@@ -432,11 +432,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     else                    send line
     return null
   input       = $ ( data ) ->
-  D.on_finish input, done
   input
     .pipe D.new_stream { transform, }
     .pipe D.$collect()
     .pipe D.new_stream transform: ( ( lines ) => T.eq lines, matcher if lines? )
+    .pipe D.$on_finish done
   #.........................................................................................................
   D.send  input, probe for probe in probes
   D.end   input
@@ -639,9 +639,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( line, send ) =>
       send line
       collector.push line
-  D.on_finish input, =>
-    T.eq collector, [ "first line", "second line", ]
-    done()
+    .pipe D.$on_finish =>
+      T.eq collector, [ "first line", "second line", ]
+      done()
   input.write "first line\nsecond line"
   input.end()
 
@@ -661,10 +661,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
             received_null = yes
           else
             T.fail "received #{rpr data}, shouldn't happen"
-  D.on_finish input, =>
-    T.fail "expected to receive null in observer transform" unless received_null
-    T.eq collector, [ "helo", "world", ]
-    done()
+    .pipe D.$on_finish =>
+      T.fail "expected to receive null in observer transform" unless received_null
+      T.eq collector, [ "helo", "world", ]
+      done()
   input.write "helo"
   input.write "world"
   input.end()
@@ -719,7 +719,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     # .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
     .pipe $verify()
     .pipe $summarize "position #2:"
-  D.on_finish input, done
+    .pipe D.$on_finish done
 
   #.........................................................................................................
   for n in [ 4, 7, 9, 3, 5, 6, ]
@@ -966,7 +966,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 4, 5, 6, 14, 15, 16, 24, 25, 26, ] if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   #.........................................................................................................
   D.send input, 5
   D.send input, 15
@@ -1013,7 +1013,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ [ 4, 5, 6, ], [ 14, 15, 16, ], [ 24, 25, 26, ], ] if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   #.........................................................................................................
   D.send input, 5
   D.send input, 15
@@ -1031,7 +1031,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -1043,7 +1043,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect collect: yes
     .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -1059,7 +1059,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ] if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -1071,7 +1071,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, [ +Infinity, 99, 98, 82, 55, 33, 23, 11, -Infinity, ] if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, +Infinity, -Infinity, 23, 11, 98, 33, ]
   D.end input
 
@@ -1088,7 +1088,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe D.$show()
       .pipe D.$collect()
       .pipe $ ( data ) -> T.eq data, matcher if data? and matcher?
-    D.on_finish input, handler
+    .pipe D.$on_finish done
     D.send input, n for n in [
       [ 55,        121, 0, ]
       [ 23,        126, 5, ]
@@ -1253,7 +1253,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-  D.on_finish input_1, done
+    .pipe D.$on_finish done
   # D.send input_1, word for word in "do re mi fa so la ti".split /\s+/
   matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
               [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], ]
@@ -1294,7 +1294,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-  D.on_finish input_1, done
+    .pipe D.$on_finish done
   matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
               [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], [ '千', null ], ]
   D.send input_1, word for word in "以 呂 波 耳 本 部 止 千".split /\s+/
@@ -1312,7 +1312,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   matcher = [ [ 0, '以' ], [ 1, '呂' ], [ 2, '波' ], [ 0, '耳' ], [ 1, '本' ], [ 2, '部' ], [ 0, '止' ] ]
   D.send input, word for word in "以 呂 波 耳 本 部 止".split /\s+/
   D.end input
@@ -1326,7 +1326,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   matcher = [
     ["a","text"]
     ["with","a number"]
@@ -1365,7 +1365,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   matcher = [
     {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
     {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
@@ -1399,7 +1399,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-  D.on_finish input, done
+    .pipe D.$on_finish done
   matcher = [
     {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
     {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
@@ -1512,7 +1512,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     throw error if error
     urge "MSP.finish"
     done()
-  # D.on_finish input, done
   return null
 
 #-----------------------------------------------------------------------------------------------------------
@@ -1520,9 +1519,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   input = D.new_stream url: 'http://example.com'
   sink  = D.new_stream 'devnull'
   found = no
-  D.on_finish sink, =>
-    T.ok found
-    done()
   input
     .pipe D.$split()
     .pipe $ ( line ) ->
@@ -1530,6 +1526,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
         found = found or ( /<h1>Example Domain<\/h1>/ ).test line
     # .pipe D.$show()
     .pipe sink
+    .pipe D.$on_finish =>
+      T.ok found
+      done()
   return null
 
 #-----------------------------------------------------------------------------------------------------------
@@ -1824,8 +1823,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い, ろ, は, に, ほ, へ, と"
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
   #.........................................................................................................
@@ -1841,8 +1840,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い\nろ\nは\nに, ほ, へ, と\n諸\n行\n無\n常"
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろは"
   D.send  source, Array.from "にほへと"
   D.send  source, kana for kana in Array.from "諸行無常"
@@ -1860,8 +1859,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い—ろ—は—に·ほ·へ·と—諸—行—無—常"
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろは"
   D.send  source, Array.from "にほへと"
   D.send  source, kana for kana in Array.from "諸行無常"
@@ -1882,8 +1881,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い,ろ,は,に,ほ,へ,と"
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
   #.........................................................................................................
@@ -1902,8 +1901,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "|い,ろ,は,に,ほ,へ,と|"
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
   #.........................................................................................................
@@ -1921,8 +1920,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, '["い","ろ","は","に","ほ","へ","と"]'
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
   #.........................................................................................................
@@ -1941,8 +1940,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
   #.........................................................................................................
@@ -1963,7 +1962,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
           result = data.join ''
           help x, result
           T.eq result, matchers[ matcher_idx ]
-    D.on_finish input, handler
+      .pipe D.$on_finish done
     D.send input, 'a'
     D.send input, 'b'
     D.send input, 'c'
@@ -2032,8 +2031,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '["い","ろ","は","に","ほ","へ","と"]'
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
   #.........................................................................................................
@@ -2050,8 +2049,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
   #.........................................................................................................
@@ -2063,13 +2062,13 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   f = ( path, handler ) ->
     source  = D.new_stream()
     output  = D.new_stream 'write', { path, }
-    D.on_finish output, handler
     source
       # .pipe D.$as_json_list()
       .pipe $ ( data, send ) => send ( JSON.stringify data ); send ','
       .pipe D.$on_start ( send ) => send '['
       .pipe D.$on_last ( data, send ) => send ']\n'
       .pipe output
+      .pipe D.$on_finish handler
     #.........................................................................................................
     D.send  source, 42
     D.send  source, 'a string'
@@ -2118,7 +2117,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     #.......................................................................................................
     source  = D.new_stream()
     output  = D.new_stream 'write', { path, }
-    D.on_finish output, handler
     source
       .pipe $serialize()
       .pipe $insert_delimiters()
@@ -2126,6 +2124,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe $stop_list()
       .pipe $as_text()
       .pipe output
+      .pipe D.$on_finish handler
     #.........................................................................................................
     D.send  source, [ 'data', 42,         ]
     D.send  source, [ 'data', 'a string', ]
@@ -2146,13 +2145,13 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   f = ( path, handler ) ->
     source  = D.new_stream()
     output  = D.new_stream 'write', { path, }
-    D.on_finish output, handler
     source
       .pipe $ ( data, send ) => if data is Symbol.for 'null' then send 'null' else send JSON.stringify data
       .pipe $ ( data, send ) => send data; send ','
       .pipe D.$on_start (       send ) => send '['
       .pipe D.$on_last  ( data, send ) => send ']\n'
       .pipe output
+      .pipe D.$on_finish handler
     #.........................................................................................................
     data_items = [ 42, 'a string', null, false, ]
     for data in data_items
@@ -2175,7 +2174,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '[\n  "a text",\n  {"~isa":"symbol","value":"XXXXXXXX"},\n  42,\n  null,\n  true,\n  ["foo","bar"]\n  ]\n'
-  D.on_finish source, done
+    .pipe D.$on_finish done
   #.........................................................................................................
   probes = [
     "a text"
@@ -2209,8 +2208,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
         idx += +1
         info data
         T.eq data, probe[ idx ]
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   probe = [
     "a text"
     Symbol.for 'XXXXXXXX'
@@ -2237,8 +2236,8 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
         idx += +1
         # info data
         T.eq data, matchers[ idx ]
+    .pipe D.$on_finish done
   #.........................................................................................................
-  D.on_finish source, done
   probes = [
     "a text"
     Symbol.for 'XXXXXXXX'
@@ -2296,69 +2295,69 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) fail to read when thru stream comes before read stream"
-    # # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) file stream events (1)"
-    # "(v4) transforms below output receive data events (1)"
-    # "(v4) transforms below output receive data events (2)"
-    # "(v4) _new_stream_from_url"
-    # "(v4) new_stream README example (1)"
-    # "(v4) new_stream README example (2)"
-    # "(v4) new_stream README example (3)"
-    # "(v4) _new_stream_from_path with encodings"
-    # "(v4) _new_stream_from_path (raw)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_path (1)"
-    # "(v4) _new_stream_from_path (4)"
-    # "(v4) _new_stream_from_path (3)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) read TSV file (1)"
-    # "(v4) TSV whitespace trimming"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $intersperse (1)"
-    # "(v4) $intersperse (2)"
-    # "(v4) $intersperse (3)"
-    # "(v4) $intersperse (3a)"
-    # "(v4) $intersperse (4)"
-    # "(v4) $join (1)"
-    # "(v4) $join (2)"
-    # "(v4) $join (3)"
-    # "(v4) $as_json_list (1)"
-    # "(v4) $as_json_list (2)"
-    # "(v4) $as_json_list (2a)"
-    # "(v4) $as_json_list (2b)"
-    # "(v4) $as_json_list (2c)"
-    # "(v4) $as_json_list (3)"
-    # "(v4) symbols as data events (1)"
-    # "(v4) symbols as data events (2)"
-    # "(v4) stream sigils"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $sort 5"
+    # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) fail to read when thru stream comes before read stream"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) file stream events (1)"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) _new_stream_from_url"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_path (4)"
+    "(v4) _new_stream_from_path (3)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) read TSV file (1)"
+    "(v4) TSV whitespace trimming"
+    "(v4) $split_tsv (1)"
+    "(v4) $intersperse (1)"
+    "(v4) $intersperse (2)"
+    "(v4) $intersperse (3)"
+    "(v4) $intersperse (3a)"
+    "(v4) $intersperse (4)"
+    "(v4) $join (1)"
+    "(v4) $join (2)"
+    "(v4) $join (3)"
+    "(v4) $as_json_list (1)"
+    "(v4) $as_json_list (2)"
+    "(v4) $as_json_list (2a)"
+    "(v4) $as_json_list (2b)"
+    "(v4) $as_json_list (2c)"
+    "(v4) $as_json_list (3)"
+    "(v4) symbols as data events (1)"
+    "(v4) symbols as data events (2)"
+    "(v4) stream sigils"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $sort 5"
     "(v4) $sort 6"
     ]
   @_prune()
