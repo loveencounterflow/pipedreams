@@ -311,8 +311,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input   = D.new_stream()
     output  = D.new_stream 'write', 'lines', { file: path_1, }
     input
-      .pipe output
-      .pipe D.$on_finish handler
+      .pipe D.$finish output, handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -335,38 +334,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     yield           write_sample  resume
     result = yield  read_sample   resume
     handler null, result
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) _new_stream_from_path (4)" ] = ( T, done ) ->
-  step        = ( require 'coffeenode-suspend' ).step
-  path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
-  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
-  #.........................................................................................................
-  write_sample = ( handler ) =>
-    input   = D.new_stream()
-    output  = ( require 'fs' ).createWriteStream path_1, { flags: 'a', }
-    input
-      .pipe D.$as_line()
-      .pipe D.new_stream pipeline: [ ( D.$bridge output ), D.$show(), ]
-      .pipe D.$on_finish handler
-    #.......................................................................................................
-    D.send input, probe for probe in probes
-    D.end input
-  #.........................................................................................................
-  read_sample = ( handler ) =>
-    input   = D.new_stream 'read', 'lines', path: path_1
-    input
-      .pipe D.$collect()
-      .pipe $ ( lines ) => T.eq lines, matcher if lines?
-      .pipe D.$on_finish handler
-  #.........................................................................................................
-  step ( resume ) =>
-    yield write_sample  resume
-    yield read_sample   resume
-    done()
   #.........................................................................................................
   return null
 
@@ -1668,16 +1635,12 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input
       .pipe D.$collect()
       # .pipe D.$show "using #{encoding}:"
-      .pipe $ ( result ) =>
-        if result?
-          if CND.equals result, matchers[ encoding ]
-            T.ok yes
-          else
-            T.fail """
-              reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
-              expected #{rpr matchers[ encoding ]}
-              got      #{rpr result}
-              """
+      .pipe $ ( result ) => T.eq result, matchers[ encoding ] if result?
+            # T.fail """
+            #   reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
+            #   expected #{rpr matchers[ encoding ]}
+            #   got      #{rpr result}
+            #   """
       .pipe D.$on_finish handler
     return null
   #.........................................................................................................
@@ -1720,16 +1683,12 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input
       .pipe D.$collect()
       .pipe D.$show "using #{encoding}:"
-      .pipe $ ( result ) =>
-        if result?
-          if CND.equals result, matcher
-            T.ok yes
-          else
-            T.fail """
-              reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
-              expected #{rpr matcher}
-              got      #{rpr result}
-              """
+      .pipe $ ( result ) => T.eq result, matcher if result?
+            # T.fail """
+            #   reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
+            #   expected #{rpr matcher}
+            #   got      #{rpr result}
+            #   """
       .pipe D.$on_finish handler
     return null
   #.........................................................................................................
@@ -2361,8 +2320,7 @@ unless module.parent?
     "(v4) new new_stream signature (1)"
     "(v4) new new_stream signature (2)"
     "(v4) _new_stream_from_path (1)"
-    "(v4) _new_stream_from_path (4)"
-    "(v4) _new_stream_from_path (3)"
+    # "(v4) _new_stream_from_path (3)"
     "(v4) $split_tsv (3)"
     "(v4) $split_tsv (4)"
     "(v4) read TSV file (1)"

@@ -602,6 +602,38 @@ D                         = require './main'
   #.........................................................................................................
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path (4)" ] = ( T, done ) ->
+  step        = ( require 'coffeenode-suspend' ).step
+  path_1      = resolve_temp_path '_new_stream_from_path-4.txt'
+  probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  matcher     = [ 'helo', 'world', '𪉟⿱鹵皿' ]
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    output  = ( require 'fs' ).createWriteStream path_1, { flags: 'a', }
+    input
+      .pipe D.$as_line()
+      .pipe D.new_stream pipeline: [ ( D.$bridge output ), D.$show(), ]
+      .pipe D.$on_finish handler
+    #.......................................................................................................
+    D.send input, probe for probe in probes
+    D.end input
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    input   = D.new_stream 'read', 'lines', path: path_1
+    input
+      .pipe D.$collect()
+      .pipe $ ( lines ) => T.eq lines, matcher if lines?
+      .pipe D.$on_finish handler
+  #.........................................................................................................
+  step ( resume ) =>
+    yield write_sample  resume
+    yield read_sample   resume
+    done()
+  #.........................................................................................................
+  return null
+
 
 #===========================================================================================================
 # HELPERS
