@@ -165,6 +165,34 @@ urge                      = CND.get_logger 'urge',      badge
     ///g
 
 #-----------------------------------------------------------------------------------------------------------
+@$as_tsv = ( names..., settings ) ->
+  if CND.isa_text settings
+    names.push settings
+    settings = null
+  #.........................................................................................................
+  stringify = settings?[ 'stringify' ] ? null
+  #.........................................................................................................
+  unless stringify?
+    stringify = ( x ) =>
+      R = x
+      switch CND.type_of R
+        when 'text'
+          R = R.replace /\\/g, "\\\\"
+          R = R.replace /\n/g, "\\n"
+          R = R.replace /\t/g, "\\t"
+        when 'date', 'jsdate'
+          R = x.toString()
+        else
+          R = JSON.stringify x
+      return R
+  #.........................................................................................................
+  pipeline = [
+    ( @$ ( row, send ) => send ( ( ( stringify value ) for value in row ).join '\t' ) + '\n' )
+    ( @$on_start ( send ) => send ( names.join '\t' ) + '\n' )
+    ]
+  return @_rpr "as-tsv", "as-tsv", null, @new_stream { pipeline, }
+
+#-----------------------------------------------------------------------------------------------------------
 do ( self = @ ) ->
   D = require './main'
   for name, value of self

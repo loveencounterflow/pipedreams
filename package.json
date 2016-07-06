@@ -33,10 +33,7 @@
     "binary-split": "^1.0.2",
     "cnd": "^3.2.0",
     "coffeenode-suspend": "^0.1.11",
-    "lodash.clonedeep": "^4.3.2",
     "mississippi": "^1.2.0",
-    "split2": "^2.1.0",
-    "throttle": "^1.0.3",
     "timsort": "^0.2.1",
     "tmp": "0.0.28",
     "to-width": "^1.0.1"

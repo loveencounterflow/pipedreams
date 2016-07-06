@@ -61,10 +61,10 @@ MSP                       = require 'mississippi'
   R = ( require 'binary-split' ) matcher
   return @_rpr "*✀", "split", ( rpr matcher ), R
 
-#-----------------------------------------------------------------------------------------------------------
-@_new_stream$throttle_bytes = ( bytes_per_second ) ->
-  R = new ( require 'throttle' ) bytes_per_second
-  return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
+# #-----------------------------------------------------------------------------------------------------------
+# @_new_stream$throttle_bytes = ( bytes_per_second ) ->
+#   R = new ( require 'throttle' ) bytes_per_second
+#   return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
 
 
 #===========================================================================================================
@@ -1043,7 +1043,8 @@ MSP                       = require 'mississippi'
 # THROUGHPUT LIMITING
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_bytes = ( bytes_per_second ) ->
-  return @_new_stream$throttle_bytes bytes_per_second
+  throw new Error "$throttle_bytes on hold"
+  # return @_new_stream$throttle_bytes bytes_per_second
 
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_items = ( items_per_second ) ->
