@@ -31,7 +31,7 @@
   "dependencies": {
     "async": "^1.5.2",
     "binary-split": "^1.0.2",
-    "cnd": "^4.0.5",
+    "cnd": "^4.1.1",
     "coffeenode-suspend": "^0.1.11",
     "mississippi": "^1.2.0",
     "timsort": "^0.2.1",

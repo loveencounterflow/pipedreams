@@ -44,7 +44,6 @@ Install as `npm install --save pipedreams2`.
   - [@$count](#@count)
   - [@$decode = ( encoding = 'utf-8' ) ->](#@decode---encoding--utf-8---)
   - [@$filter](#@filter)
-  - [@$finish = ->](#@finish---)
   - [@$intersperse = ( joiners... ) ->](#@intersperse---joiners---)
   - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#@join---outer_joiner--%5Cn-inner_joiner------)
   - [@$lockstep](#@lockstep)
@@ -966,9 +965,10 @@ input
 ## @$decode = ( encoding = 'utf-8' ) ->
 ## @$filter
 
-## @$finish = ->
+<!-- ## @$finish = ->
 
 Used at the end of a pipeline to make sure data is correctly streamed till the very last item. Onle needed in some cases.
+ -->
 
 ## @$intersperse = ( joiners... ) ->
 
@@ -1070,7 +1070,7 @@ of the pipeline may lead to hard-to-find bugs. Observe that `on_finish` and
 `$on_finish` call `handler` only upon the following turn of the JavaScript event
 loop.
 
-Also see [@$finish](#finish---).
+<!-- Also see [@$finish](#finish---). -->
 
 **Note** You should **not** attach anything in the pipeline after a
 `D.$on_finish` transform, since the behavior of such a transform is not well

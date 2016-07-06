@@ -304,21 +304,24 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "_(v4) _new_stream_from_path (3) (inner)" ] = ( idx, probes, handler ) ->
+  MSP         = require 'mississippi'
   step        = ( require 'coffeenode-suspend' ).step
-  path_1      = resolve_temp_path "_new_stream_from_path-3-#{idx}.txt"
+  path        = resolve_temp_path "_new_stream_from_path-3-#{idx}.txt"
   #.........................................................................................................
   write_sample = ( handler ) =>
     input   = D.new_stream()
-    output  = D.new_stream 'write', 'lines', { file: path_1, }
+    output  = D.new_stream 'write', 'lines', { path, }
     input
-      .pipe D.$finish output, handler
+      .pipe output
+      .pipe D.$on_finish handler
+      # .pipe D.$finish output, handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
   #.........................................................................................................
   read_sample = ( handler ) =>
     try
-      input   = D.new_stream 'read', 'lines', path: path_1
+      input   = D.new_stream 'read', 'lines', { path, }
     catch error
       return handler error
     input
@@ -1153,7 +1156,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   sort = ( directions_and_keys..., matcher, handler ) =>
     help directions_and_keys
     input     = D.new_stream 'read', path: resolve_path __dirname, '../test-data/files.tsv'
-    output    = D.new_stream 'devnull'
+    # output    = D.new_stream 'devnull'
     pipeline  = ( ( D.$sort { direction, key, } ) for [ direction, key, ] in directions_and_keys )
     pipeline  = pipeline.reverse()
     input
@@ -1162,47 +1165,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe D.new_stream { pipeline, }
       .pipe $as_table()
       .pipe $ ( row ) => info row if row?
-      .pipe D.$finish output, handler
-  # #.........................................................................................................
-  # probes = [
-  #   { date: '2016 Apr 19', size:  1069547520, name: "ubuntu-14.04.4-desktop-amd64.iso",                       }
-  #   { date: '2016 Apr 20', size:     1216498, name: "Vermeer-view-of-delft.jpg",                              }
-  #   { date: '2016 Feb  4', size:    28121472, name: "actions.pdf",                                            }
-  #   { date: '2016 Feb 19', size:       61140, name: "rss.opml",                                               }
-  #   { date: '2016 Jan 16', size:   126810054, name: "Inside Star Trek Voyager.mp4",                           }
-  #   { date: '2016 Jan 16', size:   300421011, name: "Star Trek Secrets of the Universe.mp4",                  }
-  #   { date: '2016 Jan 30', size:     8645163, name: "rack-experiment.zip",                                    }
-  #   { date: '2016 Jun  9', size:    71511772, name: "Software Defined Networking - Computerphile.mp4",        }
-  #   { date: '2016 Jun 12', size:   444219478, name: "Syntaxation • Douglas Crockford.mp4",                    }
-  #   { date: '2016 Jun 16', size:   194876109, name: "Another Go at Language Design.mp4",                      }
-  #   { date: '2015 Oct 22', size:   369306221, name: "北京位於華北平原的西北边缘.mp4",                            }
-  #   { date: '2016 Jun 16', size:   452146120, name: "Go for Pythonistas.mp4",                                 }
-  #   { date: '2016 Jun 16', size:   238955286, name: "Building Services in Go.mp4",                            }
-  #   { date: '2016 Jun 16', size:    29880564, name: "Is Glass a Liquid.mp4",                                  }
-  #   { date: '2016 Jun 16', size:    70266384, name: "Celsius Didn't Invent Celsius.mp4",                      }
-  #   { date: '2016 Jun 16', size:    89684342, name: "INSIDE a Spherical Mirror.mp4",                          }
-  #   { date: '2016 Jun 16', size:   146666578, name: "How Earth Moves.mp4",                                    }
-  #   { date: '2016 Jun 16', size:   131406982, name: "Dynamic Languages Strike Back.mp4",                      }
-  #   { date: '2016 May  4', size:  1537474560, name: "manjaro-xfce-15.12-x86_64.iso",                          }
-  #   { date: '2016 May  6', size:  1828716544, name: "antergos-2016.04.22-x86_64.iso",                         }
-  #   { date: '2016 May  6', size:  1485881344, name: "ubuntu-16.04-desktop-amd64.iso",                         }
-  #   { date: '2016 May  8', size:    12292718, name: "CJK Character Component Standard 20150112165337190.pdf", }
-  #   { date: '2016 May 21', size:     1313746, name: "2015_Logography_and_the_classification_o.pdf",           }
-  #   { date: '2004 Aug  4', size:    10500792, name: "simsun.ttc",                                             }
-  #   { date: '2015 Dec 20', size:     7740439, name: "Ricci, Mnemotechnics, btv1b9006393v.pdf",                }
-  #   { date: '2015 Apr 18', size:    26073977, name: "Perfect Numbers and Mersenne Primes - Numberphile.mp4",  }
-  #   { date: '2015 Nov  1', size:    70623822, name: "atom-amd64(1).deb",                                      }
-  #   { date: '2015 Nov  2', size:    70040746, name: "atom-amd64(2).deb",                                      }
-  #   { date: '2015 Nov 18', size:      362700, name: "CharlesBabbageLawsOfMechanicalNotation.pdf",             }
-  #   { date: '2015 Oct 17', size:    19351620, name: "Legge1899.pdf",                                          }
-  #   { date: '2015 Oct 22', size:    69957572, name: "atom-amd64.deb",                                         }
-  #   { date: '2015 Oct 22', size:   369306221, name: "The Big Bang Theory - Best of Star Trek.mp4",            }
-  #   ]
-  # #.........................................................................................................
-  # for probe in probes
-  #   probe[ 'date' ] = ( new Date probe[ 'date' ] )
-  #   probe[ 'size' ] = parseInt 10 ** parseInt Math.log10 probe[ 'size' ]
-  #.........................................................................................................
+      .pipe D.$on_finish handler
+      # .pipe D.$finish output, handler
+ #.........................................................................................................
   step ( resume ) =>
     yield sort [ 'ascending', 'date', ], null, resume
     yield sort [ 'ascending', 'size', ], null, resume
@@ -1219,12 +1184,13 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   write = ( handler ) =>
     input     = D.new_stream()
-    # output    = D.new_stream 'write', { path, }
-    output    = D.$show()
+    # output    = D.$show()
     input
       .pipe D.$as_list 'date', 'size', 'name'
       .pipe D.$as_tsv  'date', 'size', 'name'
-      .pipe D.$finish output, handler
+      .pipe D.$show()
+      .pipe D.$on_finish handler
+      # .pipe D.$finish output, handler
     for probe in probes
       D.send input, probe
     D.end input
@@ -1635,12 +1601,16 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input
       .pipe D.$collect()
       # .pipe D.$show "using #{encoding}:"
-      .pipe $ ( result ) => T.eq result, matchers[ encoding ] if result?
-            # T.fail """
-            #   reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
-            #   expected #{rpr matchers[ encoding ]}
-            #   got      #{rpr result}
-            #   """
+      .pipe $ ( result ) =>
+        if result?
+          if CND.equals result, matchers[ encoding ]
+            T.ok yes
+          else
+            T.fail """
+              reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
+              expected #{rpr matchers[ encoding ]}
+              got      #{rpr result}
+              """
       .pipe D.$on_finish handler
     return null
   #.........................................................................................................
@@ -1683,12 +1653,16 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input
       .pipe D.$collect()
       .pipe D.$show "using #{encoding}:"
-      .pipe $ ( result ) => T.eq result, matcher if result?
-            # T.fail """
-            #   reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
-            #   expected #{rpr matcher}
-            #   got      #{rpr result}
-            #   """
+      .pipe $ ( result ) =>
+        if result?
+          if CND.equals result, matcher
+            T.ok yes
+          else
+            T.fail """
+              reading file with encoding #{rpr encoding}, use_hint #{use_hint} failed;
+              expected #{rpr matcher}
+              got      #{rpr result}
+              """
       .pipe D.$on_finish handler
     return null
   #.........................................................................................................
@@ -2320,7 +2294,7 @@ unless module.parent?
     "(v4) new new_stream signature (1)"
     "(v4) new new_stream signature (2)"
     "(v4) _new_stream_from_path (1)"
-    # "(v4) _new_stream_from_path (3)"
+    "(v4) _new_stream_from_path (3)"
     "(v4) $split_tsv (3)"
     "(v4) $split_tsv (4)"
     "(v4) read TSV file (1)"

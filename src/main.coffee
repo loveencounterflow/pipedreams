@@ -980,10 +980,11 @@ MSP                       = require 'mississippi'
   # stream.on 'finish', => setImmediate handler
   stream.on 'finish', => setImmediate => handler()
 
-#-----------------------------------------------------------------------------------------------------------
-@$finish = ( stream, handler ) ->
-  @on_finish stream, handler
-  return stream
+# #-----------------------------------------------------------------------------------------------------------
+# @$finish = ( stream, handler ) ->
+#   MSP.finished stream, handler
+#   # @on_finish stream, handler
+#   return stream
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_finish = ( method ) ->
