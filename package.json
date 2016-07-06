@@ -31,12 +31,12 @@
   "dependencies": {
     "async": "^1.5.2",
     "binary-split": "^1.0.2",
-    "cnd": "^3.2.0",
+    "cnd": "^4.0.1",
     "coffeenode-suspend": "^0.1.11",
     "mississippi": "^1.2.0",
     "timsort": "^0.2.1",
     "tmp": "0.0.28",
-    "to-width": "^1.0.1"
+    "to-width": "^1.0.2"
   },
   "devDependencies": {
     "guy-test": "^1.2.1"
