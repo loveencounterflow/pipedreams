@@ -405,16 +405,19 @@ MSP                       = require 'mississippi'
 #===========================================================================================================
 # TRANSFORM CREATION
 #-----------------------------------------------------------------------------------------------------------
-@remit        = @$      = ( method ) -> @_new_remit  'sync', method
-@remit_async  = @$async = ( method ) -> @_new_remit 'async', method
+@remit        = @$      = ( tags..., method ) -> @_new_remit tags,  'sync', method
+@remit_async  = @$async = ( tags..., method ) -> @_new_remit tags, 'async', method
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_remit = ( mode, method ) ->
+@_new_remit = ( tags, mode, method ) ->
+  unless CND.is_subset tags, [ 'end', ]
+    throw new Error "expected tags to be 'end', got #{rpr tags}"
+  has_end     = 'end' in tags
+  #.........................................................................................................
   arity       = method.length
   throw new Error "method with #{arity} arguments not supported" unless arity in [ 1, 2, 3, ]
   throw new Error "unknown mode #{rpr mode}" unless mode in [ 'sync', 'async', ]
   has_error   = no
-  flush       = null
   #.........................................................................................................
   if arity is 1
     throw new Error "method with #{arity} arguments not supported for async transforms" if mode is 'async'
@@ -424,12 +427,21 @@ MSP                       = require 'mississippi'
       callback null, chunk
     #.......................................................................................................
     flush = ( callback ) ->
-      method null
+      method null if has_end
       callback()
     #.......................................................................................................
     return @_rpr "+", "$d", null, MSP.through.obj main, flush
   #.........................................................................................................
-  if arity is 3
+  else if arity is 2
+    if has_end
+      flush = ( callback ) ->
+        send = get_send @, callback
+        method null, send
+        return null
+    else
+      flush = null
+  #.........................................................................................................
+  else if arity is 3
     flush = ( callback ) ->
       ### TAINT do we have to re-construct `send` on each call, or can we recycle the same function? ###
       send = get_send @, callback
