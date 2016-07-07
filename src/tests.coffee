@@ -329,7 +329,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       # .pipe D.$show()
       .pipe do =>
         result = null
-        return $ ( lines ) =>
+        return $ 'null', ( lines ) =>
           if lines? then result = lines
           else handler null, result
   #.........................................................................................................
@@ -620,7 +620,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   collector     = []
   input = D.new_stream()
   input
-    .pipe $ ( data ) =>
+    .pipe $ 'null', ( data ) =>
         if data?
           collector.push data
         else
@@ -1626,7 +1626,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     else                          input = ( require 'fs' ).createReadStream path, { encoding, }
     input
       .pipe D.$collect()
-      .pipe $ ( data ) => matchers[ encoding ] = data if data?
+      .pipe $ ( data ) => matchers[ encoding ] = data
       .pipe D.$on_finish handler
     return null
   #.........................................................................................................
@@ -1640,7 +1640,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     input
       .pipe D.$collect()
       # .pipe D.$show "using #{encoding}:"
-      .pipe $ ( result ) =>
+      .pipe $ 'null', ( result ) =>
         if result?
           if CND.equals result, matchers[ encoding ]
             T.ok yes
@@ -2280,10 +2280,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   null_count  = 0
   input
     # .pipe $ ( kana ) => info kana
-    .pipe $ 'end', ( kana ) =>
+    .pipe $ 'null', ( kana ) =>
         if kana? then data_count += +1
         else          null_count += +1
-    .pipe $ 'end', ( kana ) =>
+    .pipe $ 'null', ( kana ) =>
       unless kana?
         T.eq data_count, 10
         T.eq null_count,  1
@@ -2310,11 +2310,11 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   null_count  = 0
   input
     # .pipe $ ( kana ) => info kana
-    .pipe $ 'end', ( kana, send ) =>
+    .pipe $ 'null', ( kana, send ) =>
         if kana? then data_count += +1
         else          null_count += +1
         send kana
-    .pipe $ 'end', ( kana ) =>
+    .pipe $ 'null', ( kana ) =>
       if kana?
         data_count += +1
       else
@@ -2360,78 +2360,76 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) fail to read when thru stream comes before read stream"
-    # # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) README demo (1)"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 2"
-    # "(v4) $async with method arity 3"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) file stream events (1)"
-    # "(v4) transforms below output receive data events (1)"
-    # "(v4) transforms below output receive data events (2)"
-    # "(v4) _new_stream_from_url"
-    # "(v4) new_stream README example (1)"
-    # "(v4) new_stream README example (2)"
-    # "(v4) new_stream README example (3)"
-    # "(v4) _new_stream_from_path with encodings"
-    # "(v4) _new_stream_from_path (raw)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_path (1)"
-    # "(v4) _new_stream_from_path (3)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) read TSV file (1)"
-    # "(v4) TSV whitespace trimming"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $intersperse (1)"
-    # "(v4) $intersperse (2)"
-    # "(v4) $intersperse (3)"
-    # "(v4) $intersperse (3a)"
-    # "(v4) $intersperse (4)"
-    # "(v4) $join (1)"
-    # "(v4) $join (2)"
-    # "(v4) $join (3)"
-    # "(v4) $as_json_list (1)"
-    # "(v4) $as_json_list (2)"
-    # "(v4) $as_json_list (2a)"
-    # "(v4) $as_json_list (2b)"
-    # "(v4) $as_json_list (2c)"
-    # "(v4) $as_json_list (3)"
-    # "(v4) symbols as data events (1)"
-    # "(v4) symbols as data events (2)"
-    # "(v4) stream sigils"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $sort 5"
-    # "(v4) $sort 6"
-    # "(v4) $as_tsv"
-    # "(v4) $batch (1)"
-    # "(v4) $batch (2)"
+    # "(v4) stream / transform construction with through2 (2)"
+    # "(v4) fail to read when thru stream comes before read stream"
+    # "(v4) _new_stream_from_text doesn't work synchronously"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) README demo (1)"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 2"
+    "(v4) $async with method arity 3"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) file stream events (1)"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) _new_stream_from_url"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) _new_stream_from_path (3)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) read TSV file (1)"
+    "(v4) TSV whitespace trimming"
+    "(v4) $split_tsv (1)"
+    "(v4) $intersperse (1)"
+    "(v4) $intersperse (2)"
+    "(v4) $intersperse (3)"
+    "(v4) $intersperse (3a)"
+    "(v4) $intersperse (4)"
+    "(v4) $join (1)"
+    "(v4) $join (2)"
+    "(v4) $join (3)"
+    "(v4) $as_json_list (1)"
+    "(v4) $as_json_list (2)"
+    "(v4) $as_json_list (2a)"
+    "(v4) $as_json_list (2b)"
+    "(v4) $as_json_list (2c)"
+    "(v4) $as_json_list (3)"
+    "(v4) symbols as data events (1)"
+    "(v4) symbols as data events (2)"
+    "(v4) stream sigils"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $sort 5"
+    "(v4) $sort 6"
+    "(v4) $as_tsv"
+    "(v4) $batch (1)"
+    "(v4) $batch (2)"
     "(v4) all remit methods have opt-in end detection (1)"
     "(v4) all remit methods have opt-in end detection (2)"
     "(v4) all remit methods have opt-in end detection (3)"
     "(v4) all remit methods have opt-in end detection (4)"
-    "(v4) all remit methods have opt-in end detection (5)"
-    "(v4) all remit methods have opt-in end detection (6)"
     ]
   @_prune()
   @_main()

@@ -410,9 +410,9 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_remit = ( tags, mode, method ) ->
-  unless CND.is_subset tags, [ 'end', ]
-    throw new Error "expected tags to be 'end', got #{rpr tags}"
-  has_end     = 'end' in tags
+  unless CND.is_subset tags, [ 'null', ]
+    throw new Error "the only allowed tag is 'null', got #{rpr tags}"
+  send_null   = 'null' in tags
   #.........................................................................................................
   arity       = method.length
   throw new Error "method with #{arity} arguments not supported" unless arity in [ 1, 2, 3, ]
@@ -427,13 +427,13 @@ MSP                       = require 'mississippi'
       callback null, chunk
     #.......................................................................................................
     flush = ( callback ) ->
-      method null if has_end
+      method null if send_null
       callback()
     #.......................................................................................................
     return @_rpr "+", "$d", null, MSP.through.obj main, flush
   #.........................................................................................................
   else if arity is 2
-    if has_end
+    if send_null
       flush = ( callback ) ->
         send = get_send @, callback
         method null, send
