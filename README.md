@@ -516,16 +516,16 @@ $async 'null', ( data, send      ) -> ...
 $async         ( data, send, end ) -> ...
 ```
 
-| signature                               | `data` may     |                |                |
-| :-------------------------------------- | :------------: | :------------: | :------------: |
-| `$              ( data            ) ->` | no             | no             | no             |
-| `$      'null', ( data            ) ->` | no             | no             | no             |
-| `$              ( data, send      ) ->` | no             | no             | no             |
-| `$      'null', ( data, send      ) ->` | no             | no             | no             |
-| `$              ( data, send, end ) ->` | no             | no             | no             |
-| `$async         ( data, send      ) ->` | no             | no             | no             |
-| `$async 'null', ( data, send      ) ->` | no             | no             | no             |
-| `$async         ( data, send, end ) ->` | no             | no             | no             |
+| signature                               | `data` may be `null` | must call `end()` | must call `send.done()` |
+| :-------------------------------------- | :------------:       | :------------:    | :------------:          |
+| `$              ( data            ) ->` | no                   | no                | no                      |
+| `$      'null', ( data            ) ->` | yes                  | no                | no                      |
+| `$              ( data, send      ) ->` | no                   | no                | no                      |
+| `$      'null', ( data, send      ) ->` | yes                  | no                | no                      |
+| `$              ( data, send, end ) ->` | yes                  | yes               | no                      |
+| `$async         ( data, send      ) ->` | no                   | no                | yes                     |
+| `$async 'null', ( data, send      ) ->` | yes                  | no                | yes                     |
+| `$async         ( data, send, end ) ->` | yes                  | yes               | yes                     |
 
 where `data` is the current data event that comes down the stream, `send`
 (where used) is a method that send data down the stream, and `end` (where used
