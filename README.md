@@ -502,30 +502,44 @@ You can call `remit` (`$`) with a function that takes one, two, or three argumen
 `data` (or whatever fits the purpose best) for the first, `send` for the second, and `end` for the third
 argument, where present.
 
+You use `send` to send data down the stream; when not present in the signature, the data is sent
+for you; where present, you may call it any number of times to send an arbitrary number of items.
+
+Where the `end` parameter is present, you must explicitly call `end()` to end the stream; otherwise, it will
+remain open indefinitely. Either `data` or `end`—but not both—will be `null` on any given event. More
+precisely, the stream transform will be called once for each upstream data event (if any) with `data != null`,
+and then once with `data == null` and `end != null` upon stream end. The pattern to use is always:
+
+```coffee
+stream
+  .pipe <...>
+  .pipe $ ( data, send, end ) =>
+    if data?
+      <...>
+    if end?
+      <...>
+      end()
+  .pipe <...>
+```
+
+Where the `'null'` tag is used
+
 In a nutshell, you have the
 following options:
 
-```coffee
-$              ( data            ) -> ...
-$      'null', ( data            ) -> ...
-$              ( data, send      ) -> ...
-$      'null', ( data, send      ) -> ...
-$              ( data, send, end ) -> ...
-$async         ( data, send      ) -> ...
-$async 'null', ( data, send      ) -> ...
-$async         ( data, send, end ) -> ...
-```
 
+```
 | signature                               | `data` may be `null` | must call `end()` | must call `send.done()` |
-| :-------------------------------------- | :------------:       | :------------:    | :------------:          |
-| `$              ( data            ) ->` | no                   | no                | no                      |
-| `$      'null', ( data            ) ->` | yes                  | no                | no                      |
-| `$              ( data, send      ) ->` | no                   | no                | no                      |
-| `$      'null', ( data, send      ) ->` | yes                  | no                | no                      |
-| `$              ( data, send, end ) ->` | yes                  | yes               | no                      |
-| `$async         ( data, send      ) ->` | no                   | no                | yes                     |
-| `$async 'null', ( data, send      ) ->` | yes                  | no                | yes                     |
-| `$async         ( data, send, end ) ->` | yes                  | yes               | yes                     |
++-----------------------------------------+----------------------+-------------------+-------------------------+
+|  $              ( data            ) ->  |         no           |          no       |            no           |
+|  $      'null', ( data            ) ->  |         yes          |          no       |            no           |
+|  $              ( data, send      ) ->  |         no           |          no       |            no           |
+|  $      'null', ( data, send      ) ->  |         yes          |          no       |            no           |
+|  $              ( data, send, end ) ->  |         yes          |          yes      |            no           |
+|  $async         ( data, send      ) ->  |         no           |          no       |            yes          |
+|  $async 'null', ( data, send      ) ->  |         yes          |          no       |            yes          |
+|  $async         ( data, send, end ) ->  |         yes          |          yes      |            yes          |
+```
 
 where `data` is the current data event that comes down the stream, `send`
 (where used) is a method that send data down the stream, and `end` (where used
