@@ -526,6 +526,9 @@ Where `end` is **not** given, `data` will **never** be `null`, **except** where 
 as in `$ 'null', ( data ) =>`. Checking `data` for `null` in this kind of transforms allows you to
 observe the end-of-stream event without having to bother calling it yourself.
 
+Where `$async` is used, you *may* call `send data` any number of times, but you *must* call `send.done()`
+(or `send.done data`) exactly once to signal completion of your asynchronous transform.
+
 In a nutshell, you have the following options:
 
 
@@ -570,7 +573,7 @@ notation:
 input = ( require 'fs' ).createReadStream()
 input
   .pipe D.$split()      # convert buffer chunks into single-line strings
-  .pipe $ ( data ) ->
+  .pipe $ 'null', ( data ) ->
     if data? then console.log "received event:", data
     else          console.log "stream has ended"
   .pipe output
@@ -592,20 +595,30 @@ technique (notwithstanding the folks who claim that everything should be pure
 functions; pure functions are great but try to count using those):
 
 ```coffee
-$observe = ->
-  count = 0
-  return $ ( data ) ->
-    if data?
-      count += +1
-      console.log "received event:", data
-    else
-      console.log "stream has ended; read #{count} events"
+f = ( done ) ->
+  $show = ->
+    return $ ( data ) ->
+      console.log "received data:", data
 
-input = ( require 'fs' ).createReadStream()
-input
-  .pipe D.$split()      # Convert buffer chunks into single-line strings.
-  .pipe $observe()      # Don't forget to call the factory!
-  .pipe output
+  $count = ->
+    count = 0
+    return $ 'null', ( data ) ->
+      if data? then count += +1
+      else          console.log "stream has ended; read #{count} events"
+
+  input = D.new_stream()
+  input
+    .pipe D.$split()      # Convert buffer chunks into single-line strings.
+    .pipe $show()
+    .pipe $count()
+    .pipe D.$on_finish done
+
+  D.send input, """
+    Here we write
+    some lines of text
+    into the stream.
+    """
+  D.end  input # don't forget to end the input stream
 ```
 
 In case you were wondering, `$split()` is a useful convenience method to turn
@@ -657,24 +670,46 @@ Use synchronous transforms when you want to both mangle data as it passes by
 and aggregate data across the entire stream.
 
 ```coffee
-$observe = ->
-  count = 0
-  return $ ( data ) ->
-    if data?
-      count += +1
-      console.log "received event:", data
-    else
-      console.log "stream has ended; read #{count} events"
+f = ( done ) ->
+  $as_number = ->
+    return $ ( data, send ) ->
+      send parseFloat data
 
-input = D.new_stream()  # returns a `through2` stream
-input
-  .pipe D.$split()      # Convert buffer chunks into single-line strings.
-  .pipe $observe()      # Don't forget to call the factory!
-  .pipe output
+  $add = ( increment = 1 ) ->
+    return $ ( n, send ) ->
+      send n
+      send n + increment
 
-for n in [ 4, 7, 9, 3, 5, 6, ]
-  input.write n
-input.end()
+  $show = ->
+    return $ ( data ) ->
+      console.log "received data:", data
+
+  input = D.new_stream()
+  input
+    .pipe D.$split()      # Convert into single-line strings.
+    .pipe $as_number()
+    .pipe $add 12
+    .pipe D.$sort()
+    .pipe $show()
+    .pipe D.$on_finish done
+
+  D.send input, "20\n10\n50\n40\n30\n"
+  D.end  input
+```
+
+Output:
+
+```
+received data: 10
+received data: 20
+received data: 22
+received data: 30
+received data: 32
+received data: 40
+received data: 42
+received data: 50
+received data: 52
+received data: 62
 ```
 
 ### Asynchronous Transforms

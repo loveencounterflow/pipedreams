@@ -638,66 +638,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   input.end()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) README demo (1)" ] = ( T, done ) ->
-  #.........................................................................................................
-  $comment = ->
-    count = 0
-    return $ ( data ) =>
-      if data?
-        count += +1
-        info "received event:", data
-      else
-        warn "stream has ended; read #{count} events"
-
-  #.........................................................................................................
-  $as_text_line = ->
-    return $ ( data, send ) =>
-      send "line: " + ( JSON.stringify data ) + '\n'
-
-  #.........................................................................................................
-  $summarize = ( title ) ->
-    collector = []
-    return $ ( data, send, end ) =>
-      if data?
-        send data
-        collector.push ( JSON.stringify data )
-      if end?
-        collector.sort() # Just a demo; always use a custom sort method, kids!
-        help title, collector.join ', '
-        end()
-
-  #.........................................................................................................
-  $verify = ( title ) ->
-    collector = []
-    return $ ( data, send, end ) =>
-      if data?
-        send data
-        collector.push ( JSON.stringify data )
-      if end?
-        T.eq collector, [ '"line: 4\\n"', '"line: 7\\n"', '"line: 9\\n"', '"line: 3\\n"', '"line: 5\\n"', '"line: 6\\n"' ]
-        end()
-
-  #.........................................................................................................
-  input = D.new_stream()  # returns a `through2` stream
-  input
-    .pipe $comment()
-    .pipe $ ( data ) => log CND.truth data?
-    .pipe $summarize "position #1:"
-    .pipe $as_text_line()
-    # .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
-    .pipe $verify()
-    .pipe $summarize "position #2:"
-    .pipe D.$on_finish done
-
-  #.........................................................................................................
-  for n in [ 4, 7, 9, 3, 5, 6, ]
-    input.write n
-  input.end()
-
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) D.new_stream" ] = ( T, done ) ->
   T.ok isa_stream stream = D.new_stream()
   stream
@@ -2326,6 +2266,125 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   D.end  input
 
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) README demo (1)" ] = ( T, done ) ->
+  #.........................................................................................................
+  $comment = ->
+    count = 0
+    return $ ( data ) =>
+      if data?
+        count += +1
+        info "received event:", data
+      else
+        warn "stream has ended; read #{count} events"
+
+  #.........................................................................................................
+  $as_text_line = ->
+    return $ ( data, send ) =>
+      send "line: " + ( JSON.stringify data ) + '\n'
+
+  #.........................................................................................................
+  $summarize = ( title ) ->
+    collector = []
+    return $ ( data, send, end ) =>
+      if data?
+        send data
+        collector.push ( JSON.stringify data )
+      if end?
+        collector.sort() # Just a demo; always use a custom sort method, kids!
+        help title, collector.join ', '
+        end()
+
+  #.........................................................................................................
+  $verify = ( title ) ->
+    collector = []
+    return $ ( data, send, end ) =>
+      if data?
+        send data
+        collector.push ( JSON.stringify data )
+      if end?
+        T.eq collector, [ '"line: 4\\n"', '"line: 7\\n"', '"line: 9\\n"', '"line: 3\\n"', '"line: 5\\n"', '"line: 6\\n"' ]
+        end()
+
+  #.........................................................................................................
+  input = D.new_stream()  # returns a `through2` stream
+  input
+    .pipe $comment()
+    .pipe $ ( data ) => log CND.truth data?
+    .pipe $summarize "position #1:"
+    .pipe $as_text_line()
+    # .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
+    .pipe $verify()
+    .pipe $summarize "position #2:"
+    .pipe D.$on_finish done
+
+  #.........................................................................................................
+  for n in [ 4, 7, 9, 3, 5, 6, ]
+    input.write n
+  input.end()
+
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) README demo (2)" ] = ( T, done ) ->
+  $show = ->
+    return $ ( data ) ->
+      console.log "received data:", data
+
+  $count = ->
+    count = 0
+    return $ 'null', ( data ) ->
+      if data? then count += +1
+      else          console.log "stream has ended; read #{count} events"
+
+  input = D.new_stream()
+  input
+    .pipe D.$split()      # Convert buffer chunks into single-line strings.
+    .pipe $show()
+    .pipe $count()
+    .pipe D.$on_finish done
+
+  D.send input, """
+    Here we write
+    some lines of text
+    into the stream.
+    """
+  D.end  input # don't forget to end the input stream
+
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) README demo (3)" ] = ( T, done ) ->
+  $as_number = ->
+    return $ ( data, send ) ->
+      send parseFloat data
+
+  $add = ( increment = 1 ) ->
+    return $ ( n, send ) ->
+      send n
+      send n + increment
+
+  $show = ->
+    return $ ( data ) ->
+      console.log "received data:", data
+
+  input = D.new_stream()
+  input
+    .pipe D.$split()      # Convert into single-line strings.
+    .pipe $as_number()
+    .pipe $add 12
+    .pipe D.$sort()
+    .pipe $show()
+    .pipe D.$on_finish done
+
+  D.send input, "20\n10\n50\n40\n30\n"
+  D.end  input
+
+  #.........................................................................................................
+  return null
+
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
@@ -2360,76 +2419,78 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) fail to read when thru stream comes before read stream"
-    # "(v4) _new_stream_from_text doesn't work synchronously"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # # "(v4) fail to read when thru stream comes before read stream"
+    # # "(v4) _new_stream_from_text doesn't work synchronously"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 2"
+    # "(v4) $async with method arity 3"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) file stream events (1)"
+    # "(v4) transforms below output receive data events (1)"
+    # "(v4) transforms below output receive data events (2)"
+    # "(v4) _new_stream_from_url"
+    # "(v4) new_stream README example (1)"
+    # "(v4) new_stream README example (2)"
+    # "(v4) new_stream README example (3)"
+    # "(v4) _new_stream_from_path with encodings"
+    # "(v4) _new_stream_from_path (raw)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) _new_stream_from_path (3)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) read TSV file (1)"
+    # "(v4) TSV whitespace trimming"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $intersperse (1)"
+    # "(v4) $intersperse (2)"
+    # "(v4) $intersperse (3)"
+    # "(v4) $intersperse (3a)"
+    # "(v4) $intersperse (4)"
+    # "(v4) $join (1)"
+    # "(v4) $join (2)"
+    # "(v4) $join (3)"
+    # "(v4) $as_json_list (1)"
+    # "(v4) $as_json_list (2)"
+    # "(v4) $as_json_list (2a)"
+    # "(v4) $as_json_list (2b)"
+    # "(v4) $as_json_list (2c)"
+    # "(v4) $as_json_list (3)"
+    # "(v4) symbols as data events (1)"
+    # "(v4) symbols as data events (2)"
+    # "(v4) stream sigils"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $sort 5"
+    # "(v4) $sort 6"
+    # "(v4) $as_tsv"
+    # "(v4) $batch (1)"
+    # "(v4) $batch (2)"
+    # "(v4) all remit methods have opt-in end detection (1)"
+    # "(v4) all remit methods have opt-in end detection (2)"
+    # "(v4) all remit methods have opt-in end detection (3)"
+    # "(v4) all remit methods have opt-in end detection (4)"
     "(v4) README demo (1)"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 2"
-    "(v4) $async with method arity 3"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
-    "(v4) file stream events (1)"
-    "(v4) transforms below output receive data events (1)"
-    "(v4) transforms below output receive data events (2)"
-    "(v4) _new_stream_from_url"
-    "(v4) new_stream README example (1)"
-    "(v4) new_stream README example (2)"
-    "(v4) new_stream README example (3)"
-    "(v4) _new_stream_from_path with encodings"
-    "(v4) _new_stream_from_path (raw)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) _new_stream_from_path (3)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) read TSV file (1)"
-    "(v4) TSV whitespace trimming"
-    "(v4) $split_tsv (1)"
-    "(v4) $intersperse (1)"
-    "(v4) $intersperse (2)"
-    "(v4) $intersperse (3)"
-    "(v4) $intersperse (3a)"
-    "(v4) $intersperse (4)"
-    "(v4) $join (1)"
-    "(v4) $join (2)"
-    "(v4) $join (3)"
-    "(v4) $as_json_list (1)"
-    "(v4) $as_json_list (2)"
-    "(v4) $as_json_list (2a)"
-    "(v4) $as_json_list (2b)"
-    "(v4) $as_json_list (2c)"
-    "(v4) $as_json_list (3)"
-    "(v4) symbols as data events (1)"
-    "(v4) symbols as data events (2)"
-    "(v4) stream sigils"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $sort 5"
-    "(v4) $sort 6"
-    "(v4) $as_tsv"
-    "(v4) $batch (1)"
-    "(v4) $batch (2)"
-    "(v4) all remit methods have opt-in end detection (1)"
-    "(v4) all remit methods have opt-in end detection (2)"
-    "(v4) all remit methods have opt-in end detection (3)"
-    "(v4) all remit methods have opt-in end detection (4)"
+    "(v4) README demo (2)"
+    "(v4) README demo (3)"
     ]
   @_prune()
   @_main()
