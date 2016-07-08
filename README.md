@@ -516,13 +516,15 @@ stream
   .pipe $ ( data, send, end ) =>
     if data?
       <...>
-    if end?
+    if end? # you could use a simple `else` here, but explicit is better than implicit
       <...>
       end()
   .pipe <...>
 ```
 
-Where the `'null'` tag is used
+Where `end` is **not** given, `data` will **never** be `null`, **except** where the `'null'` tag is used,
+as in `$ 'null', ( data ) =>`. Checking `data` for `null` in this kind of transforms allows you to
+observe the end-of-stream event without having to bother calling it yourself.
 
 In a nutshell, you have the
 following options:
