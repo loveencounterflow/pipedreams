@@ -20,7 +20,6 @@ Install as `npm install --save pipedreams`.
   - [Require Statement](#require-statement)
   - [Streams are Transforms, Transforms are Streams](#streams-are-transforms-transforms-are-streams)
   - [When to Call it a Day: Always Use On_Finish](#when-to-call-it-a-day-always-use-on_finish)
-  - [remit (aka $) and remit_async (aka $async)](#remit-aka--and-remit_async-aka-async)
   - [Never Assume Your Streams to be Synchronous](#never-assume-your-streams-to-be-synchronous)
   - [Stream Creation](#stream-creation)
     - [Stream Creation API](#stream-creation-api)
@@ -214,17 +213,6 @@ write_sample = ( handler ) =>
 Observe that `$on_finish` uses `setImmediate` to delay calling the callback handler until the next tick of
 the event loop; this too, helps to prevent prematurely leaving the writing procedure.
 
-
-## remit (aka $) and remit_async (aka $async)
-
-The `remit` method (as well as its asynchronous companion, `remit_async`)  is
-very much the centerpiece of the PipeDreams API¹. It accepts a function (call
-it a 'transformation') and returns a stream transform. In case you're
-familiar with the [event-stream](https://github.com/dominictarr/event-stream)
-way of doing things, then PipeDreams' `remit f` is roughly equivalent
-to event-stream's  `through on_data, on_end`, except you can handle both the
-`on_data` and `on_end` parts in a single function `f`. `remit_async f` is
-roughly equivalent to event-stream's `map f`.
 
 
 ## Never Assume Your Streams to be Synchronous
@@ -497,20 +485,47 @@ Hints:
 
 ## The Remit and Remit-Async Methods
 
-The behavior of the stream transform—the return value of calling `remit` or
-`remit_async` with a transformation function—is governed by the arity (the number of
-arguments) of the transformation; you can call `remit` (`$`) with a function
-that takes one, two, or three arguments, and `remit_async` (`$async`) with  a
-function that takes two, or three arguments. In a nutshell, you have the
+The `remit` method (as well as its asynchronous companion, `remit_async`)  is
+very much the centerpiece of the PipeDreams API¹. It accepts a function (call
+it a 'transformation') and returns a stream transform. In case you're
+familiar with the [event-stream](https://github.com/dominictarr/event-stream)
+way of doing things, then PipeDreams' `remit f` is roughly equivalent
+to event-stream's  `through on_data, on_end`, except you can handle both the
+`on_data` and `on_end` parts in a single function `f`. `remit_async f` is
+roughly equivalent to event-stream's `map f`.
+
+**The behavior of a stream transform is governed by the number of arguments of the transformation function
+and the optional `'null'` tag**.
+
+You can call `remit` (`$`) with a function that takes one, two, or three arguments, and `remit_async`
+(`$async`) with  a function that takes two, or three arguments. The suggested names of the arguments are
+`data` (or whatever fits the purpose best) for the first, `send` for the second, and `end` for the third
+argument, where present.
+
+In a nutshell, you have the
 following options:
 
 ```coffee
-$ ( data ) ->
-$ ( data, send ) -> ...
-$ ( data, send, end ) -> ...
-$async ( data, send ) -> ...
-$async ( data, send, end ) -> ...
+$              ( data            ) -> ...
+$      'null', ( data            ) -> ...
+$              ( data, send      ) -> ...
+$      'null', ( data, send      ) -> ...
+$              ( data, send, end ) -> ...
+$async         ( data, send      ) -> ...
+$async 'null', ( data, send      ) -> ...
+$async         ( data, send, end ) -> ...
 ```
+| signature                               | `data` may     |                |                |
+|                                         | be `null`      |                |                |
+| :-------------------------------------- | :------------: | :------------: | :------------: |
+| `$              ( data            ) ->` | no             | no             | no             |
+| `$      'null', ( data            ) ->` | no             | no             | no             |
+| `$              ( data, send      ) ->` | no             | no             | no             |
+| `$      'null', ( data, send      ) ->` | no             | no             | no             |
+| `$              ( data, send, end ) ->` | no             | no             | no             |
+| `$async         ( data, send      ) ->` | no             | no             | no             |
+| `$async 'null', ( data, send      ) ->` | no             | no             | no             |
+| `$async         ( data, send, end ) ->` | no             | no             | no             |
 
 where `data` is the current data event that comes down the stream, `send`
 (where used) is a method that send data down the stream, and `end` (where used
