@@ -526,31 +526,28 @@ Where `end` is **not** given, `data` will **never** be `null`, **except** where 
 as in `$ 'null', ( data ) =>`. Checking `data` for `null` in this kind of transforms allows you to
 observe the end-of-stream event without having to bother calling it yourself.
 
-In a nutshell, you have the
-following options:
+In a nutshell, you have the following options:
 
 
 ```
-| signature                               | `data` may be `null` | must call `end()` | must call `send.done()` |
-+-----------------------------------------+----------------------+-------------------+-------------------------+
-|  $              ( data            ) ->  |         no           |          no       |            no           |
-|  $      'null', ( data            ) ->  |         yes          |          no       |            no           |
-|  $              ( data, send      ) ->  |         no           |          no       |            no           |
-|  $      'null', ( data, send      ) ->  |         yes          |          no       |            no           |
-|  $              ( data, send, end ) ->  |         yes          |          yes      |            no           |
-|  $async         ( data, send      ) ->  |         no           |          no       |            yes          |
-|  $async 'null', ( data, send      ) ->  |         yes          |          no       |            yes          |
-|  $async         ( data, send, end ) ->  |         yes          |          yes      |            yes          |
+┌─────────────────────────────────────────┬─────────────┬─────────────┬─────────────┐
+│ signature                               │ data may    │ must call   │ must call   │
+│                                         │ be null     │ end()       │ send.done() │
+├─────────────────────────────────────────┼─────────────┼─────────────┼─────────────┤
+│  $              ( data            ) ->  │   no        │     no      │     no      │
+│  $      'null', ( data            ) ->  │   yes       │     no      │     no      │
+│  $              ( data, send      ) ->  │   no        │     no      │     no      │
+│  $      'null', ( data, send      ) ->  │   yes       │     no      │     no      │
+│  $              ( data, send, end ) ->  │   yes       │     yes     │     no      │
+│  $async         ( data, send      ) ->  │   no        │     no      │     yes     │
+│  $async 'null', ( data, send      ) ->  │   yes       │     no      │     yes     │
+│  $async         ( data, send, end ) ->  │   yes       │     yes     │     yes     │
+└─────────────────────────────────────────┴─────────────┴─────────────┴─────────────┘
 ```
 
-where `data` is the current data event that comes down the stream, `send`
-(where used) is a method that send data down the stream, and `end` (where used
-and when actually present in the call) is a method to signal that the stream
-should be ended. `send` is used as `send some_data`; it always has a member
-`send.end()` to end the stream at some arbitrary point in time, and a
-`send.error "message"` member to indicate that something has gone wrong.
-`end()`, where used and when defined, must always be called (without any
-arguments).—Now for the details.
+You can also use `send.end()` to end the stream at any point in time and `send.error new Error "message"` to
+signal an error.
+
 
 ### (Synchronous) Stream Observer
 
