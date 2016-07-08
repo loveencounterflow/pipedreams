@@ -534,14 +534,14 @@ In a nutshell, you have the following options:
 │ signature                               │ data may    │ must call   │ must call   │
 │                                         │ be null     │ end()       │ send.done() │
 ├─────────────────────────────────────────┼─────────────┼─────────────┼─────────────┤
-│  $              ( data            ) ->  │   no        │     no      │     no      │
-│  $      'null', ( data            ) ->  │   yes       │     no      │     no      │
-│  $              ( data, send      ) ->  │   no        │     no      │     no      │
-│  $      'null', ( data, send      ) ->  │   yes       │     no      │     no      │
-│  $              ( data, send, end ) ->  │   yes       │     yes     │     no      │
-│  $async         ( data, send      ) ->  │   no        │     no      │     yes     │
-│  $async 'null', ( data, send      ) ->  │   yes       │     no      │     yes     │
-│  $async         ( data, send, end ) ->  │   yes       │     yes     │     yes     │
+│  $              ( data            ) ->  │             │             │             │
+│  $      'null', ( data            ) ->  │      ●      │             │             │
+│  $              ( data, send      ) ->  │             │             │             │
+│  $      'null', ( data, send      ) ->  │      ●      │             │             │
+│  $              ( data, send, end ) ->  │      ●      │      ●      │             │
+│  $async         ( data, send      ) ->  │             │             │      ●      │
+│  $async 'null', ( data, send      ) ->  │      ●      │             │      ●      │
+│  $async         ( data, send, end ) ->  │      ●      │      ●      │      ●      │
 └─────────────────────────────────────────┴─────────────┴─────────────┴─────────────┘
 ```
 
