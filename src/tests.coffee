@@ -265,82 +265,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) _new_stream_from_path (3)" ] = ( T, done ) ->
-  @[ "_(v4) _new_stream_from_path (3) (outer)" ] ( error, Z ) =>
-    throw error if error?
-    [ n, failures, ] = Z
-    if ( count = failures.length ) is 0
-      T.ok true
-    else
-      T.fail """failed in #{count} out of #{n} cases:
-        #{ (JSON.stringify r) + '\n' for r in failures }"""
-    done()
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "_(v4) _new_stream_from_path (3) (outer)" ] = ( handler ) ->
-  ASYNC       = require 'async'
-  tasks       = []
-  failures    = []
-  n           = 100
-  #.........................................................................................................
-  for idx in [ 0 ... n ]
-    do ( idx ) =>
-      tasks.push ( done ) =>
-        probes = [ 'helo', 'world', "run ##{idx}" ]
-        @[ "_(v4) _new_stream_from_path (3) (inner)" ] idx, probes, ( error, result ) =>
-          if error?
-            failures.push error[ 'message' ]
-          else
-            failures.push result unless CND.equals result, probes
-          done()
-  #.........................................................................................................
-  ASYNC.parallelLimit tasks, 10, =>
-    urge "done"
-    handler null, [ n, failures, ]
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "_(v4) _new_stream_from_path (3) (inner)" ] = ( idx, probes, handler ) ->
-  MSP         = require 'mississippi'
-  step        = ( require 'coffeenode-suspend' ).step
-  path        = resolve_temp_path "_new_stream_from_path-3-#{idx}.txt"
-  #.........................................................................................................
-  write_sample = ( handler ) =>
-    input   = D.new_stream()
-    output  = D.new_stream 'write', 'lines', { path, }
-    input
-      .pipe output
-      .pipe D.$on_finish handler
-      # .pipe D.$finish output, handler
-    #.......................................................................................................
-    D.send input, probe for probe in probes
-    D.end input
-  #.........................................................................................................
-  read_sample = ( handler ) =>
-    try
-      input   = D.new_stream 'read', 'lines', { path, }
-    catch error
-      return handler error
-    input
-      .pipe D.$collect()
-      # .pipe D.$show()
-      .pipe do =>
-        result = null
-        return $ 'null', ( lines ) =>
-          if lines? then result = lines
-          else handler null, result
-  #.........................................................................................................
-  step ( resume ) =>
-    yield           write_sample  resume
-    result = yield  read_sample   resume
-    handler null, result
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) file stream events (1)" ] = ( T, done ) ->
   path_1      = resolve_temp_path '(v4) file stream events (1).txt'
   probes      = [ 'helo', 'world', '𪉟⿱鹵皿' ]
@@ -856,14 +780,16 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   # T.ok isa_stream D.new_file_writestream()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $async with method arity 2" ] = ( T, done ) ->
+@[ "(v4) $async with method arity 3 (1)" ] = ( T, done ) ->
   #.........................................................................................................
-  $calculate = => $async ( n, send ) =>
-    delay "$calculate", =>
-      send n - 1
-      send n
-      send n + 1
-      send.done()
+  $calculate = => $async ( n, send, end ) =>
+    if n?
+      delay "$calculate", =>
+        send n - 1
+        send n
+        send n + 1
+        send.done()
+    end() if end?
   #.........................................................................................................
   input = D.new_stream()
   # MSP   = require 'mississippi'
@@ -885,14 +811,16 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $async with method arity 3" ] = ( T, done ) ->
+@[ "(v4) $async with method arity 3 (2)" ] = ( T, done ) ->
   #.........................................................................................................
-  $calculate = => $async ( n, send ) =>
-    delay "$calculate", =>
-      send n - 1
-      send n
-      send n + 1
-      send.done()
+  $calculate = => $async ( n, send, end ) =>
+    if n?
+      delay "$calculate", =>
+        send n - 1
+        send n
+        send n + 1
+        send.done()
+    end() if end?
   #.........................................................................................................
   $group = =>
     last_n        = null
@@ -2265,6 +2193,21 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   D.send input, kana for kana in Array.from "アイウエオカキクケコ"
   D.end  input
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $async only allows 3 arguments in transformation (1)" ] = ( T, done ) ->
+  T.throws "method with 1 arguments not supported for asynchronous transforms", ( => $async ( data ) -> )
+  T.throws "method with 2 arguments not supported for asynchronous transforms", ( => $async ( data, send ) -> )
+  T.throws "method with 4 arguments not supported for asynchronous transforms", ( => $async ( data, send, foo, bar ) -> )
+  T.throws "tag 'null' not allowed for asynchronous transforms", ( => $async 'null', ( data ) -> )
+  T.throws "tag 'null' not allowed for asynchronous transforms", ( => $async 'null', ( data, send ) -> )
+  T.throws "tag 'null' not allowed for asynchronous transforms", ( => $async 'null', ( data, send, end ) -> )
+  T.throws "tag 'null' not allowed for asynchronous transforms", ( => $async 'null', ( data, send, foo, bar ) -> )
+  try
+    $async ( data, send, end ) -> null
+    T.succeed "$async with 3 arguments OK"
+  catch error
+    T.fail "fails with error #{rpr error[ 'message' ]}"
+  done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) README demo (1)" ] = ( T, done ) ->
@@ -2432,8 +2375,8 @@ unless module.parent?
     "(v4) D.new_stream"
     "(v4) stream / transform construction with through2 (1)"
     "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 2"
-    "(v4) $async with method arity 3"
+    "(v4) $async with method arity 3 (1)"
+    "(v4) $async with method arity 3 (2)"
     "(v4) $lockstep 1"
     "(v4) $lockstep fails on streams of unequal lengths without fallback"
     "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
@@ -2452,7 +2395,6 @@ unless module.parent?
     "(v4) new new_stream signature (1)"
     "(v4) new new_stream signature (2)"
     "(v4) _new_stream_from_path (1)"
-    "(v4) _new_stream_from_path (3)"
     "(v4) $split_tsv (3)"
     "(v4) $split_tsv (4)"
     "(v4) read TSV file (1)"
@@ -2491,6 +2433,7 @@ unless module.parent?
     "(v4) README demo (1)"
     "(v4) README demo (2)"
     "(v4) README demo (3)"
+    "(v4) $async only allows 3 arguments in transformation (1)"
     ]
   @_prune()
   @_main()

@@ -410,17 +410,24 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_remit = ( tags, mode, method ) ->
+  throw new Error "unknown mode #{rpr mode}" unless mode in [ 'sync', 'async', ]
+  #.........................................................................................................
   unless CND.is_subset tags, [ 'null', ]
     throw new Error "the only allowed tag is 'null', got #{rpr tags}"
   send_null   = 'null' in tags
+  if send_null and mode is 'async'
+    throw new Error "tag 'null' not allowed for asynchronous transforms"
   #.........................................................................................................
-  arity       = method.length
-  throw new Error "method with #{arity} arguments not supported" unless arity in [ 1, 2, 3, ]
-  throw new Error "unknown mode #{rpr mode}" unless mode in [ 'sync', 'async', ]
-  has_error   = no
+  has_error = no
+  arity     = method.length
+  if mode is 'sync'
+    unless 1 <= arity <= 3
+      throw new Error "method with #{arity} arguments not supported for synchronous transforms"
+  else
+    unless arity is 3
+      throw new Error "method with #{arity} arguments not supported for asynchronous transforms"
   #.........................................................................................................
   if arity is 1
-    throw new Error "method with #{arity} arguments not supported for async transforms" if mode is 'async'
     #.......................................................................................................
     main = ( chunk, encoding, callback ) ->
       method chunk

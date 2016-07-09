@@ -635,6 +635,83 @@ D                         = require './main'
   return null
 
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_path (3)" ] = ( T, done ) ->
+  @[ "_(v4) _new_stream_from_path (3) (outer)" ] ( error, Z ) =>
+    throw error if error?
+    [ n, failures, ] = Z
+    if ( count = failures.length ) is 0
+      T.ok true
+    else
+      T.fail """failed in #{count} out of #{n} cases:
+        #{ (JSON.stringify r) + '\n' for r in failures }"""
+    done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "_(v4) _new_stream_from_path (3) (outer)" ] = ( handler ) ->
+  ASYNC       = require 'async'
+  tasks       = []
+  failures    = []
+  n           = 100
+  #.........................................................................................................
+  for idx in [ 0 ... n ]
+    do ( idx ) =>
+      tasks.push ( done ) =>
+        probes = [ 'helo', 'world', "run ##{idx}" ]
+        @[ "_(v4) _new_stream_from_path (3) (inner)" ] idx, probes, ( error, result ) =>
+          if error?
+            failures.push error[ 'message' ]
+          else
+            failures.push result unless CND.equals result, probes
+          done()
+  #.........................................................................................................
+  ASYNC.parallelLimit tasks, 10, =>
+    urge "done"
+    handler null, [ n, failures, ]
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "_(v4) _new_stream_from_path (3) (inner)" ] = ( idx, probes, handler ) ->
+  MSP         = require 'mississippi'
+  step        = ( require 'coffeenode-suspend' ).step
+  path        = resolve_temp_path "_new_stream_from_path-3-#{idx}.txt"
+  #.........................................................................................................
+  write_sample = ( handler ) =>
+    input   = D.new_stream()
+    output  = D.new_stream 'write', 'lines', { path, }
+    input
+      .pipe output
+      .pipe D.$on_finish handler
+      # .pipe D.$finish output, handler
+    #.......................................................................................................
+    D.send input, probe for probe in probes
+    D.end input
+  #.........................................................................................................
+  read_sample = ( handler ) =>
+    try
+      input   = D.new_stream 'read', 'lines', { path, }
+    catch error
+      return handler error
+    input
+      .pipe D.$collect()
+      # .pipe D.$show()
+      .pipe do =>
+        result = null
+        return $ 'null', ( lines ) =>
+          if lines? then result = lines
+          else handler null, result
+  #.........................................................................................................
+  step ( resume ) =>
+    yield           write_sample  resume
+    result = yield  read_sample   resume
+    handler null, result
+  #.........................................................................................................
+  return null
+
+
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
