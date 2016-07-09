@@ -534,14 +534,16 @@ In a nutshell, you have the following options:
 
 ```
 ┌─────────────────────────────────────────┬─────────────┬─────────────┬─────────────┐
-│ signature                               │ data may    │ must call   │ must call   │
-│                                         │ be null     │ end()       │ send.done() │
+│  signature                              │ data  may   │ must call   │  must call  │
+│                                         │  be null    │   end()     │ send.done() │
 ├─────────────────────────────────────────┼─────────────┼─────────────┼─────────────┤
 │  $              ( data            ) ->  │             │             │             │
 │  $      'null', ( data            ) ->  │      ●      │             │             │
+├─────────────────────────────────────────┼─────────────┼─────────────┼─────────────┤
 │  $              ( data, send      ) ->  │             │             │             │
 │  $      'null', ( data, send      ) ->  │      ●      │             │             │
 │  $              ( data, send, end ) ->  │      ●      │      ●      │             │
+├─────────────────────────────────────────┼─────────────┼─────────────┼─────────────┤
 │  $async         ( data, send      ) ->  │             │             │      ●      │
 │  $async 'null', ( data, send      ) ->  │      ●      │             │      ●      │
 │  $async         ( data, send, end ) ->  │      ●      │      ●      │      ●      │
@@ -589,10 +591,9 @@ being called as argument to a `.pipe` call within a stream pipeline'
 (iknowiknow, that's a mouthful)—it is also customary to prefix the name with a
 `$` (dollar sign).
 
-Since `$observe`, below, is such a factory function, the transform that
+Since `$show`, below, is such a factory function, the transform that
 it returns may hold private state within the closure, an immensely useful
-technique (notwithstanding the folks who claim that everything should be pure
-functions; pure functions are great but try to count using those):
+technique:
 
 ```coffee
 f = ( done ) ->
