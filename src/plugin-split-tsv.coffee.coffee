@@ -4,7 +4,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPEDREAMS/TRANSFORM-SPLIT-TSV'
+badge                     = 'PIPEDREAMS/PLUGIN-SPLIT-TSV'
 # log                       = CND.get_logger 'plain',     badge
 # info                      = CND.get_logger 'info',      badge
 # whisper                   = CND.get_logger 'whisper',   badge
