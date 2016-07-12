@@ -33,6 +33,7 @@
     "binary-split": "^1.0.2",
     "cnd": "^4.1.1",
     "coffeenode-suspend": "^0.1.11",
+    "line-stream": "^1.0.0",
     "mississippi": "^1.2.0",
     "timsort": "^0.2.1",
     "tmp": "0.0.28",

@@ -61,6 +61,11 @@ MSP                       = require 'mississippi'
   R = ( require 'binary-split' ) matcher
   return @_rpr "*✀", "split", ( rpr matcher ), R
 
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$line_splitter = ( matcher ) ->
+  R = ( require 'line-stream' ) matcher
+  return @_rpr "*✀", "split", ( rpr matcher ), R
+
 # #-----------------------------------------------------------------------------------------------------------
 # @_new_stream$throttle_bytes = ( bytes_per_second ) ->
 #   R = new ( require 'throttle' ) bytes_per_second
@@ -215,7 +220,7 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
-  x     = new Buffer "data\n"
+  x     = new Buffer "devnull\n"
   plug  = @new_stream()
   pipeline = [
     ( @$ ( data, send ) => send x; @send plug, data )
@@ -314,19 +319,24 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}"        if hints?
   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
-  #.........................................................................................................
-  ### The underlying implementation does not allow to get passed less than two streams, so we
-  add pass-through transforms to satisfy it: ###
-  if pipeline.length < 2
-    pipeline  = Object.assign [], pipeline
-    while pipeline.length < 2
-      if ( pipeline.length is 1 ) and ( @isa_readonly_stream pipeline[ 0 ] )
-        pipeline.push @$pass_through()
-      else
-        pipeline.unshift @$pass_through()
-  #.........................................................................................................
-  inner = ( rpr p for p in pipeline ).join ' '
-  return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
+  # #.........................................................................................................
+  # ### The underlying implementation does not allow to get passed less than two streams, so we
+  # add pass-through transforms to satisfy it: ###
+  # if pipeline.length < 2
+  #   pipeline  = Object.assign [], pipeline
+  #   while pipeline.length < 2
+  #     if ( pipeline.length is 1 ) and ( @isa_readonly_stream pipeline[ 0 ] )
+  #       pipeline.push @$pass_through()
+  #     else
+  #       pipeline.unshift @$pass_through()
+  # #.........................................................................................................
+  # inner = ( rpr p for p in pipeline ).join ' '
+  # return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
+  R = @new_stream()
+  for transform in pipeline
+    transform = @$bridge transform if @isa_readonly_stream transform
+    R         = R.pipe transform
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -461,6 +471,8 @@ MSP                       = require 'mississippi'
   get_send = ( self, callback ) ->
     #.......................................................................................................
     R = ( data ) ->
+      # debug '4401', rpr data
+      # urge '4402', ( rpr data.toString 'utf-8' ) if ( CND.type_of data ) is 'buffer'
       self.push data # if data?
     #.......................................................................................................
     R.error = ( error ) ->
@@ -528,7 +540,6 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$split = ( settings ) ->
-  ### TAINT should allow to specify splitter, encoding, keep binary format ###
   matcher   = settings?[ 'matcher'  ] ? '\n'
   encoding  = settings?[ 'encoding' ] ? 'utf-8'
   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
@@ -537,6 +548,35 @@ MSP                       = require 'mississippi'
   extra    += " #{encoding}" unless encoding is 'buffer'
   return @_rpr "✀", "split", extra, R if encoding is 'buffer'
   return @_rpr "✀", "split", extra, @new_stream pipeline: [ R, ( @$decode encoding ), ]
+
+#-----------------------------------------------------------------------------------------------------------
+@$split_2 = ( settings ) ->
+  matcher     = settings?[ 'matcher'  ] ? '\n'
+  throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
+  strip       = settings?[ 'strip'    ] ? yes and matcher.length > 0
+  encoding    = settings?[ 'encoding' ] ? 'utf-8'
+  #.........................................................................................................
+  if strip
+    matcher_bfr = if ( Buffer.isBuffer matcher ) then matcher else new Buffer matcher, 'utf-8'
+  #.........................................................................................................
+  splitter    = @_new_stream$line_splitter matcher
+  output      = @new_stream()
+  splitter.on 'data',      ( data ) => debug '4432-1', rpr data; @send  output, data
+  splitter.on 'fragment',  ( data ) => debug '4432-2', rpr data; @send  output, data
+  splitter.on 'end',                => @end   output
+  pipeline    = []
+  pipeline.push MSP.duplex splitter, output
+  #.........................................................................................................
+  if strip
+    pipeline.push @$ ( data, send ) =>
+      position = data.length - matcher_bfr.length
+      return send data unless data.includes matcher_bfr, position
+      send data.slice 0, position
+  #.........................................................................................................
+  pipeline.push @$decode encoding unless encoding is 'buffer'
+  extra       = rpr matcher
+  extra      += " #{encoding}" unless encoding is 'buffer'
+  return @_rpr "✀", "split", extra, @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->
@@ -965,6 +1005,7 @@ MSP                       = require 'mississippi'
       cache = data
     if end?
       send cache if cache?
+      cache = null
       if arity is 0 then method() else method send
       end()
 
@@ -990,8 +1031,8 @@ MSP                       = require 'mississippi'
       send cache if cache?
       cache = data
     if end?
-      # send cache if cache?
       method cache, send
+      cache = null
       end()
 
 #-----------------------------------------------------------------------------------------------------------
@@ -1033,8 +1074,9 @@ MSP                       = require 'mississippi'
 @$filter = ( method ) -> @$ ( data, send ) => send data if method data
 
 
+
 #===========================================================================================================
-# REPORTING
+# REPORTING & BENCHMARKS
 #-----------------------------------------------------------------------------------------------------------
 @$show = ( badge = null ) ->
   my_show = CND.get_logger 'info', badge ? '*'
@@ -1042,21 +1084,49 @@ MSP                       = require 'mississippi'
     my_show rpr record
     send record
 
+#-----------------------------------------------------------------------------------------------------------
+@$benchmark = ( title = null ) ->
+  t0                            = null
+  me                            = {}
+  me.n                          = 0
+  me.dt                         = null
+  me.rps                        = null
+  me.title                      = title ? "№#{( Object.keys @$benchmark.registry ).length}"
+  @$benchmark.registry[ title ] = me
+  R                             = @new_stream()
+  #.........................................................................................................
+  R.on 'data', =>
+    t0  ?= +new Date()
+    me.n += 1
+    echo title, me.n if me.n % 10000 is 0
+  #.........................................................................................................
+  R.on 'finish', =>
+    me.dt  = ( new Date() - t0 ) / 1000
+    me.rps = me.n / me.dt
+    @$benchmark._report me
+  return R
+
 # #-----------------------------------------------------------------------------------------------------------
-# @$stop_time = ( badge_or_handler ) ->
-#   t0 = null
-#   return @$observe ( data, is_last ) =>
-#     t0 = +new Date() if data? and not t0?
-#     if is_last
-#       dt = ( new Date() ) - t0
-#       switch type = CND.type_of badge_or_handler
-#         when 'function'
-#           badge_or_handler dt
-#         when 'text', 'jsundefined'
-#           logger = CND.get_logger 'info', badge_or_handler ? 'stop time'
-#           logger "#{(dt / 1000).toFixed 2}s"
-#         else
-#           throw new Error "expected function or text, got a #{type}"
+# @$benchmark.$summarize = =>
+#   R = @new_stream()
+#   R.on 'finish', => @$benchmark.summarize()
+#   return R
+
+#-----------------------------------------------------------------------------------------------------------
+@$benchmark.summarize = =>
+  urge "Benchmarks summary:"
+  @$benchmark._report me for _, me of @$benchmark.registry
+
+#-----------------------------------------------------------------------------------------------------------
+@$benchmark._report = ( me ) =>
+  n   = CND.format_number me.n
+  dt  = me.dt.toFixed  3
+  rps = me.rps.toFixed 3
+  info CND.steel "#{me.title}: #{n} records in #{dt} s (#{rps} r/s)"
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@$benchmark.registry = {}
 
 
 #===========================================================================================================

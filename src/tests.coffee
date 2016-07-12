@@ -18,7 +18,10 @@ test                      = require 'guy-test'
 D                         = require './main'
 { $, $async, }            = D
 #...........................................................................................................
+# D                         = Object.assign D, require './plugin-split-tsv'
+# D                         = Object.assign D, require './plugin-tabulate'
 require './plugin-split-tsv'
+require './plugin-tabulate'
 
 #...........................................................................................................
 ### TAINT for the time being, we create one global folder and keep it beyond process termination; this
@@ -216,7 +219,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   $verify = =>
     idx = -1
-    return $ ( data ) =>
+    return $ 'null', ( data ) =>
       if data?
         idx += +1
         T.eq data, matcher[ idx ]
@@ -1004,7 +1007,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       row[ 'size' ] = parseInt row[ 'size' ], 10
       send row
   #.........................................................................................................
-  $as_table_row = =>
+  $tabulate_row = =>
     return $ ( data, send ) =>
       { date, size, name, } = data
       columns = [
@@ -1013,9 +1016,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
         ( to_width name, 28 ) ]
       send '│ ' + ( columns.join ' │ ' ) + ' │'
   #.........................................................................................................
-  $as_table = =>
+  $tabulate = =>
     return D.new_stream pipeline: [
-      ( $as_table_row() )
+      ( $tabulate_row() )
       ( D.$on_start ( send ) => send '┌' + ( '─'.repeat 68 ) + '┐' )
       # ( D.$on_stop  ( send ) => send '├' + ( '─'.repeat 68 ) + '┤' )
       ( D.$on_stop  ( send ) => send '└' + ( '─'.repeat 68 ) + '┘' )
@@ -1023,6 +1026,10 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   sort = ( directions_and_keys..., matcher, handler ) =>
     help directions_and_keys
+    title     = []
+    for [ direction, key, ] in directions_and_keys
+      title.push key + ' ' + ( if direction is 'ascending' then '▲' else '▼' )
+    title     = "sorting by " + title.join ', '
     input     = D.new_stream 'read', path: resolve_path __dirname, '../test-data/files.tsv'
     # output    = D.new_stream 'devnull'
     pipeline  = ( ( D.$sort { direction, key, } ) for [ direction, key, ] in directions_and_keys )
@@ -1031,8 +1038,9 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
       .pipe D.$split_tsv names: 'inline'
       .pipe $cast()
       .pipe D.new_stream { pipeline, }
-      .pipe $as_table()
+      .pipe $tabulate()
       .pipe $ ( row ) => info row if row?
+      .pipe D.$benchmark title
       .pipe D.$on_finish handler
       # .pipe D.$finish output, handler
  #.........................................................................................................
@@ -1041,6 +1049,106 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     yield sort [ 'ascending', 'size', ], null, resume
     yield sort [ 'ascending', 'name', ], null, resume
     yield sort [ 'descending', 'date', ], [ 'descending', 'size', ], [ 'ascending', 'name', ], null, resume
+    D.$benchmark.summarize()
+    done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) can send empty strings" ] = ( T, done ) ->
+  matchers  = [ '', '', ]
+  through   = D.new_stream pipeline: [ D.$show(), ( $ ( data ) => urge data ), ]
+  input     = D.new_stream()
+  input
+    # .pipe through
+    .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, 'A text'
+  D.send  input, 'with a few'
+  D.send  input, ''
+  D.send  input, 'lines'
+  D.send  input, ''
+  D.send  input, 'some of which'
+  D.send  input, 'are empty.'
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) can send empty strings (split) (1)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split_2()
+    # .pipe $ ( data, send ) => send ''
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) can send empty strings (split) (2)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """ + '\n\n'
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split_2()
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $tabulate" ] = ( T, done ) ->
+  { step }            = require 'coffeenode-suspend'
+  #.........................................................................................................
+  $cast = =>
+    return $ ( row, send ) =>
+      row[ 'date' ] = new Date row[ 'date' ]
+      row[ 'size' ] = parseInt row[ 'size' ], 10
+      send row
+  #.........................................................................................................
+  show = ( table_settings, as_lists, matcher, handler ) =>
+    input     = D.new_stream 'read', path: resolve_path __dirname, '../test-data/files.tsv'
+    # output    = D.new_stream 'devnull'
+    input
+      .pipe D.$split_tsv names: 'inline'
+      .pipe D.$sample 1 / 5, seed: 1.1
+      .pipe $cast()
+      .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass_through()
+      .pipe D.$tabulate table_settings
+      .pipe $ ( row ) => echo row
+      .pipe D.$on_finish handler
+  #.........................................................................................................
+  step ( resume ) =>
+    yield show { spacing: 'wide',  columns: 2, }, no,   null, resume
+    # yield show { spacing: 'tight', columns: 3, }, no,   null, resume
+    # yield show { spacing: 'wide',  columns: 2, }, yes,  null, resume
+    # yield show { spacing: 'tight', columns: 3, }, yes,  null, resume
     done()
 
 #-----------------------------------------------------------------------------------------------------------
@@ -2341,6 +2449,17 @@ delay = ( name, f ) =>
   setTimeout f, dt
 
 #-----------------------------------------------------------------------------------------------------------
+$validate_probes = ( T, matchers ) =>
+  idx = -1
+  return $ 'null', ( data ) =>
+    if data?
+      idx += +1
+      T.eq data, matchers[ idx ]
+    else
+      T.eq idx + 1, matchers.length
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
 sleep = ( dt, handler ) =>
   setTimeout handler, dt
 
@@ -2362,84 +2481,87 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) fail to read when thru stream comes before read stream"
-    # "(v4) _new_stream_from_text doesn't work synchronously"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 3 (1)"
-    "(v4) $async with method arity 3 (2)"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
-    "(v4) file stream events (1)"
-    "(v4) transforms below output receive data events (1)"
-    "(v4) transforms below output receive data events (2)"
-    "(v4) _new_stream_from_url"
-    "(v4) new_stream README example (1)"
-    "(v4) new_stream README example (2)"
-    "(v4) new_stream README example (3)"
-    "(v4) _new_stream_from_path with encodings"
-    "(v4) _new_stream_from_path (raw)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) read TSV file (1)"
-    "(v4) TSV whitespace trimming"
-    "(v4) $split_tsv (1)"
-    "(v4) $intersperse (1)"
-    "(v4) $intersperse (2)"
-    "(v4) $intersperse (3)"
-    "(v4) $intersperse (3a)"
-    "(v4) $intersperse (4)"
-    "(v4) $join (1)"
-    "(v4) $join (2)"
-    "(v4) $join (3)"
-    "(v4) $as_json_list (1)"
-    "(v4) $as_json_list (2)"
-    "(v4) $as_json_list (2a)"
-    "(v4) $as_json_list (2b)"
-    "(v4) $as_json_list (2c)"
-    "(v4) $as_json_list (3)"
-    "(v4) symbols as data events (1)"
-    "(v4) symbols as data events (2)"
-    "(v4) stream sigils"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $sort 5"
-    "(v4) $sort 6"
-    "(v4) $as_tsv"
-    "(v4) $batch (1)"
-    "(v4) $batch (2)"
-    "(v4) all remit methods have opt-in end detection (1)"
-    "(v4) all remit methods have opt-in end detection (2)"
-    "(v4) all remit methods have opt-in end detection (3)"
-    "(v4) all remit methods have opt-in end detection (4)"
-    "(v4) README demo (1)"
-    "(v4) README demo (2)"
-    "(v4) README demo (3)"
-    "(v4) $async only allows 3 arguments in transformation (1)"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # # "(v4) fail to read when thru stream comes before read stream"
+    # # "(v4) _new_stream_from_text doesn't work synchronously"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 3 (1)"
+    # "(v4) $async with method arity 3 (2)"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) file stream events (1)"
+    # "(v4) transforms below output receive data events (1)"
+    # "(v4) transforms below output receive data events (2)"
+    # "(v4) _new_stream_from_url"
+    # "(v4) new_stream README example (1)"
+    # "(v4) new_stream README example (2)"
+    # "(v4) new_stream README example (3)"
+    # "(v4) _new_stream_from_path with encodings"
+    # "(v4) _new_stream_from_path (raw)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) read TSV file (1)"
+    # "(v4) TSV whitespace trimming"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $intersperse (1)"
+    # "(v4) $intersperse (2)"
+    # "(v4) $intersperse (3)"
+    # "(v4) $intersperse (3a)"
+    # "(v4) $intersperse (4)"
+    # "(v4) $join (1)"
+    # "(v4) $join (2)"
+    # "(v4) $join (3)"
+    # "(v4) $as_json_list (1)"
+    # "(v4) $as_json_list (2)"
+    # "(v4) $as_json_list (2a)"
+    # "(v4) $as_json_list (2b)"
+    # "(v4) $as_json_list (2c)"
+    # "(v4) $as_json_list (3)"
+    # "(v4) symbols as data events (1)"
+    # "(v4) symbols as data events (2)"
+    # "(v4) stream sigils"
+    # "(v4) $as_tsv"
+    # "(v4) $batch (1)"
+    # "(v4) $batch (2)"
+    # "(v4) all remit methods have opt-in end detection (1)"
+    # "(v4) all remit methods have opt-in end detection (2)"
+    # "(v4) all remit methods have opt-in end detection (3)"
+    # "(v4) all remit methods have opt-in end detection (4)"
+    # "(v4) README demo (1)"
+    # "(v4) README demo (2)"
+    # "(v4) README demo (3)"
+    # "(v4) $async only allows 3 arguments in transformation (1)"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $sort 5"
+    # "(v4) $sort 6"
+    # "(v4) $tabulate"
+    "(v4) can send empty strings"
+    "(v4) can send empty strings (split) (1)"
+    # "(v4) can send empty strings (split) (2)"
     ]
   @_prune()
   @_main()
 
 
   # debug '5562', JSON.stringify key for key in Object.keys @
-
 
 
