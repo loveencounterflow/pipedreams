@@ -956,8 +956,8 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_stop = ( method ) ->
-  unless 0 <= ( arity = method.length ) is 1
-    throw new Error "expected method with 1 argument, got one with #{arity}"
+  unless 0 <= ( arity = method.length ) <= 1
+    throw new Error "expected method with up to 1 argument, got one with #{arity}"
   cache = null
   return @$ ( data, send, end ) ->
     if data?
