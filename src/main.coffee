@@ -319,27 +319,36 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}"        if hints?
   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
-  # #.........................................................................................................
-  # ### The underlying implementation does not allow to get passed less than two streams, so we
-  # add pass-through transforms to satisfy it: ###
-  # if pipeline.length < 2
-  #   pipeline  = Object.assign [], pipeline
-  #   while pipeline.length < 2
-  #     if ( pipeline.length is 1 ) and ( @isa_readonly_stream pipeline[ 0 ] )
-  #       pipeline.push @$pass_through()
-  #     else
-  #       pipeline.unshift @$pass_through()
-  # #.........................................................................................................
-  # inner = ( rpr p for p in pipeline ).join ' '
-  # return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
-  as_bridged = ( transform ) => if @isa_readonly_stream transform then @$bridge transform else transform
-  return @$pass_through()         if pipeline.length is 0
-  return as_bridged pipeline[ 0 ] if pipeline.length is 1
-  input = output = @new_stream()
-  for transform in pipeline
-    output = output.pipe as_bridged transform
-  ### TAINT `MSP.duplex` has same implementation as `MSP.pipeline`, so no cause to think it will work here: ###
-  return MSP.duplex input, output
+  #.........................................................................................................
+  ### The underlying implementation does not allow to get passed less than two streams, so we
+  add pass-through transforms to satisfy it: ###
+  if pipeline.length < 2
+    pipeline  = Object.assign [], pipeline
+    while pipeline.length < 2
+      if ( pipeline.length is 1 ) and ( @isa_readonly_stream pipeline[ 0 ] )
+        pipeline.push @$pass_through()
+      else
+        pipeline.unshift @$pass_through()
+  #.........................................................................................................
+  inner = ( rpr p for p in pipeline ).join ' '
+  return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
+
+# #-----------------------------------------------------------------------------------------------------------
+# @_new_stream_from_pipeline_2 = ( pipeline, hints, settings ) ->
+#   ### Given a list of transforms (a.k.a. a 'pipeline'), return a stream that has all the transforms
+#   successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
+#   reading from the stream will read from the last transform. ###
+#   throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}"        if hints?
+#   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
+#   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
+#   as_bridged = ( transform ) => if @isa_readonly_stream transform then @$bridge transform else transform
+#   return @$pass_through()         if pipeline.length is 0
+#   return as_bridged pipeline[ 0 ] if pipeline.length is 1
+#   input = output = @new_stream()
+#   for transform in pipeline
+#     output = output.pipe as_bridged transform
+#   ### TAINT `MSP.duplex` has same implementation as `MSP.pipeline`, so no cause to think it will work here: ###
+#   return MSP.duplex.obj input, output
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -552,34 +561,34 @@ MSP                       = require 'mississippi'
   return @_rpr "✀", "split", extra, R if encoding is 'buffer'
   return @_rpr "✀", "split", extra, @new_stream pipeline: [ R, ( @$decode encoding ), ]
 
-#-----------------------------------------------------------------------------------------------------------
-@$split_2 = ( settings ) ->
-  matcher     = settings?[ 'matcher'  ] ? '\n'
-  throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
-  strip       = settings?[ 'strip'    ] ? yes and matcher.length > 0
-  encoding    = settings?[ 'encoding' ] ? 'utf-8'
-  #.........................................................................................................
-  if strip
-    matcher_bfr = if ( Buffer.isBuffer matcher ) then matcher else new Buffer matcher, 'utf-8'
-  #.........................................................................................................
-  splitter    = @_new_stream$line_splitter matcher
-  output      = @new_stream()
-  splitter.on 'data',      ( data ) => debug '4432-1', rpr data; @send  output, data
-  splitter.on 'fragment',  ( data ) => debug '4432-2', rpr data; @send  output, data
-  splitter.on 'end',                => @end   output
-  pipeline    = []
-  pipeline.push MSP.duplex splitter, output
-  #.........................................................................................................
-  if strip
-    pipeline.push @$ ( data, send ) =>
-      position = data.length - matcher_bfr.length
-      return send data unless data.includes matcher_bfr, position
-      send data.slice 0, position
-  #.........................................................................................................
-  pipeline.push @$decode encoding unless encoding is 'buffer'
-  extra       = rpr matcher
-  extra      += " #{encoding}" unless encoding is 'buffer'
-  return @_rpr "✀", "split", extra, @new_stream { pipeline, }
+# #-----------------------------------------------------------------------------------------------------------
+# @$split_2 = ( settings ) ->
+#   matcher     = settings?[ 'matcher'  ] ? '\n'
+#   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
+#   strip       = settings?[ 'strip'    ] ? yes and matcher.length > 0
+#   encoding    = settings?[ 'encoding' ] ? 'utf-8'
+#   #.........................................................................................................
+#   if strip
+#     matcher_bfr = if ( Buffer.isBuffer matcher ) then matcher else new Buffer matcher, 'utf-8'
+#   #.........................................................................................................
+#   splitter    = @_new_stream$line_splitter matcher
+#   output      = @new_stream()
+#   splitter.on 'data',      ( data ) => debug '4432-1', rpr data; @send  output, data
+#   splitter.on 'fragment',  ( data ) => debug '4432-2', rpr data; @send  output, data
+#   splitter.on 'end',                => @end   output
+#   pipeline    = []
+#   pipeline.push MSP.duplex splitter, output
+#   #.........................................................................................................
+#   if strip
+#     pipeline.push @$ ( data, send ) =>
+#       position = data.length - matcher_bfr.length
+#       return send data unless data.includes matcher_bfr, position
+#       send data.slice 0, position
+#   #.........................................................................................................
+#   pipeline.push @$decode encoding unless encoding is 'buffer'
+#   extra       = rpr matcher
+#   extra      += " #{encoding}" unless encoding is 'buffer'
+#   return @_rpr "✀", "split", extra, @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->

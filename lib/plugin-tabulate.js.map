@@ -1,7 +1,7 @@
 {
   "version": 3,
   "file": "plugin-tabulate.js",
-  "sourceRoot": "../../pipedreams",
+  "sourceRoot": "..",
   "sources": [
     "src/plugin-tabulate.coffee"
   ],
