@@ -332,11 +332,14 @@ MSP                       = require 'mississippi'
   # #.........................................................................................................
   # inner = ( rpr p for p in pipeline ).join ' '
   # return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
-  R = @new_stream()
+  as_bridged = ( transform ) => if @isa_readonly_stream transform then @$bridge transform else transform
+  return @$pass_through()         if pipeline.length is 0
+  return as_bridged pipeline[ 0 ] if pipeline.length is 1
+  input = output = @new_stream()
   for transform in pipeline
-    transform = @$bridge transform if @isa_readonly_stream transform
-    R         = R.pipe transform
-  return R
+    output = output.pipe as_bridged transform
+  ### TAINT `MSP.duplex` has same implementation as `MSP.pipeline`, so no cause to think it will work here: ###
+  return MSP.duplex input, output
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
