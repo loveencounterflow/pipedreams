@@ -2498,10 +2498,12 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #-----------------------------------------------------------------------------------------------------------
 @[ "(empty-string) can send empty strings (validate mississippi pipe works as such)" ] = ( T, done ) ->
   MSP         = require 'mississippi'
-  matchers    = []
+  matchers_1  = [ 'A text', 'with a few', 'lines', 'some of which', 'are empty.', ]
+  matchers_2  = []
   sub_input   = D.new_stream()
-  sub_thruput = D.$show()
+  sub_thruput = $validate_probes T, matchers_1
   sub_output  = D.new_stream()
+  T.fail "test no correct; misses checkpoint 1"
   handler     = ( error ) =>
     return T.fail error if error?
     T.succeed "mississippi pipe ok."
@@ -2511,9 +2513,9 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input
     .pipe through
     # .pipe D.$show()
-    # .pipe $ ( data ) => urge data
+    .pipe $ ( data ) => urge data
     .pipe $ ( data, send ) => send data if data is ''
-    .pipe $validate_probes T, matchers
+    .pipe $validate_probes T, matchers_2
     .pipe D.$on_finish done
   D.send  input, 'A text'
   D.send  input, 'with a few'
@@ -2681,11 +2683,11 @@ unless module.parent?
     # "(empty-string) $tabulate"
     # "(empty-string) can send empty strings (split) (1)"
     # "(empty-string) can send empty strings (split) (2)"
-    "(empty-string) can send empty strings (w/out pipeline)"
-    "(empty-string) can send empty strings (w/ pipeline)"
-    "(empty-string) can send empty strings (w/ mississippi pipeline)"
-    "(empty-string) can send empty strings (validate mississippi duplex works as such)"
-    "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)"
+    # "(empty-string) can send empty strings (w/out pipeline)"
+    # "(empty-string) can send empty strings (w/ pipeline)"
+    # "(empty-string) can send empty strings (w/ mississippi pipeline)"
+    # "(empty-string) can send empty strings (validate mississippi duplex works as such)"
+    # "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)"
     "(empty-string) can send empty strings (validate mississippi pipe works as such)"
     ]
   @_prune()
