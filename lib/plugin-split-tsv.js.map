@@ -1,7 +1,7 @@
 {
   "version": 3,
   "file": "plugin-split-tsv.js",
-  "sourceRoot": "..",
+  "sourceRoot": "../../pipedreams",
   "sources": [
     "src/plugin-split-tsv.coffee.coffee"
   ],
