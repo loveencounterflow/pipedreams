@@ -2500,15 +2500,15 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   MSP         = require 'mississippi'
   matchers_1  = [ 'A text', 'with a few', 'lines', 'some of which', 'are empty.', ]
   matchers_2  = []
+  collector   = []
   sub_input   = D.new_stream()
-  sub_thruput = $validate_probes T, matchers_1
+  collect     = $ ( data ) => collector.push data
   sub_output  = D.new_stream()
-  T.fail "test no correct; misses checkpoint 1"
   handler     = ( error ) =>
     return T.fail error if error?
     T.succeed "mississippi pipe ok."
     # done()
-  through     = MSP.pipe sub_input, sub_thruput, sub_output, handler
+  through     = MSP.pipe sub_input, collect, sub_output, handler
   input       = D.new_stream()
   input
     .pipe through
@@ -2516,7 +2516,9 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data ) => urge data
     .pipe $ ( data, send ) => send data if data is ''
     .pipe $validate_probes T, matchers_2
-    .pipe D.$on_finish done
+    .pipe D.$on_finish =>
+      T.eq collector, matchers_1
+      done()
   D.send  input, 'A text'
   D.send  input, 'with a few'
   D.send  input, 'lines'
