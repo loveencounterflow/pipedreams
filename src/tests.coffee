@@ -2794,7 +2794,56 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (split) (1)" ] = ( T, done ) ->
+@[ "(empty-string) can send empty strings ($split) (1)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split()
+    # .pipe $ ( data, send ) => send ''
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings ($split) (2)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """ + '\n\n'
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split()
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings ($split_2) (1)" ] = ( T, done ) ->
   probe = """
     A text
     with a few
@@ -2819,7 +2868,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (split) (2)" ] = ( T, done ) ->
+@[ "(empty-string) can send empty strings ($split_2) (2)" ] = ( T, done ) ->
   probe = """
     A text
     with a few
@@ -2949,8 +2998,10 @@ unless module.parent?
     # "(v4) $sort 5"
     # "(v4) $sort 6"
     # "(empty-string) $tabulate"
-    # "(empty-string) can send empty strings (split) (1)"
-    # "(empty-string) can send empty strings (split) (2)"
+    "(empty-string) can send empty strings ($split) (1)"
+    "(empty-string) can send empty strings ($split) (2)"
+    "(empty-string) can send empty strings ($split_2) (1)"
+    "(empty-string) can send empty strings ($split_2) (2)"
     # "(empty-string) can send empty strings (w/out pipeline)"
     # "(empty-string) can send empty strings (w/ pipeline)"
     # "(empty-string) can send empty strings (w/ mississippi pipeline)"
@@ -2963,7 +3014,7 @@ unless module.parent?
     # "(empty-string) can send empty strings (validate mississippi duplex works as such)"
     # "(empty-string) can send empty mississippi duplex works as such)"
     # "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)"
-    # "(empty-string) duplexer2 works with empty strings"
+    "(empty-string) duplexer2 works with empty strings"
     "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
     "(v4) stream sigils"
     ]
