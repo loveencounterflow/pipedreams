@@ -43,28 +43,28 @@ MSP                       = require 'mississippi'
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$read_from_file = ( path, settings )   ->
   R = ( require 'fs' ).createReadStream path, settings
-  return @_rpr "*🖹 △", "FS read", ( rpr path ), R
+  return @_rpr "*🖹 △", "*FS-read", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$write_to_file = ( path, settings )   ->
   R = ( require 'fs' ).createWriteStream path, settings
-  return @_rpr "*🖹 ▼", "FS write", ( rpr path ), R
+  return @_rpr "*🖹 ▼", "*FS-write", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$append_to_file = ( path, settings )   ->
   settings[ 'flags' ] = ( settings[ 'flags' ] ? '' ) + 'a'
   R = ( require 'fs' ).createWriteStream path, settings
-  return @_rpr "*🖹 ⏬", "FS append", ( rpr path ), R
+  return @_rpr "*🖹 ⏬", "*FS-append", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$split_buffer = ( matcher ) ->
   R = ( require 'binary-split' ) matcher
-  return @_rpr "*✀", "split", ( rpr matcher ), R
+  return @_rpr "*✀", "*split", ( rpr matcher ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$line_splitter = ( matcher ) ->
   R = ( require 'line-stream' ) matcher
-  return @_rpr "*✀", "split", ( rpr matcher ), R
+  return @_rpr "*✀", "*split", ( rpr matcher ), R
 
 # #-----------------------------------------------------------------------------------------------------------
 # @_new_stream$throttle_bytes = ( bytes_per_second ) ->
@@ -72,9 +72,16 @@ MSP                       = require 'mississippi'
 #   return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream$duplexer2 = ( receiver, sender ) ->
+@_duplex$duplexer2 = ( receiver, sender ) ->
   R = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
-  # return @_rpr "*↹", "split", ( ( rpr receiver ) + ( rpr sender) ), R
+  return @_rpr "*↹", "*duplex", ( ( rpr receiver ) + ( rpr sender) ), R
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$pump = ( pipeline, handler ) ->
+  R = ( require 'pump' ) pipeline..., handler
+  # return @_rpr "*❡", "*pump", ( rpr pipeline ), R
+  return @_rpr "*❡", "*pump", null, R
   return R
 
 
@@ -99,7 +106,7 @@ MSP                       = require 'mississippi'
   _sub        = CND.crimson
   _extra      = CND.orange
   sub_inspect = stream.inspect
-  show_subs   = yes
+  show_subs   = no
   show_names  = no
   parts       = []
   parts.push _brackets start
@@ -226,15 +233,16 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
-  x     = new Buffer "devnull\n"
-  plug  = @new_stream()
-  pipeline = [
+  x         = new Buffer "devnull\n"
+  plug      = @new_stream()
+  pipeline  = [
     ( @$ ( data, send ) => send x; @send plug, data )
     ( @new_stream 'write', file: '/dev/null' )
     ( @$ ( data, send ) => null )
     plug
     ]
-  return @_rpr "⏚", "devnull", null, @new_stream { pipeline, }
+  R = @new_stream { pipeline, }
+  return @_rpr "⏚", "devnull", null, R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path = ( path, hints, settings ) ->
@@ -327,27 +335,19 @@ MSP                       = require 'mississippi'
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
   #.........................................................................................................
   as_bridged = ( transform ) => if @isa_writeonly_stream transform then @$bridge transform else transform
+  # as_bridged = ( transform ) => transform
   return @$pass_through()         if pipeline.length is 0
   return as_bridged pipeline[ 0 ] if pipeline.length is 1
   #.........................................................................................................
   handler = ( error ) => R.emit 'error', error if error?
-    help 'ok'
   #.........................................................................................................
   pipeline  = ( as_bridged transform for transform in pipeline )
   receiver  = pipeline[ 0 ]
   sender    = pipeline[ pipeline.length - 1 ]
-  MSP.pipe pipeline..., handler
-  R         = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
-  # inner_rpr = ( rpr p for p in pipeline ).join ' '
-  # return @_rprx "[", null, "pipeline", inner_rpr, "]", R
-  return R
-
-
-#   input = output = @new_stream()
-#   for transform in pipeline
-#     output = output.pipe as_bridged transform
-#   ### TAINT `MSP.duplex` has same implementation as `MSP.pipeline`, so no cause to think it will work here: ###
-#   return MSP.duplex.obj input, output
+  @_new_stream$pump pipeline, handler
+  R         = @duplex receiver, sender
+  inner_rpr = ( rpr p for p in pipeline ).join ' '
+  return @_rprx "[", null, "pipeline", inner_rpr, "]", R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -1048,14 +1048,7 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @on_finish = ( stream, handler ) ->
-  # stream.on 'finish', => setImmediate handler
   stream.on 'finish', => setImmediate => handler()
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$finish = ( stream, handler ) ->
-#   MSP.finished stream, handler
-#   # @on_finish stream, handler
-#   return stream
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_finish = ( method ) ->
@@ -1221,9 +1214,8 @@ pluck = ( x, key ) ->
   throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
-  # return @new_stream pipeline: [ @$pass_through(), stream, ]
-  output      = @_rpr "output",     "output",     null, @new_stream()
-  # throughput  = @_rpr "throughput", "throughput", null, @$ ( data, send, end ) =>
+  # output      = @_rpr "output",     "output",     null, @new_stream()
+  output      = @new_stream()
   throughput  = @$ ( data, send, end ) =>
     if data?
       send data
@@ -1231,15 +1223,20 @@ pluck = ( x, key ) ->
     if end?
       end()
       output.end()
-  bridge = @new_stream pipeline: [
-    throughput
-    stream
-    ]
+  handler = ( error ) => R.emit 'error', error if error?
+  bridge  = @_new_stream$pump [ throughput, stream, ], handler
+  R       = @duplex bridge, output
   extra = ( rpr bridge ) + ' ↝ ' + ( rpr output )
-  return @_rpr "↷", "bridge", extra, @duplex bridge, output
+  return @_rpr "↷", "bridge", extra, R
 
-# -----------------------------------------------------------------------------------------------------------
-# @duplex = ( receiver, sender ) -> @_new_stream$duplexer2 ->
+#-----------------------------------------------------------------------------------------------------------
+@duplex = ( receiver, sender ) -> @_duplex$duplexer2 receiver, sender
+
+
+#===========================================================================================================
+# EXPORT
+#-----------------------------------------------------------------------------------------------------------
+do ( PIPEDREAMS = @ ) ->
   for key in Object.keys PIPEDREAMS
     if CND.isa_function value = PIPEDREAMS[ key ]
       PIPEDREAMS[ key ] = value.bind PIPEDREAMS
@@ -1247,5 +1244,4 @@ pluck = ( x, key ) ->
         PIPEDREAMS[ key ][ sub_key ] = value[ sub_key ]
     else
       PIPEDREAMS[ key ] = value
-
 

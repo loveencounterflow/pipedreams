@@ -1731,8 +1731,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     help ( CND.grey '021' ), D.$split_tsv empty: no
     help ( CND.grey '021' ), D.$split_tsv comments: no
     help ( CND.grey '021' ), D.$split_tsv()
-    debug '9970'
-    setImmediate => debug '3332'; done()
+    setImmediate => done()
   D.send output, 'x'
   D.end output
 
@@ -2932,7 +2931,6 @@ unless module.parent?
     # "(v4) $as_json_list (3)"
     # "(v4) symbols as data events (1)"
     # "(v4) symbols as data events (2)"
-    # "(v4) stream sigils"
     # "(v4) $as_tsv"
     # "(v4) $batch (1)"
     # "(v4) $batch (2)"
@@ -2962,11 +2960,12 @@ unless module.parent?
     # "(empty-string) can send empty strings (validate mississippi pipeline works with empty strings)"
     # "(empty-string) can send empty strings (validate mississippi pipe works as such)"
     # "(empty-string) can send empty strings (validate mississippi pipe works with empty strings)"
-    "(empty-string) can send empty strings (validate mississippi duplex works as such)"
+    # "(empty-string) can send empty strings (validate mississippi duplex works as such)"
     # "(empty-string) can send empty mississippi duplex works as such)"
     # "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)"
-    "(empty-string) duplexer2 works with empty strings"
+    # "(empty-string) duplexer2 works with empty strings"
     "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
+    "(v4) stream sigils"
     ]
   @_prune()
   @_main()
@@ -2974,4 +2973,5 @@ unless module.parent?
 
   # debug '5562', JSON.stringify key for key in Object.keys @
 
+  # @[ "(empty-string) new D.duplex, new_stream from pipeline work with empty strings" ]()
 
