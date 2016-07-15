@@ -1,6 +1,6 @@
 {
   "name": "pipedreams",
-  "version": "4.0.5",
+  "version": "4.0.6",
   "description": "Piping NodeJS streams made rad easy, no subclassing man",
   "main": "lib/main.js",
   "scripts": {
@@ -33,8 +33,10 @@
     "binary-split": "^1.0.2",
     "cnd": "^4.1.1",
     "coffeenode-suspend": "^0.1.11",
+    "duplexer2": "^0.1.4",
     "line-stream": "^1.0.0",
     "mississippi": "^1.2.0",
+    "pump": "^1.0.1",
     "timsort": "^0.2.1",
     "tmp": "0.0.28",
     "to-width": "^1.0.3"

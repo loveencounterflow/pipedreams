@@ -43,33 +43,46 @@ MSP                       = require 'mississippi'
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$read_from_file = ( path, settings )   ->
   R = ( require 'fs' ).createReadStream path, settings
-  return @_rpr "*🖹 △", "FS read", ( rpr path ), R
+  return @_rpr "*🖹 △", "*FS-read", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$write_to_file = ( path, settings )   ->
   R = ( require 'fs' ).createWriteStream path, settings
-  return @_rpr "*🖹 ▼", "FS write", ( rpr path ), R
+  return @_rpr "*🖹 ▼", "*FS-write", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$append_to_file = ( path, settings )   ->
   settings[ 'flags' ] = ( settings[ 'flags' ] ? '' ) + 'a'
   R = ( require 'fs' ).createWriteStream path, settings
-  return @_rpr "*🖹 ⏬", "FS append", ( rpr path ), R
+  return @_rpr "*🖹 ⏬", "*FS-append", ( rpr path ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$split_buffer = ( matcher ) ->
   R = ( require 'binary-split' ) matcher
-  return @_rpr "*✀", "split", ( rpr matcher ), R
+  return @_rpr "*✀", "*split", ( rpr matcher ), R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream$line_splitter = ( matcher ) ->
   R = ( require 'line-stream' ) matcher
-  return @_rpr "*✀", "split", ( rpr matcher ), R
+  return @_rpr "*✀", "*split", ( rpr matcher ), R
 
 # #-----------------------------------------------------------------------------------------------------------
 # @_new_stream$throttle_bytes = ( bytes_per_second ) ->
 #   R = new ( require 'throttle' ) bytes_per_second
 #   return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
+
+#-----------------------------------------------------------------------------------------------------------
+@_duplex$duplexer2 = ( receiver, sender ) ->
+  R = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
+  return @_rpr "*↹", "*duplex", ( ( rpr receiver ) + ( rpr sender) ), R
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$pump = ( pipeline, handler ) ->
+  R = ( require 'pump' ) pipeline..., handler
+  # return @_rpr "*❡", "*pump", ( rpr pipeline ), R
+  return @_rpr "*❡", "*pump", null, R
+  return R
 
 
 #===========================================================================================================
@@ -93,7 +106,7 @@ MSP                       = require 'mississippi'
   _sub        = CND.crimson
   _extra      = CND.orange
   sub_inspect = stream.inspect
-  show_subs   = yes
+  show_subs   = no
   show_names  = no
   parts       = []
   parts.push _brackets start
@@ -220,15 +233,16 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
-  x     = new Buffer "devnull\n"
-  plug  = @new_stream()
-  pipeline = [
+  x         = new Buffer "devnull\n"
+  plug      = @new_stream()
+  pipeline  = [
     ( @$ ( data, send ) => send x; @send plug, data )
     ( @new_stream 'write', file: '/dev/null' )
     ( @$ ( data, send ) => null )
     plug
     ]
-  return @_rpr "⏚", "devnull", null, @new_stream { pipeline, }
+  R = @new_stream { pipeline, }
+  return @_rpr "⏚", "devnull", null, R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path = ( path, hints, settings ) ->
@@ -320,35 +334,20 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
   #.........................................................................................................
-  ### The underlying implementation does not allow to get passed less than two streams, so we
-  add pass-through transforms to satisfy it: ###
-  if pipeline.length < 2
-    pipeline  = Object.assign [], pipeline
-    while pipeline.length < 2
-      if ( pipeline.length is 1 ) and ( @isa_readonly_stream pipeline[ 0 ] )
-        pipeline.push @$pass_through()
-      else
-        pipeline.unshift @$pass_through()
+  as_bridged = ( transform ) => if @isa_writeonly_stream transform then @$bridge transform else transform
+  # as_bridged = ( transform ) => transform
+  return @$pass_through()         if pipeline.length is 0
+  return as_bridged pipeline[ 0 ] if pipeline.length is 1
   #.........................................................................................................
-  inner = ( rpr p for p in pipeline ).join ' '
-  return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
-
-# #-----------------------------------------------------------------------------------------------------------
-# @_new_stream_from_pipeline_2 = ( pipeline, hints, settings ) ->
-#   ### Given a list of transforms (a.k.a. a 'pipeline'), return a stream that has all the transforms
-#   successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
-#   reading from the stream will read from the last transform. ###
-#   throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}"        if hints?
-#   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
-#   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
-#   as_bridged = ( transform ) => if @isa_readonly_stream transform then @$bridge transform else transform
-#   return @$pass_through()         if pipeline.length is 0
-#   return as_bridged pipeline[ 0 ] if pipeline.length is 1
-#   input = output = @new_stream()
-#   for transform in pipeline
-#     output = output.pipe as_bridged transform
-#   ### TAINT `MSP.duplex` has same implementation as `MSP.pipeline`, so no cause to think it will work here: ###
-#   return MSP.duplex.obj input, output
+  handler = ( error ) => R.emit 'error', error if error?
+  #.........................................................................................................
+  pipeline  = ( as_bridged transform for transform in pipeline )
+  receiver  = pipeline[ 0 ]
+  sender    = pipeline[ pipeline.length - 1 ]
+  @_new_stream$pump pipeline, handler
+  R         = @duplex receiver, sender
+  inner_rpr = ( rpr p for p in pipeline ).join ' '
+  return @_rprx "[", null, "pipeline", inner_rpr, "]", R
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_text = ( text, hints, settings ) ->
@@ -561,34 +560,38 @@ MSP                       = require 'mississippi'
   return @_rpr "✀", "split", extra, R if encoding is 'buffer'
   return @_rpr "✀", "split", extra, @new_stream pipeline: [ R, ( @$decode encoding ), ]
 
-# #-----------------------------------------------------------------------------------------------------------
-# @$split_2 = ( settings ) ->
-#   matcher     = settings?[ 'matcher'  ] ? '\n'
-#   throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
-#   strip       = settings?[ 'strip'    ] ? yes and matcher.length > 0
-#   encoding    = settings?[ 'encoding' ] ? 'utf-8'
-#   #.........................................................................................................
-#   if strip
-#     matcher_bfr = if ( Buffer.isBuffer matcher ) then matcher else new Buffer matcher, 'utf-8'
-#   #.........................................................................................................
-#   splitter    = @_new_stream$line_splitter matcher
-#   output      = @new_stream()
-#   splitter.on 'data',      ( data ) => debug '4432-1', rpr data; @send  output, data
-#   splitter.on 'fragment',  ( data ) => debug '4432-2', rpr data; @send  output, data
-#   splitter.on 'end',                => @end   output
-#   pipeline    = []
-#   pipeline.push MSP.duplex splitter, output
-#   #.........................................................................................................
-#   if strip
-#     pipeline.push @$ ( data, send ) =>
-#       position = data.length - matcher_bfr.length
-#       return send data unless data.includes matcher_bfr, position
-#       send data.slice 0, position
-#   #.........................................................................................................
-#   pipeline.push @$decode encoding unless encoding is 'buffer'
-#   extra       = rpr matcher
-#   extra      += " #{encoding}" unless encoding is 'buffer'
-#   return @_rpr "✀", "split", extra, @new_stream { pipeline, }
+#-----------------------------------------------------------------------------------------------------------
+@$split_2 = ( settings ) ->
+  matcher     = settings?[ 'matcher'  ] ? '\n'
+  throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
+  strip       = settings?[ 'strip'    ] ? yes and matcher.length > 0
+  encoding    = settings?[ 'encoding' ] ? 'utf-8'
+  #.........................................................................................................
+  if strip
+    matcher_bfr = if ( Buffer.isBuffer matcher ) then matcher else new Buffer matcher, 'utf-8'
+  #.........................................................................................................
+  if Buffer::includes?
+    includes = ( buffer, probe ) -> buffer.includes probe, buffer.length - probe.length
+  else
+    includes = ( buffer, probe ) -> ( ( buffer.slice buffer.length - probe.length ).compare probe ) is 0
+  #.........................................................................................................
+  splitter    = @_new_stream$line_splitter matcher
+  output      = @new_stream()
+  splitter.on 'data',      ( data ) => @send  output, data
+  splitter.on 'fragment',  ( data ) => @send  output, data
+  splitter.on 'end',                => @end   output
+  pipeline    = []
+  pipeline.push MSP.duplex splitter, output
+  #.........................................................................................................
+  if strip
+    pipeline.push @$ ( data, send ) =>
+      return send data unless includes data, matcher_bfr
+      send data.slice 0, data.length - matcher_bfr.length
+  #.........................................................................................................
+  pipeline.push @$decode encoding unless encoding is 'buffer'
+  extra       = rpr matcher
+  extra      += " #{encoding}" unless encoding is 'buffer'
+  return @_rpr "✀", "split", extra, @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->
@@ -1049,14 +1052,7 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @on_finish = ( stream, handler ) ->
-  # stream.on 'finish', => setImmediate handler
   stream.on 'finish', => setImmediate => handler()
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$finish = ( stream, handler ) ->
-#   MSP.finished stream, handler
-#   # @on_finish stream, handler
-#   return stream
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_finish = ( method ) ->
@@ -1222,9 +1218,8 @@ pluck = ( x, key ) ->
   throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
-  # return @new_stream pipeline: [ @$pass_through(), stream, ]
-  output      = @_rpr "output",     "output",     null, @new_stream()
-  # throughput  = @_rpr "throughput", "throughput", null, @$ ( data, send, end ) =>
+  # output      = @_rpr "output",     "output",     null, @new_stream()
+  output      = @new_stream()
   throughput  = @$ ( data, send, end ) =>
     if data?
       send data
@@ -1232,12 +1227,14 @@ pluck = ( x, key ) ->
     if end?
       end()
       output.end()
-  bridge = @new_stream pipeline: [
-    throughput
-    stream
-    ]
+  handler = ( error ) => R.emit 'error', error if error?
+  bridge  = @_new_stream$pump [ throughput, stream, ], handler
+  R       = @duplex bridge, output
   extra = ( rpr bridge ) + ' ↝ ' + ( rpr output )
-  return @_rpr "↷", "bridge", extra, MSP.duplex.obj bridge, output
+  return @_rpr "↷", "bridge", extra, R
+
+#-----------------------------------------------------------------------------------------------------------
+@duplex = ( receiver, sender ) -> @_duplex$duplexer2 receiver, sender
 
 
 #===========================================================================================================
@@ -1251,5 +1248,4 @@ do ( PIPEDREAMS = @ ) ->
         PIPEDREAMS[ key ][ sub_key ] = value[ sub_key ]
     else
       PIPEDREAMS[ key ] = value
-
 

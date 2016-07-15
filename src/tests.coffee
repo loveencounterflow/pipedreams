@@ -39,6 +39,49 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
 # debug resolve_temp_path '/foo.txt'
 
 #===========================================================================================================
+# HELPERS
+#-----------------------------------------------------------------------------------------------------------
+delay = ( name, f ) =>
+  if arguments.length is 1
+    f     = name
+    name  = null
+  dt = CND.random_integer 10, 200
+  # dt = 1
+  whisper "delay for #{rpr name}: #{dt}ms" if name?
+  setTimeout f, dt
+
+#-----------------------------------------------------------------------------------------------------------
+$validate_probes = ( T, matchers ) =>
+  idx = -1
+  return $ 'null', ( data ) =>
+    if data?
+      idx += +1
+      T.eq data, matchers[ idx ]
+    else
+      T.eq idx + 1, matchers.length
+    return null
+
+#-----------------------------------------------------------------------------------------------------------
+sleep = ( dt, handler ) =>
+  setTimeout handler, dt
+
+#-----------------------------------------------------------------------------------------------------------
+isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
+
+#-----------------------------------------------------------------------------------------------------------
+@_prune = ->
+  for name, value of @
+    continue if name.startsWith '_'
+    delete @[ name ] unless name in include
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@_main = ->
+  info "temporary files, if any, written to #{temp_home}"
+  test @, 'timeout': 3000
+
+
+#===========================================================================================================
 # TESTS
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) new new_stream signature (1)" ] = ( T, done ) ->
@@ -1051,106 +1094,6 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     yield sort [ 'descending', 'date', ], [ 'descending', 'size', ], [ 'ascending', 'name', ], null, resume
     D.$benchmark.summarize()
     done()
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings" ] = ( T, done ) ->
-  matchers  = [ '', '', ]
-  through   = D.new_stream pipeline: [ D.$show(), ( $ ( data ) => urge data ), ]
-  input     = D.new_stream()
-  input
-    # .pipe through
-    .pipe D.$show()
-    .pipe $ ( data ) => urge data
-    .pipe $ ( data, send ) => send data if data is ''
-    .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, 'A text'
-  D.send  input, 'with a few'
-  D.send  input, ''
-  D.send  input, 'lines'
-  D.send  input, ''
-  D.send  input, 'some of which'
-  D.send  input, 'are empty.'
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (split) (1)" ] = ( T, done ) ->
-  probe = """
-    A text
-    with a few
-
-    lines
-
-    some of which
-    are empty.
-    """
-  debug '4412', rpr probe
-  matchers = [ '', '', ]
-  input = D.new_stream()
-  input
-    .pipe D.$split_2()
-    # .pipe $ ( data, send ) => send ''
-    .pipe D.$show()
-    # .pipe $ ( data, send ) => send data if data is ''
-    # .pipe D.$show()
-    # .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, probe
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (split) (2)" ] = ( T, done ) ->
-  probe = """
-    A text
-    with a few
-
-    lines
-
-    some of which
-    are empty.
-    """ + '\n\n'
-  debug '4412', rpr probe
-  matchers = [ '', '', ]
-  input = D.new_stream()
-  input
-    .pipe D.$split_2()
-    .pipe D.$show()
-    # .pipe $ ( data, send ) => send data if data is ''
-    # .pipe D.$show()
-    # .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, probe
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) $tabulate" ] = ( T, done ) ->
-  { step }            = require 'coffeenode-suspend'
-  #.........................................................................................................
-  $cast = =>
-    return $ ( row, send ) =>
-      row[ 'date' ] = new Date row[ 'date' ]
-      row[ 'size' ] = parseInt row[ 'size' ], 10
-      send row
-  #.........................................................................................................
-  show = ( table_settings, as_lists, matcher, handler ) =>
-    input     = D.new_stream 'read', path: resolve_path __dirname, '../test-data/files.tsv'
-    # output    = D.new_stream 'devnull'
-    input
-      .pipe D.$split_tsv names: 'inline'
-      .pipe D.$sample 1 / 5, seed: 1.1
-      .pipe $cast()
-      .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass_through()
-      .pipe D.$tabulate table_settings
-      .pipe $ ( row ) => echo row
-      .pipe D.$on_finish handler
-  #.........................................................................................................
-  step ( resume ) =>
-    yield show { spacing: 'wide',  columns: 2, }, no,   null, resume
-    # yield show { spacing: 'tight', columns: 3, }, no,   null, resume
-    # yield show { spacing: 'wide',  columns: 2, }, yes,  null, resume
-    # yield show { spacing: 'tight', columns: 3, }, yes,  null, resume
-    done()
-
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $as_tsv" ] = ( T, done ) ->
   { step }            = require 'coffeenode-suspend'
@@ -1788,8 +1731,7 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
     help ( CND.grey '021' ), D.$split_tsv empty: no
     help ( CND.grey '021' ), D.$split_tsv comments: no
     help ( CND.grey '021' ), D.$split_tsv()
-    debug '9970'
-    setImmediate => debug '3332'; done()
+    setImmediate => done()
   D.send output, 'x'
   D.end output
 
@@ -2436,127 +2378,645 @@ resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.
   #.........................................................................................................
   return null
 
-#===========================================================================================================
-# HELPERS
-#-----------------------------------------------------------------------------------------------------------
-delay = ( name, f ) =>
-  if arguments.length is 1
-    f     = name
-    name  = null
-  dt = CND.random_integer 10, 200
-  # dt = 1
-  whisper "delay for #{rpr name}: #{dt}ms" if name?
-  setTimeout f, dt
+### # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  ###
+###  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ###
+### # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  ###
+###  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ###
 
 #-----------------------------------------------------------------------------------------------------------
-$validate_probes = ( T, matchers ) =>
-  idx = -1
-  return $ 'null', ( data ) =>
-    if data?
-      idx += +1
-      T.eq data, matchers[ idx ]
-    else
-      T.eq idx + 1, matchers.length
-    return null
+@[ "(empty-string) can send empty strings (w/out pipeline)" ] = ( T, done ) ->
+  matchers  = [ '', '', ]
+  input     = D.new_stream()
+  input
+    .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, 'A text'
+  D.send  input, 'with a few'
+  D.send  input, ''
+  D.send  input, 'lines'
+  D.send  input, ''
+  D.send  input, 'some of which'
+  D.send  input, 'are empty.'
+  D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-sleep = ( dt, handler ) =>
-  setTimeout handler, dt
+@[ "(empty-string) can send empty strings (w/ pipeline)" ] = ( T, done ) ->
+  matchers  = [ '', '', ]
+  # through   = D.new_stream pipeline: [ D.$show(), ( $ ( data ) => urge data ), ]
+  through   = D.new_stream pipeline: [ D.new_stream(), D.new_stream(), D.new_stream(), ]
+  input     = D.new_stream()
+  input
+    .pipe through
+    .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, 'A text'
+  D.send  input, 'with a few'
+  D.send  input, ''
+  D.send  input, 'lines'
+  D.send  input, ''
+  D.send  input, 'some of which'
+  D.send  input, 'are empty.'
+  D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
+@[ "(empty-string) can send empty strings (w/ mississippi pipeline)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers    = [ '', '', ]
+  through     = MSP.pipeline.obj D.new_stream(), D.new_stream(), D.new_stream()
+  input       = D.new_stream()
+  input
+    .pipe through
+    .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, 'A text'
+  D.send  input, 'with a few'
+  D.send  input, ''
+  D.send  input, 'lines'
+  D.send  input, ''
+  D.send  input, 'some of which'
+  D.send  input, 'are empty.'
+  D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-@_prune = ->
-  for name, value of @
-    continue if name.startsWith '_'
-    delete @[ name ] unless name in include
-  return null
+@[ "(empty-string) can send empty strings (validate mississippi through works as such)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers    = []
+  sub_input   = D.new_stream()
+  sub_output  = D.new_stream()
+  sub_input.pipe sub_output
+  through     = MSP.through.obj sub_input, sub_output
+  input       = D.new_stream()
+  input
+    .pipe through
+    .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, 'A text'
+  D.send  input, 'with a few'
+  D.send  input, 'lines'
+  D.send  input, 'some of which'
+  D.send  input, 'are empty.'
+  D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-@_main = ->
-  info "temporary files, if any, written to #{temp_home}"
-  test @, 'timeout': 3000
+@[ "(empty-string) can send empty strings (validate mississippi through works with empty strings)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers    = [ '', '', ]
+  sub_input   = D.new_stream()
+  sub_output  = D.new_stream()
+  sub_input.pipe sub_output
+  through     = MSP.through.obj sub_input, sub_output
+  input       = D.new_stream()
+  input
+    .pipe through
+    .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, 'A text'
+  D.send  input, 'with a few'
+  D.send  input, ''
+  D.send  input, 'lines'
+  D.send  input, ''
+  D.send  input, 'some of which'
+  D.send  input, 'are empty.'
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings (validate mississippi pipeline works as such)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "none", "of which", "are empty.", ]
+  matchers_2  = []
+  collector   = []
+  sub_input   = D.new_stream()
+  collect     = $ ( data ) => collector.push data
+  sub_output  = D.new_stream()
+  # handler     = ( error ) =>
+  #   return T.fail error if error?
+  #   T.succeed "mississippi pipe ok."
+  #   # done()
+  through     = MSP.pipeline.obj sub_input, collect, sub_output
+  input       = D.new_stream()
+  input
+    .pipe through
+    # .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers_2
+    .pipe D.$on_finish =>
+      T.eq collector, matchers_1
+      done()
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, "none"
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings (validate mississippi pipeline works with empty strings)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
+  matchers_2  = []
+  collector   = []
+  sub_input   = D.new_stream()
+  collect     = $ ( data ) => collector.push data
+  sub_output  = D.new_stream()
+  # handler     = ( error ) =>
+  #   return T.fail error if error?
+  #   T.succeed "mississippi pipe ok."
+  #   # done()
+  through     = MSP.pipeline.obj sub_input, collect, sub_output
+  input       = D.new_stream()
+  input
+    .pipe through
+    # .pipe D.$show()
+    .pipe $ ( data ) => urge data
+    .pipe $ ( data, send ) => send data if data is ''
+    .pipe $validate_probes T, matchers_2
+    .pipe D.$on_finish =>
+      T.eq collector, matchers_1
+      done()
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, ""
+  D.send  input, "some"
+  D.send  input, ""
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings (validate mississippi pipe works as such)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "none", "of which", "are empty.", ]
+  matchers_2  = []
+  collector   = []
+  #.........................................................................................................
+  collect     = $ ( data ) => collector.push data
+  show        = $ ( data ) => urge data
+  filter      = $ ( data, send ) => send data if data is ''
+  # validate    = $validate_probes T, matchers_2
+  input       = D.new_stream()
+  #.........................................................................................................
+  handler     = ( error ) =>
+    return T.fail error if error?
+    T.succeed "mississippi pipe ok."
+    T.eq collector, matchers_1
+    done()
+  #.........................................................................................................
+  MSP.pipe input, collect, show, handler
+  #.........................................................................................................
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, "none"
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings (validate mississippi pipe works with empty strings)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
+  matchers_2  = [ "", "", ]
+  collector_1 = []
+  collector_2 = []
+  #.........................................................................................................
+  collect_1   = $ ( data ) => collector_1.push data
+  collect_2   = $ ( data ) => collector_2.push data
+  show        = $ ( data ) => urge data
+  filter      = $ ( data, send ) => send data if data is ''
+  # validate    = $validate_probes T, matchers_2
+  input       = D.new_stream()
+  #.........................................................................................................
+  handler     = ( error ) =>
+    return T.fail error if error?
+    T.succeed "mississippi pipe ok."
+    T.eq collector_1, matchers_1
+    T.eq collector_2, matchers_2
+    done()
+  #.........................................................................................................
+  MSP.pipe input, collect_1, show, filter, collect_2, handler
+  #.........................................................................................................
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, ""
+  D.send  input, "some"
+  D.send  input, ""
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings (validate mississippi duplex works as such)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "none", "of which", "are empty.", ]
+  collector_1 = []
+  #.........................................................................................................
+  collect     = $ ( data ) => collector_1.push data
+  show        = $ ( data ) => urge data
+  filter      = $ ( data, send ) => send data if data is ''
+  input       = D.new_stream()
+  receiver    = D.new_stream()
+  sender      = D.new_stream()
+  #.........................................................................................................
+  handler     = ( error ) =>
+    return T.fail error if error?
+    help 'ok'
+  #.........................................................................................................
+  MSP.pipe receiver, collect, show, sender, handler
+  through     = MSP.duplex.obj receiver, sender
+  #.........................................................................................................
+  input
+    .pipe through
+    .pipe D.$show()
+    .pipe D.$on_finish =>
+      T.eq collector_1, matchers_1
+      done()
+  #.........................................................................................................
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, "none"
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
+  matchers_2  = [ "", "", ]
+  collector_1 = []
+  collector_2 = []
+  #.........................................................................................................
+  collect_1   = $ ( data ) => collector_1.push data
+  collect_2   = $ ( data ) => collector_2.push data
+  show        = $ ( data ) => urge data
+  filter      = $ ( data, send ) => send data if data is ''
+  input       = D.new_stream()
+  receiver    = D.new_stream()
+  sender      = D.new_stream()
+  #.........................................................................................................
+  handler     = ( error ) =>
+    return T.fail error if error?
+    help 'ok'
+  #.........................................................................................................
+  MSP.pipe receiver, collect_1, show, filter, collect_2, sender, handler
+  through     = MSP.duplex.obj receiver, sender
+  #.........................................................................................................
+  input
+    .pipe through
+    .pipe D.$show()
+    .pipe D.$on_finish =>
+      T.eq collector_1, matchers_1
+      T.eq collector_2, matchers_2
+      done()
+  #.........................................................................................................
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, ""
+  D.send  input, "some"
+  D.send  input, ""
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) duplexer2 works with empty strings" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
+  matchers_2  = [ "", "", ]
+  collector_1 = []
+  collector_2 = []
+  #.........................................................................................................
+  collect_1   = $ ( data ) => collector_1.push data
+  collect_2   = $ ( data ) => collector_2.push data
+  show        = $ ( data ) => urge data
+  filter      = $ ( data, send ) => send data if data is ''
+  cause_error = $ ( data, send ) =>
+    return send data unless data is "some"
+    send.error new Error "test error"
+  input       = D.new_stream()
+  receiver    = D.new_stream()
+  sender      = D.new_stream()
+  #.........................................................................................................
+  handler     = ( error ) =>
+    return pipeline.emit 'error', error if error?
+    help 'ok'
+  #.........................................................................................................
+  # MSP.pipe receiver, collect_1, show, cause_error, filter, collect_2, sender, handler
+  MSP.pipe receiver, collect_1, show, filter, collect_2, sender, handler
+  pipeline = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
+  #.........................................................................................................
+  input
+    .pipe pipeline
+    .pipe D.$on_finish =>
+      T.eq collector_1, matchers_1
+      T.eq collector_2, matchers_2
+      done()
+  #.........................................................................................................
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, ""
+  D.send  input, "some"
+  D.send  input, ""
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) new D.duplex, new_stream from pipeline work with empty strings" ] = ( T, done ) ->
+  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
+  matchers_2  = [ "", "", ]
+  collector_1 = []
+  collector_2 = []
+  #.........................................................................................................
+  collect_1   = $ ( data ) => collector_1.push data
+  collect_2   = $ ( data ) => collector_2.push data
+  show        = $ ( data ) => urge data
+  filter      = $ ( data, send ) => send data if data is ''
+  cause_error = $ ( data, send ) =>
+    return send data unless data is "some"
+    send.error new Error "test error"
+  input       = D.new_stream()
+  receiver    = D.new_stream()
+  sender      = D.new_stream()
+  #.........................................................................................................
+  handler     = ( error ) =>
+    return pipeline.emit 'error', error if error?
+    help 'ok'
+  #.........................................................................................................
+  pipeline    = [
+    receiver
+    collect_1
+    show
+    # cause_error
+    filter
+    collect_2
+    sender
+    ]
+  confluence  = D.new_stream { pipeline }
+  #.........................................................................................................
+  input
+    .pipe confluence
+    .pipe D.$on_finish =>
+      T.eq collector_1, matchers_1
+      T.eq collector_2, matchers_2
+      done()
+  #.........................................................................................................
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, ""
+  D.send  input, "some"
+  D.send  input, ""
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings ($split) (1)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split()
+    # .pipe $ ( data, send ) => send ''
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings ($split) (2)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """ + '\n\n'
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split()
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings ($split_2) (1)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split_2()
+    # .pipe $ ( data, send ) => send ''
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) can send empty strings ($split_2) (2)" ] = ( T, done ) ->
+  probe = """
+    A text
+    with a few
+
+    lines
+
+    some of which
+    are empty.
+    """ + '\n\n'
+  debug '4412', rpr probe
+  matchers = [ '', '', ]
+  input = D.new_stream()
+  input
+    .pipe D.$split_2()
+    .pipe D.$show()
+    # .pipe $ ( data, send ) => send data if data is ''
+    # .pipe D.$show()
+    # .pipe $validate_probes T, matchers
+    .pipe D.$on_finish done
+  D.send  input, probe
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) $tabulate" ] = ( T, done ) ->
+  { step }            = require 'coffeenode-suspend'
+  #.........................................................................................................
+  $cast = =>
+    return $ ( row, send ) =>
+      row[ 'date' ] = new Date row[ 'date' ]
+      row[ 'size' ] = parseInt row[ 'size' ], 10
+      send row
+  #.........................................................................................................
+  show = ( table_settings, as_lists, matcher, handler ) =>
+    input     = D.new_stream 'read', path: resolve_path __dirname, '../test-data/files.tsv'
+    # output    = D.new_stream 'devnull'
+    input
+      .pipe D.$split_tsv names: 'inline'
+      .pipe D.$sample 1 / 5, seed: 1.1
+      .pipe $cast()
+      .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass_through()
+      .pipe D.$tabulate table_settings
+      .pipe $ ( row ) => echo row
+      .pipe D.$on_finish handler
+  #.........................................................................................................
+  step ( resume ) =>
+    yield show { spacing: 'wide',  columns: 2, }, no,   null, resume
+    # yield show { spacing: 'tight', columns: 3, }, no,   null, resume
+    # yield show { spacing: 'wide',  columns: 2, }, yes,  null, resume
+    # yield show { spacing: 'tight', columns: 3, }, yes,  null, resume
+    done()
+
+
+
 
 ############################################################################################################
 unless module.parent?
   include = [
-    # "(v4) stream / transform construction with through2 (2)"
-    # "(v4) fail to read when thru stream comes before read stream"
-    # "(v4) _new_stream_from_text doesn't work synchronously"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 3 (1)"
-    "(v4) $async with method arity 3 (2)"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
-    "(v4) file stream events (1)"
-    "(v4) transforms below output receive data events (1)"
-    "(v4) transforms below output receive data events (2)"
-    "(v4) _new_stream_from_url"
-    "(v4) new_stream README example (1)"
-    "(v4) new_stream README example (2)"
-    "(v4) new_stream README example (3)"
-    "(v4) _new_stream_from_path with encodings"
-    "(v4) _new_stream_from_path (raw)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) read TSV file (1)"
-    "(v4) TSV whitespace trimming"
-    "(v4) $split_tsv (1)"
-    "(v4) $intersperse (1)"
-    "(v4) $intersperse (2)"
-    "(v4) $intersperse (3)"
-    "(v4) $intersperse (3a)"
-    "(v4) $intersperse (4)"
-    "(v4) $join (1)"
-    "(v4) $join (2)"
-    "(v4) $join (3)"
-    "(v4) $as_json_list (1)"
-    "(v4) $as_json_list (2)"
-    "(v4) $as_json_list (2a)"
-    "(v4) $as_json_list (2b)"
-    "(v4) $as_json_list (2c)"
-    "(v4) $as_json_list (3)"
-    "(v4) symbols as data events (1)"
-    "(v4) symbols as data events (2)"
-    "(v4) stream sigils"
-    "(v4) $as_tsv"
-    "(v4) $batch (1)"
-    "(v4) $batch (2)"
-    "(v4) all remit methods have opt-in end detection (1)"
-    "(v4) all remit methods have opt-in end detection (2)"
-    "(v4) all remit methods have opt-in end detection (3)"
-    "(v4) all remit methods have opt-in end detection (4)"
-    "(v4) README demo (1)"
-    "(v4) README demo (2)"
-    "(v4) README demo (3)"
-    "(v4) $async only allows 3 arguments in transformation (1)"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $sort 5"
-    "(v4) $sort 6"
+    # # "(v4) stream / transform construction with through2 (2)"
+    # # "(v4) fail to read when thru stream comes before read stream"
+    # # "(v4) _new_stream_from_text doesn't work synchronously"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 3 (1)"
+    # "(v4) $async with method arity 3 (2)"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) file stream events (1)"
+    # "(v4) transforms below output receive data events (1)"
+    # "(v4) transforms below output receive data events (2)"
+    # "(v4) _new_stream_from_url"
+    # "(v4) new_stream README example (1)"
+    # "(v4) new_stream README example (2)"
+    # "(v4) new_stream README example (3)"
+    # "(v4) _new_stream_from_path with encodings"
+    # "(v4) _new_stream_from_path (raw)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) read TSV file (1)"
+    # "(v4) TSV whitespace trimming"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $intersperse (1)"
+    # "(v4) $intersperse (2)"
+    # "(v4) $intersperse (3)"
+    # "(v4) $intersperse (3a)"
+    # "(v4) $intersperse (4)"
+    # "(v4) $join (1)"
+    # "(v4) $join (2)"
+    # "(v4) $join (3)"
+    # "(v4) $as_json_list (1)"
+    # "(v4) $as_json_list (2)"
+    # "(v4) $as_json_list (2a)"
+    # "(v4) $as_json_list (2b)"
+    # "(v4) $as_json_list (2c)"
+    # "(v4) $as_json_list (3)"
+    # "(v4) symbols as data events (1)"
+    # "(v4) symbols as data events (2)"
+    # "(v4) $as_tsv"
+    # "(v4) $batch (1)"
+    # "(v4) $batch (2)"
+    # "(v4) all remit methods have opt-in end detection (1)"
+    # "(v4) all remit methods have opt-in end detection (2)"
+    # "(v4) all remit methods have opt-in end detection (3)"
+    # "(v4) all remit methods have opt-in end detection (4)"
+    # "(v4) README demo (1)"
+    # "(v4) README demo (2)"
+    # "(v4) README demo (3)"
+    # "(v4) $async only allows 3 arguments in transformation (1)"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $sort 5"
+    # "(v4) $sort 6"
     # "(empty-string) $tabulate"
-    # "(empty-string) can send empty strings"
-    # "(empty-string) can send empty strings (split) (1)"
-    # "(empty-string) can send empty strings (split) (2)"
+    "(empty-string) can send empty strings ($split) (1)"
+    "(empty-string) can send empty strings ($split) (2)"
+    "(empty-string) can send empty strings ($split_2) (1)"
+    "(empty-string) can send empty strings ($split_2) (2)"
+    # "(empty-string) can send empty strings (w/out pipeline)"
+    # "(empty-string) can send empty strings (w/ pipeline)"
+    # "(empty-string) can send empty strings (w/ mississippi pipeline)"
+    # "(empty-string) can send empty strings (validate mississippi through works as such)"
+    # "(empty-string) can send empty strings (validate mississippi through works with empty strings)"
+    # "(empty-string) can send empty strings (validate mississippi pipeline works as such)"
+    # "(empty-string) can send empty strings (validate mississippi pipeline works with empty strings)"
+    # "(empty-string) can send empty strings (validate mississippi pipe works as such)"
+    # "(empty-string) can send empty strings (validate mississippi pipe works with empty strings)"
+    # "(empty-string) can send empty strings (validate mississippi duplex works as such)"
+    # "(empty-string) can send empty mississippi duplex works as such)"
+    # "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)"
+    "(empty-string) duplexer2 works with empty strings"
+    "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
+    "(v4) stream sigils"
     ]
   @_prune()
   @_main()
@@ -2564,4 +3024,5 @@ unless module.parent?
 
   # debug '5562', JSON.stringify key for key in Object.keys @
 
+  # @[ "(empty-string) new D.duplex, new_stream from pipeline work with empty strings" ]()
 

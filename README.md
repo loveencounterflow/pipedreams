@@ -1,4 +1,5 @@
 
+**Disclaimer** PipeDreams v4 should be considered alpha-level software—expect bugs and API changes.
 
 
 # PipeDreams
