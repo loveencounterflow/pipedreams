@@ -71,6 +71,12 @@ MSP                       = require 'mississippi'
 #   R = new ( require 'throttle' ) bytes_per_second
 #   return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
 
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$duplexer2 = ( receiver, sender ) ->
+  R = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
+  # return @_rpr "*↹", "split", ( ( rpr receiver ) + ( rpr sender) ), R
+  return R
+
 
 #===========================================================================================================
 # CONSTANTS
@@ -320,30 +326,23 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
   #.........................................................................................................
-  ### The underlying implementation does not allow to get passed less than two streams, so we
-  add pass-through transforms to satisfy it: ###
-  if pipeline.length < 2
-    pipeline  = Object.assign [], pipeline
-    while pipeline.length < 2
-      if ( pipeline.length is 1 ) and ( @isa_readonly_stream pipeline[ 0 ] )
-        pipeline.push @$pass_through()
-      else
-        pipeline.unshift @$pass_through()
+  as_bridged = ( transform ) => if @isa_writeonly_stream transform then @$bridge transform else transform
+  return @$pass_through()         if pipeline.length is 0
+  return as_bridged pipeline[ 0 ] if pipeline.length is 1
   #.........................................................................................................
-  inner = ( rpr p for p in pipeline ).join ' '
-  return @_rprx "[", null, "pipeline", inner, "]", MSP.pipeline.obj pipeline...
+  handler = ( error ) => R.emit 'error', error if error?
+    help 'ok'
+  #.........................................................................................................
+  pipeline  = ( as_bridged transform for transform in pipeline )
+  receiver  = pipeline[ 0 ]
+  sender    = pipeline[ pipeline.length - 1 ]
+  MSP.pipe pipeline..., handler
+  R         = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
+  # inner_rpr = ( rpr p for p in pipeline ).join ' '
+  # return @_rprx "[", null, "pipeline", inner_rpr, "]", R
+  return R
 
-# #-----------------------------------------------------------------------------------------------------------
-# @_new_stream_from_pipeline_2 = ( pipeline, hints, settings ) ->
-#   ### Given a list of transforms (a.k.a. a 'pipeline'), return a stream that has all the transforms
-#   successively linked with `.pipe` calls; writing to the stream will write to the first transform, and
-#   reading from the stream will read from the last transform. ###
-#   throw new Error "_new_stream_from_pipeline doesn't accept 'hints', got #{rpr hints}"        if hints?
-#   throw new Error "_new_stream_from_pipeline doesn't accept 'settings', got #{rpr settings}"  if settings?
-#   throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of pipeline ) is 'list'
-#   as_bridged = ( transform ) => if @isa_readonly_stream transform then @$bridge transform else transform
-#   return @$pass_through()         if pipeline.length is 0
-#   return as_bridged pipeline[ 0 ] if pipeline.length is 1
+
 #   input = output = @new_stream()
 #   for transform in pipeline
 #     output = output.pipe as_bridged transform
@@ -1237,13 +1236,10 @@ pluck = ( x, key ) ->
     stream
     ]
   extra = ( rpr bridge ) + ' ↝ ' + ( rpr output )
-  return @_rpr "↷", "bridge", extra, MSP.duplex.obj bridge, output
+  return @_rpr "↷", "bridge", extra, @duplex bridge, output
 
-
-#===========================================================================================================
-# EXPORT
-#-----------------------------------------------------------------------------------------------------------
-do ( PIPEDREAMS = @ ) ->
+# -----------------------------------------------------------------------------------------------------------
+# @duplex = ( receiver, sender ) -> @_new_stream$duplexer2 ->
   for key in Object.keys PIPEDREAMS
     if CND.isa_function value = PIPEDREAMS[ key ]
       PIPEDREAMS[ key ] = value.bind PIPEDREAMS
