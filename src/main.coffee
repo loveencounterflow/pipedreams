@@ -62,16 +62,6 @@ MSP                       = require 'mississippi'
   return @_rpr "*✀", "*split", ( rpr matcher ), R
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream$line_splitter = ( matcher ) ->
-  R = ( require 'line-stream' ) matcher
-  return @_rpr "*✀", "*split", ( rpr matcher ), R
-
-# #-----------------------------------------------------------------------------------------------------------
-# @_new_stream$throttle_bytes = ( bytes_per_second ) ->
-#   R = new ( require 'throttle' ) bytes_per_second
-#   return @_rpr "⏳", "throttle", "#{bytes_per_second} B/s", R
-
-#-----------------------------------------------------------------------------------------------------------
 @_duplex$duplexer2 = ( receiver, sender ) ->
   R = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
   return @_rpr "*↹", "*duplex", ( ( rpr receiver ) + ( rpr sender) ), R
@@ -559,39 +549,6 @@ MSP                       = require 'mississippi'
   extra    += " #{encoding}" unless encoding is 'buffer'
   return @_rpr "✀", "split", extra, R if encoding is 'buffer'
   return @_rpr "✀", "split", extra, @new_stream pipeline: [ R, ( @$decode encoding ), ]
-
-#-----------------------------------------------------------------------------------------------------------
-@$split_2 = ( settings ) ->
-  matcher     = settings?[ 'matcher'  ] ? '\n'
-  throw new Error "expected a text, got a #{type}" unless ( type = CND.type_of matcher ) is 'text'
-  strip       = settings?[ 'strip'    ] ? yes and matcher.length > 0
-  encoding    = settings?[ 'encoding' ] ? 'utf-8'
-  #.........................................................................................................
-  if strip
-    matcher_bfr = if ( Buffer.isBuffer matcher ) then matcher else new Buffer matcher, 'utf-8'
-  #.........................................................................................................
-  if Buffer::includes?
-    includes = ( buffer, probe ) -> buffer.includes probe, buffer.length - probe.length
-  else
-    includes = ( buffer, probe ) -> ( ( buffer.slice buffer.length - probe.length ).compare probe ) is 0
-  #.........................................................................................................
-  splitter    = @_new_stream$line_splitter matcher
-  output      = @new_stream()
-  splitter.on 'data',      ( data ) => @send  output, data
-  splitter.on 'fragment',  ( data ) => @send  output, data
-  splitter.on 'end',                => @end   output
-  pipeline    = []
-  pipeline.push MSP.duplex splitter, output
-  #.........................................................................................................
-  if strip
-    pipeline.push @$ ( data, send ) =>
-      return send data unless includes data, matcher_bfr
-      send data.slice 0, data.length - matcher_bfr.length
-  #.........................................................................................................
-  pipeline.push @$decode encoding unless encoding is 'buffer'
-  extra       = rpr matcher
-  extra      += " #{encoding}" unless encoding is 'buffer'
-  return @_rpr "✀", "split", extra, @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @$decode = ( encoding = 'utf-8' ) ->

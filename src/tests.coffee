@@ -2425,281 +2425,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (w/ mississippi pipeline)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers    = [ '', '', ]
-  through     = MSP.pipeline.obj D.new_stream(), D.new_stream(), D.new_stream()
-  input       = D.new_stream()
-  input
-    .pipe through
-    .pipe D.$show()
-    .pipe $ ( data ) => urge data
-    .pipe $ ( data, send ) => send data if data is ''
-    .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, 'A text'
-  D.send  input, 'with a few'
-  D.send  input, ''
-  D.send  input, 'lines'
-  D.send  input, ''
-  D.send  input, 'some of which'
-  D.send  input, 'are empty.'
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi through works as such)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers    = []
-  sub_input   = D.new_stream()
-  sub_output  = D.new_stream()
-  sub_input.pipe sub_output
-  through     = MSP.through.obj sub_input, sub_output
-  input       = D.new_stream()
-  input
-    .pipe through
-    .pipe D.$show()
-    .pipe $ ( data ) => urge data
-    .pipe $ ( data, send ) => send data if data is ''
-    .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, 'A text'
-  D.send  input, 'with a few'
-  D.send  input, 'lines'
-  D.send  input, 'some of which'
-  D.send  input, 'are empty.'
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi through works with empty strings)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers    = [ '', '', ]
-  sub_input   = D.new_stream()
-  sub_output  = D.new_stream()
-  sub_input.pipe sub_output
-  through     = MSP.through.obj sub_input, sub_output
-  input       = D.new_stream()
-  input
-    .pipe through
-    .pipe D.$show()
-    .pipe $ ( data ) => urge data
-    .pipe $ ( data, send ) => send data if data is ''
-    .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, 'A text'
-  D.send  input, 'with a few'
-  D.send  input, ''
-  D.send  input, 'lines'
-  D.send  input, ''
-  D.send  input, 'some of which'
-  D.send  input, 'are empty.'
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi pipeline works as such)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers_1  = [ "A text", "with a few", "lines", "none", "of which", "are empty.", ]
-  matchers_2  = []
-  collector   = []
-  sub_input   = D.new_stream()
-  collect     = $ ( data ) => collector.push data
-  sub_output  = D.new_stream()
-  # handler     = ( error ) =>
-  #   return T.fail error if error?
-  #   T.succeed "mississippi pipe ok."
-  #   # done()
-  through     = MSP.pipeline.obj sub_input, collect, sub_output
-  input       = D.new_stream()
-  input
-    .pipe through
-    # .pipe D.$show()
-    .pipe $ ( data ) => urge data
-    .pipe $ ( data, send ) => send data if data is ''
-    .pipe $validate_probes T, matchers_2
-    .pipe D.$on_finish =>
-      T.eq collector, matchers_1
-      done()
-  D.send  input, "A text"
-  D.send  input, "with a few"
-  D.send  input, "lines"
-  D.send  input, "none"
-  D.send  input, "of which"
-  D.send  input, "are empty."
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi pipeline works with empty strings)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
-  matchers_2  = []
-  collector   = []
-  sub_input   = D.new_stream()
-  collect     = $ ( data ) => collector.push data
-  sub_output  = D.new_stream()
-  # handler     = ( error ) =>
-  #   return T.fail error if error?
-  #   T.succeed "mississippi pipe ok."
-  #   # done()
-  through     = MSP.pipeline.obj sub_input, collect, sub_output
-  input       = D.new_stream()
-  input
-    .pipe through
-    # .pipe D.$show()
-    .pipe $ ( data ) => urge data
-    .pipe $ ( data, send ) => send data if data is ''
-    .pipe $validate_probes T, matchers_2
-    .pipe D.$on_finish =>
-      T.eq collector, matchers_1
-      done()
-  D.send  input, "A text"
-  D.send  input, "with a few"
-  D.send  input, "lines"
-  D.send  input, ""
-  D.send  input, "some"
-  D.send  input, ""
-  D.send  input, "of which"
-  D.send  input, "are empty."
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi pipe works as such)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers_1  = [ "A text", "with a few", "lines", "none", "of which", "are empty.", ]
-  matchers_2  = []
-  collector   = []
-  #.........................................................................................................
-  collect     = $ ( data ) => collector.push data
-  show        = $ ( data ) => urge data
-  filter      = $ ( data, send ) => send data if data is ''
-  # validate    = $validate_probes T, matchers_2
-  input       = D.new_stream()
-  #.........................................................................................................
-  handler     = ( error ) =>
-    return T.fail error if error?
-    T.succeed "mississippi pipe ok."
-    T.eq collector, matchers_1
-    done()
-  #.........................................................................................................
-  MSP.pipe input, collect, show, handler
-  #.........................................................................................................
-  D.send  input, "A text"
-  D.send  input, "with a few"
-  D.send  input, "lines"
-  D.send  input, "none"
-  D.send  input, "of which"
-  D.send  input, "are empty."
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi pipe works with empty strings)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
-  matchers_2  = [ "", "", ]
-  collector_1 = []
-  collector_2 = []
-  #.........................................................................................................
-  collect_1   = $ ( data ) => collector_1.push data
-  collect_2   = $ ( data ) => collector_2.push data
-  show        = $ ( data ) => urge data
-  filter      = $ ( data, send ) => send data if data is ''
-  # validate    = $validate_probes T, matchers_2
-  input       = D.new_stream()
-  #.........................................................................................................
-  handler     = ( error ) =>
-    return T.fail error if error?
-    T.succeed "mississippi pipe ok."
-    T.eq collector_1, matchers_1
-    T.eq collector_2, matchers_2
-    done()
-  #.........................................................................................................
-  MSP.pipe input, collect_1, show, filter, collect_2, handler
-  #.........................................................................................................
-  D.send  input, "A text"
-  D.send  input, "with a few"
-  D.send  input, "lines"
-  D.send  input, ""
-  D.send  input, "some"
-  D.send  input, ""
-  D.send  input, "of which"
-  D.send  input, "are empty."
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi duplex works as such)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers_1  = [ "A text", "with a few", "lines", "none", "of which", "are empty.", ]
-  collector_1 = []
-  #.........................................................................................................
-  collect     = $ ( data ) => collector_1.push data
-  show        = $ ( data ) => urge data
-  filter      = $ ( data, send ) => send data if data is ''
-  input       = D.new_stream()
-  receiver    = D.new_stream()
-  sender      = D.new_stream()
-  #.........................................................................................................
-  handler     = ( error ) =>
-    return T.fail error if error?
-    help 'ok'
-  #.........................................................................................................
-  MSP.pipe receiver, collect, show, sender, handler
-  through     = MSP.duplex.obj receiver, sender
-  #.........................................................................................................
-  input
-    .pipe through
-    .pipe D.$show()
-    .pipe D.$on_finish =>
-      T.eq collector_1, matchers_1
-      done()
-  #.........................................................................................................
-  D.send  input, "A text"
-  D.send  input, "with a few"
-  D.send  input, "lines"
-  D.send  input, "none"
-  D.send  input, "of which"
-  D.send  input, "are empty."
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)" ] = ( T, done ) ->
-  MSP         = require 'mississippi'
-  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
-  matchers_2  = [ "", "", ]
-  collector_1 = []
-  collector_2 = []
-  #.........................................................................................................
-  collect_1   = $ ( data ) => collector_1.push data
-  collect_2   = $ ( data ) => collector_2.push data
-  show        = $ ( data ) => urge data
-  filter      = $ ( data, send ) => send data if data is ''
-  input       = D.new_stream()
-  receiver    = D.new_stream()
-  sender      = D.new_stream()
-  #.........................................................................................................
-  handler     = ( error ) =>
-    return T.fail error if error?
-    help 'ok'
-  #.........................................................................................................
-  MSP.pipe receiver, collect_1, show, filter, collect_2, sender, handler
-  through     = MSP.duplex.obj receiver, sender
-  #.........................................................................................................
-  input
-    .pipe through
-    .pipe D.$show()
-    .pipe D.$on_finish =>
-      T.eq collector_1, matchers_1
-      T.eq collector_2, matchers_2
-      done()
-  #.........................................................................................................
-  D.send  input, "A text"
-  D.send  input, "with a few"
-  D.send  input, "lines"
-  D.send  input, ""
-  D.send  input, "some"
-  D.send  input, ""
-  D.send  input, "of which"
-  D.send  input, "are empty."
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(empty-string) duplexer2 works with empty strings" ] = ( T, done ) ->
   MSP         = require 'mississippi'
   matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
@@ -2843,55 +2568,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings ($split_2) (1)" ] = ( T, done ) ->
-  probe = """
-    A text
-    with a few
-
-    lines
-
-    some of which
-    are empty.
-    """
-  debug '4412', rpr probe
-  matchers = [ '', '', ]
-  input = D.new_stream()
-  input
-    .pipe D.$split_2()
-    # .pipe $ ( data, send ) => send ''
-    .pipe D.$show()
-    # .pipe $ ( data, send ) => send data if data is ''
-    # .pipe D.$show()
-    # .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, probe
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(empty-string) can send empty strings ($split_2) (2)" ] = ( T, done ) ->
-  probe = """
-    A text
-    with a few
-
-    lines
-
-    some of which
-    are empty.
-    """ + '\n\n'
-  debug '4412', rpr probe
-  matchers = [ '', '', ]
-  input = D.new_stream()
-  input
-    .pipe D.$split_2()
-    .pipe D.$show()
-    # .pipe $ ( data, send ) => send data if data is ''
-    # .pipe D.$show()
-    # .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
-  D.send  input, probe
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(empty-string) $tabulate" ] = ( T, done ) ->
   { step }            = require 'coffeenode-suspend'
   #.........................................................................................................
@@ -2914,10 +2590,11 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$on_finish handler
   #.........................................................................................................
   step ( resume ) =>
-    yield show { spacing: 'wide',  columns: 2, }, no,   null, resume
-    # yield show { spacing: 'tight', columns: 3, }, no,   null, resume
-    # yield show { spacing: 'wide',  columns: 2, }, yes,  null, resume
-    # yield show { spacing: 'tight', columns: 3, }, yes,  null, resume
+    yield show { spacing: 'wide',   columns: 2, }, no,   null, resume
+    yield show { spacing: 'tight',  columns: 3, }, no,   null, resume
+    yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
+    yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
+    yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
     done()
 
 
@@ -2997,26 +2674,14 @@ unless module.parent?
     # "(v4) $sort 4"
     # "(v4) $sort 5"
     # "(v4) $sort 6"
-    # "(empty-string) $tabulate"
-    "(empty-string) can send empty strings ($split) (1)"
-    "(empty-string) can send empty strings ($split) (2)"
-    "(empty-string) can send empty strings ($split_2) (1)"
-    "(empty-string) can send empty strings ($split_2) (2)"
+    # "(empty-string) can send empty strings ($split) (1)"
+    # "(empty-string) can send empty strings ($split) (2)"
     # "(empty-string) can send empty strings (w/out pipeline)"
     # "(empty-string) can send empty strings (w/ pipeline)"
-    # "(empty-string) can send empty strings (w/ mississippi pipeline)"
-    # "(empty-string) can send empty strings (validate mississippi through works as such)"
-    # "(empty-string) can send empty strings (validate mississippi through works with empty strings)"
-    # "(empty-string) can send empty strings (validate mississippi pipeline works as such)"
-    # "(empty-string) can send empty strings (validate mississippi pipeline works with empty strings)"
-    # "(empty-string) can send empty strings (validate mississippi pipe works as such)"
-    # "(empty-string) can send empty strings (validate mississippi pipe works with empty strings)"
-    # "(empty-string) can send empty strings (validate mississippi duplex works as such)"
-    # "(empty-string) can send empty mississippi duplex works as such)"
-    # "(empty-string) can send empty strings (validate mississippi duplex works with empty strings)"
-    "(empty-string) duplexer2 works with empty strings"
-    "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
-    "(v4) stream sigils"
+    # "(empty-string) duplexer2 works with empty strings"
+    # "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
+    # "(v4) stream sigils"
+    "(empty-string) $tabulate"
     ]
   @_prune()
   @_main()
@@ -3024,5 +2689,5 @@ unless module.parent?
 
   # debug '5562', JSON.stringify key for key in Object.keys @
 
-  # @[ "(empty-string) new D.duplex, new_stream from pipeline work with empty strings" ]()
+  # @[ "(empty-string) $tabulate" ]()
 

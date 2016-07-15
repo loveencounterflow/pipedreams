@@ -66,8 +66,12 @@ urge                      = CND.get_logger 'urge',      badge
   #.........................................................................................................
   as_row = ( data, keys = null ) =>
     R = []
-    for key, idx in ( keys ? [ 0 ... data.length ] )
-      R.push to_width ( as_text data[ key ] ), widths[ idx ]
+    if keys?
+      for key, idx in keys
+        R.push to_width ( as_text data[ key ] ), widths?[ idx ] ? settings[ 'width' ]
+    else
+      for idx in [ 0 ... data.length ]
+        R.push to_width ( as_text data[ idx ] ), widths?[ idx ] ? settings[ 'width' ]
     R = R.join settings[ '_mid' ]
     #.......................................................................................................
     return settings[ '_left' ] + R + settings[ '_right' ]
@@ -77,19 +81,20 @@ urge                      = CND.get_logger 'urge',      badge
     send [ 'data', data, ]
   #.........................................................................................................
   $read_parameters = => @$on_first ( event, send ) =>
-    help '1112', JSON.stringify event
-    [ type, data, ] = event
-    return send event unless type is 'data'
+    [ mark, data, ] = event
     send event
+    return unless mark is 'data'
     send [ 'table', '', ]
     #...................................................................................................
     unless keys?
-      switch type = CND.type_of data
+      switch type_of_data = CND.type_of data
         when 'list'
-          keys = ( idx for _, idx in data )
+          keys    = ( idx for _, idx in data )
         when 'pod'
           keys    = ( key for key of data )
           titles ?= keys
+        else
+          return send.error new Error "expected a list or a POD, got a #{type_of_data}"
       if settings[ '_slice' ]?
         keys.length = settings[ '_slice' ]
     #...................................................................................................
@@ -102,28 +107,26 @@ urge                      = CND.get_logger 'urge',      badge
     send [ 'table', '│──────────────────────│──────────────────────│',  ]
   #.........................................................................................................
   $as_row = => @$ ( event, send ) =>
-    [ type, data, ] = event
-    return send [ 'table', as_row data, keys ] if type is 'data'
+    [ mark, data, ] = event
+    return send [ 'table', as_row data, keys ] if mark is 'data'
     send event
   #.........................................................................................................
   $finalize = => @$on_stop ( send ) =>
     send [ 'table', '│──────────────────────│──────────────────────│',  ]
     send [ 'table', '',                                                 ]
-    send [ 'table', 'XXXX',                                                 ]
   #.........................................................................................................
-  $filter = => @$ ( event, send ) =>
-    [ type, data, ] = event
-    if type is 'table'
-      send event
+  $cleanup = => @$ ( event, send ) =>
+    [ mark, data, ] = event
+    send data if mark is 'table'
     return null
   #.........................................................................................................
   pipeline = [
     $as_event()
     $read_parameters()
     $as_row()
-    $filter()
-    ( @$ ( event, send ) => debug rpr event[ 1 ]; send 'x' )
-    @$show() ]
+    $finalize()
+    $cleanup()
+    ]
   #.........................................................................................................
   return @new_stream { pipeline, }
 
