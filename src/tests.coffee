@@ -2571,6 +2571,67 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 @[ "(empty-string) $tabulate" ] = ( T, done ) ->
   { step }            = require 'coffeenode-suspend'
   #.........................................................................................................
+  collector = []
+  matchers  = [
+    "│  │"
+    ""
+    "│ date                 │ size                 │"
+    "│──────────────────────│──────────────────────│"
+    "│ Wed Apr 20 2016 00:… │ 1216498              │"
+    "│ Thu Jun 16 2016 00:… │ 29880564             │"
+    "│ Sat May 21 2016 00:… │ 1313746              │"
+    "│ Wed Nov 18 2015 00:… │ 362700               │"
+    "│ Sat Oct 17 2015 00:… │ 19351620             │"
+    "│ Thu Oct 22 2015 00:… │ 69957572             │"
+    "│──────────────────────│──────────────────────│"
+    ""
+    "││"
+    ""
+    "│date                │size                │name                │"
+    "│──────────────────────│──────────────────────│"
+    "│Wed Apr 20 2016 00:…│1216498             │Vermeer-view-of-del…│"
+    "│Thu Jun 16 2016 00:…│29880564            │Is Glass a Liquid.m…│"
+    "│Sat May 21 2016 00:…│1313746             │2015_Logography_and…│"
+    "│Wed Nov 18 2015 00:…│362700              │CharlesBabbageLawsO…│"
+    "│Sat Oct 17 2015 00:…│19351620            │Legge1899.pdf       │"
+    "│Thu Oct 22 2015 00:…│69957572            │atom-amd64.deb      │"
+    "│──────────────────────│──────────────────────│"
+    ""
+    "│ Tue Apr 19 2016 00:… │ 1069547520           │ ubuntu-14.04.4-desk… │"
+    ""
+    "│──────────────────────│──────────────────────│"
+    "│ Wed Apr 20 2016 00:… │ 1216498              │"
+    "│ Thu Jun 16 2016 00:… │ 29880564             │"
+    "│ Sat May 21 2016 00:… │ 1313746              │"
+    "│ Wed Nov 18 2015 00:… │ 362700               │"
+    "│ Sat Oct 17 2015 00:… │ 19351620             │"
+    "│ Thu Oct 22 2015 00:… │ 69957572             │"
+    "│──────────────────────│──────────────────────│"
+    ""
+    "│Tue Apr 19 2016 00:…│1069547520          │ubuntu-14.04.4-desk…│"
+    ""
+    "│──────────────────────│──────────────────────│"
+    "│Wed Apr 20 2016 00:…│1216498             │"
+    "│Thu Jun 16 2016 00:…│29880564            │"
+    "│Sat May 21 2016 00:…│1313746             │"
+    "│Wed Nov 18 2015 00:…│362700              │"
+    "│Sat Oct 17 2015 00:…│19351620            │"
+    "│Thu Oct 22 2015 00:…│69957572            │"
+    "│──────────────────────│──────────────────────│"
+    ""
+    "│Tue Apr 19 2016 00:…│1069547520          │ubuntu-14.04.4-desk…│"
+    ""
+    "│──────────────────────│──────────────────────│"
+    "│Wed Apr 20 2016 00:…│1216498             │Vermeer-view-of-del…│"
+    "│Thu Jun 16 2016 00:…│29880564            │Is Glass a Liquid.m…│"
+    "│Sat May 21 2016 00:…│1313746             │2015_Logography_and…│"
+    "│Wed Nov 18 2015 00:…│362700              │CharlesBabbageLawsO…│"
+    "│Sat Oct 17 2015 00:…│19351620            │Legge1899.pdf       │"
+    "│Thu Oct 22 2015 00:…│69957572            │atom-amd64.deb      │"
+    "│──────────────────────│──────────────────────│"
+    ""
+    ]
+  #.........................................................................................................
   $cast = =>
     return $ ( row, send ) =>
       row[ 'date' ] = new Date row[ 'date' ]
@@ -2586,15 +2647,18 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe $cast()
       .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass_through()
       .pipe D.$tabulate table_settings
+      .pipe $ ( data ) => collector.push data
       .pipe $ ( row ) => echo row
       .pipe D.$on_finish handler
   #.........................................................................................................
   step ( resume ) =>
-    yield show { spacing: 'wide',   columns: 2, }, no,   null, resume
-    yield show { spacing: 'tight',  columns: 3, }, no,   null, resume
-    yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
-    yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
-    yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
+    yield show null, no,   null, resume
+    # yield show { spacing: 'wide',   columns: 2, }, no,   null, resume
+    # yield show { spacing: 'tight',  columns: 3, }, no,   null, resume
+    # yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
+    # yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
+    # yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
+    T.eq collector, matchers
     done()
 
 
@@ -2683,11 +2747,11 @@ unless module.parent?
     # "(v4) stream sigils"
     "(empty-string) $tabulate"
     ]
-  @_prune()
-  @_main()
+  # @_prune()
+  # @_main()
 
 
   # debug '5562', JSON.stringify key for key in Object.keys @
 
-  # @[ "(empty-string) $tabulate" ]()
+  @[ "(empty-string) $tabulate" ]()
 
