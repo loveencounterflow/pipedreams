@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
-    "async": "^1.5.2",
+    "async": "^2.0.0",
     "binary-split": "^1.0.2",
     "cnd": "^4.1.1",
     "coffeenode-suspend": "^0.1.11",

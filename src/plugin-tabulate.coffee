@@ -52,18 +52,44 @@ hc    │             │
 vc    ─             ─
 
 settings =
-  default:
-    width:          <number>  ::                                              // 20
-    alignment:      <text>    :: 'left' | 'right' | 'center' | 'justify'      // 'left'
 
-  widths:         [ <number> | '*' ]
-  alignments:     [ <text> ]
-  titles:         [ <text> ]
-  keys:           [ <text> | <number> ]
-
-  width:          <number>  ::                                                // 108
+  width:          <number>  ::                                                // 12
+  alignment:      <text>    :: 'left' | 'right' | 'center' | 'justify'        // 'left'
+  fit:            <number> | <null> ::                                        // null
   ellipsis:       <text>                                                      // '…'
   pad:            <number> | <text>                                           // ''
+  overflow:       <text> :: 'hide' | 'show'                                   // 'show'
+
+
+  widths:         <number>
+  alignments:     [ <text> ]
+  headings:       [ <text> ]
+  keys:           [ <text> | <number> ]
+
+**Formatting modes**: When width is given and a number, relative mode is used; otherwise, absolute mode.
+
+In absolute mode, the width of a column in terms of character cells is either given by a column-specific
+setting in `settings[ 'widths' ]` or by the fallback value in `settings[ 'width' ]`. The resulting table
+will take up as many character cells as needed for each column, plus the ones needed for padding and
+borders.
+
+In relative mode, an attempt is made to keep the overall width of the table—including paddings and
+borders—to the number of character cells given in `settings[ 'fit' ]`. Columns widths given in `settings[
+'widths' ]` are interpreted as proportional to their sum; columns may stretch or shrink to meet the desired
+table width. Since a minimum width of two character cells must be assumed and there is no way to fit
+arbitrarily many columns into a finite table width, overflow may occur. When `settings[ 'overflow' ]` is set
+to `'show'`, then overlong lines may occur; if it is set to `'hide'`, overlong lines are truncated so that
+line wrap is avoided on terminals.
+
+**Keys, Column Headings, and Data Types**: PipeDreams `$tabulate` accepts data items from the stream and
+reformats them into a tabular format (or prints that table as a convenience shortcut). The table may or
+may not have headings; the incoming data items must either be lists of values or JS objects with key/value
+pairs (a.k.a. properties or attributes). The question is:
+
+**1)** In what order will data be mapped to columns?
+**2)** From which elements of the stream data will table contents come?
+**3)** If headings are used, where do they come from?
+
 
 
 ###
@@ -77,8 +103,10 @@ settings =
 _new_state = ( settings ) ->
   S = {}
   ### TAINT better to use formal schema here? ###
+  #.........................................................................................................
   unless CND.is_subset ( keys = Object.keys settings ), keys_toplevel
     throw new Error "### MEH 1 ### #{rpr keys}"
+  #.........................................................................................................
   if settings[ 'default' ]?
     if CND.is_subset ( keys = Object.keys settings[ 'default' ] ), keys_default
       throw new Error "### MEH 2 ### #{rpr keys}"
@@ -86,39 +114,36 @@ _new_state = ( settings ) ->
   if settings[ 'widths'      ]? then throw new Error "'widths' not yet supported"
   if settings[ 'alignments'  ]? then throw new Error "'alignments' not yet supported"
   #.........................................................................................................
-  S.widths            = settings[ 'widths'      ] ? []
-  S.alignments        = settings[ 'alignments'  ] ? []
-  S.titles            = settings[ 'titles'      ] ? null
-  S.keys              = settings[ 'keys'        ] ? null
-  S.width             = settings[ 'width'       ] ? 108
+  S.width             = settings[ 'width'       ] ? 12
+  S.alignment         = settings[ 'alignment'   ] ? 'left'
+  S.fit               = settings[ 'fit'       ] ? null
   S.ellipsis          = settings[ 'ellipsis'    ] ? '…'
   S.pad               = settings[ 'pad'         ] ? ''
+  S.overflow          = settings[ 'overflow'    ] ? 'show'
   #.........................................................................................................
-  S.default           = {}
-  S.default.width     = settings[ 'default' ]?[ 'width'     ] ? 20
-  S.default.alignment = settings[ 'default' ]?[ 'alignment' ] ? 'left'
+  S.widths            = settings[ 'widths'      ] ? []
+  S.alignments        = settings[ 'alignments'  ] ? []
+  S.headings            = settings[ 'headings'      ] ? null
+  S.keys              = settings[ 'keys'        ] ? null
+  #.........................................................................................................
+  unless S.alignment in values_alignment
+    throw new Error "### MEH 3 ### #{rpr S.alignment}"
+  #.........................................................................................................
+  unless S.overflow in values_overflow
+    throw new Error "### MEH 4 ### #{rpr S.overflow}"
+  #.........................................................................................................
+  ### TAINT check widths are non-zero integers ###
+  ### TAINT check values in headings, widths, keys (?) ###
   #.........................................................................................................
   return S
 
-#-----------------------------------------------------------------------------------------------------------
-keys_toplevel = [ 'default', 'widths', 'alignments', 'titles', 'keys', 'width', 'ellipsis', 'pad', ]
-keys_default  = [ 'width', 'alignment', ]
-
-#-----------------------------------------------------------------------------------------------------------
-@$tabulate = ( settings = {} ) ->
-  debug '7233', _new_state settings
-  settings     ?= {}
-  S             = {}
+###
   #.........................................................................................................
   unless CND.is_subset ( keys = Object.keys settings ), @$tabulate._keys
     expected  = ( rpr x for x in @$tabulate._keys                    ).join ', '
     got       = ( rpr x for x in keys when x not in @$tabulate._keys ).join ', '
     throw new Error "expected #{expected}, got #{got}"
-  #.........................................................................................................
-  S.width     = settings[ 'width'     ]  ? 20
-  S.spacing   = settings[ 'spacing'   ]  ? 'wide'
-  S.columns   = settings[ 'columns'   ]  ? null
-  #.........................................................................................................
+
   switch S.spacing
     when 'wide'
       S._left     =  '│ '
@@ -128,23 +153,19 @@ keys_default  = [ 'width', 'alignment', ]
       S._left     = '│'
       S._mid      = '│'
       S._right    = '│'
-    else throw new Error "expected 'tight' or 'wide', got #{rpr S.spacing} "
-  #.........................................................................................................
-  S._slice    = null
-  S._titles   = null
-  #.........................................................................................................
-  switch type = CND.type_of S.columns
-    when 'null'
-      null
-    when 'number'
-      S._slice  = S.columns
-      S.columns = null
-    else throw new Error "type #{type} not implemented for settings 'columns'"
-  #.........................................................................................................
-  S.widths  = null
-  S.keys    = null
-  S.titles  = null
-  pipeline  = []
+
+###
+
+#-----------------------------------------------------------------------------------------------------------
+keys_toplevel     = [ 'default', 'widths', 'alignments', 'headings', 'keys', 'width', 'ellipsis', 'pad', ]
+keys_default      = [ 'width', 'alignment', ]
+values_overflow   = [ 'show',  'hide', ]
+values_alignment  = [ 'left',  'right', 'center', 'justify', ]
+
+#-----------------------------------------------------------------------------------------------------------
+@$tabulate = ( settings = {} ) ->
+  S = _new_state settings
+  debug '4404', S
   #.........................................................................................................
   pipeline = [
     $as_event           S
@@ -157,13 +178,8 @@ keys_default  = [ 'width', 'alignment', ]
   return @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
-@$tabulate._keys = [ 'spacing', 'width', 'columns', ]
-
-#-----------------------------------------------------------------------------------------------------------
 $as_event = ( S ) -> $ ( data, send ) -> send [ 'data', data, ]
-
-#-----------------------------------------------------------------------------------------------------------
-as_text = ( x ) -> if ( CND.isa_text x ) then x else rpr x
+as_text   = ( x ) -> if ( CND.isa_text x ) then x else rpr x
 
 #-----------------------------------------------------------------------------------------------------------
 $read_parameters = ( S ) ->
@@ -179,7 +195,7 @@ $read_parameters = ( S ) ->
           S.keys    = ( idx for _, idx in data )
         when 'pod'
           S.keys    = ( key for key of data )
-          S.titles ?= S.keys
+          S.headings ?= S.keys
         else
           return send.error new Error "expected a list or a POD, got a #{type_of_data}"
       if S._slice?
@@ -188,9 +204,9 @@ $read_parameters = ( S ) ->
     unless widths?
       widths = ( S.width for key in S.keys )
     #...................................................................................................
-    if S.titles?
-      S.titles.length = S._slice if S._slice?
-      send [ 'table', as_row S, S.titles ]
+    if S.headings?
+      S.headings.length = S._slice if S._slice?
+      send [ 'table', as_row S, S.headings ]
     #...................................................................................................
     send [ 'table', '│──────────────────────│──────────────────────│',  ]
 
