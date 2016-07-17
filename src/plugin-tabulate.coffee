@@ -86,9 +86,32 @@ reformats them into a tabular format (or prints that table as a convenience shor
 may not have headings; the incoming data items must either be lists of values or JS objects with key/value
 pairs (a.k.a. properties or attributes). The question is:
 
-**1)** In what order will data be mapped to columns?
-**2)** From which elements of the stream data will table contents come?
-**3)** If headings are used, where do they come from?
+**Q 1)** In what order is data be mapped to columns?
+**Q 2)** From which attributes of the streamed data do table contents come?
+**Q 3)** If headings are used, where do they come from?
+
+**A 1)** If the data events are lists, then columns will appear in the same order as in those events,
+naturally. With PODs (plain old dictionaries, a.k.a. JS objects), the matter is a bit more complicated: most
+JS engines used to iterate over object keys in insertion order (which is good), but V8 started a trend to
+treat keys that look like list indexes (such as `'3'` or `'756') and sort them first in numerical order.
+Whatever be the case, when the first data event comes down the stream and it is a POD, `$tabulate` will walk
+over its keys and save them for all subsequent rows. Thus, in the absence of other settings, the first data
+event determines how many columns from what attributes in which order are put into to the table. But see the
+next point.
+
+**A 2)** Point 1, above, explains the default behavior of `$tabulate` when no explicit setting is given. You
+can, however, specify your preferred selection and order of columns with the setting `keys`; when given,
+this should be a list of the keys used to access the values of each streamed data event; for example, if
+your data events look like `[ 'file', 'emerald.jpg', '~/downloads', '-rw-r-----', 109418, '2016-03-21
+17:57', ]`, you can specify `.pipe $tabulate keys: [ 2, 1, 4, ]` to display only folder, filename and size
+in the table.
+
+**A 3)** By default, `$tabulate` will display column headings in the first row of the table; this can be
+switched off with the setting `headings: false`. With the default setting or `true`, headings will be the
+keys used to access the data fields as discussed in point 2, above. When `headings` is a list, the list
+items become column headings; if that list has less items than the table has columns, the reamining headers
+are left blank; the same goes for intermittent elements that are set to `null`.
+
 
 
 
@@ -116,14 +139,17 @@ _new_state = ( settings ) ->
   #.........................................................................................................
   S.width             = settings[ 'width'       ] ? 12
   S.alignment         = settings[ 'alignment'   ] ? 'left'
-  S.fit               = settings[ 'fit'       ] ? null
+  ###
+  process.stdout.columns
+  ###
+  S.fit               = settings[ 'fit'         ] ? null
   S.ellipsis          = settings[ 'ellipsis'    ] ? '…'
   S.pad               = settings[ 'pad'         ] ? ''
   S.overflow          = settings[ 'overflow'    ] ? 'show'
   #.........................................................................................................
   S.widths            = settings[ 'widths'      ] ? []
   S.alignments        = settings[ 'alignments'  ] ? []
-  S.headings            = settings[ 'headings'      ] ? null
+  S.headings          = settings[ 'headings'    ] ? yes
   S.keys              = settings[ 'keys'        ] ? null
   #.........................................................................................................
   unless S.alignment in values_alignment
@@ -131,6 +157,9 @@ _new_state = ( settings ) ->
   #.........................................................................................................
   unless S.overflow in values_overflow
     throw new Error "### MEH 4 ### #{rpr S.overflow}"
+  #.........................................................................................................
+  if S.fit?
+    throw new Error "setting `fit` not yet implemented"
   #.........................................................................................................
   ### TAINT check widths are non-zero integers ###
   ### TAINT check values in headings, widths, keys (?) ###
@@ -187,28 +216,21 @@ $read_parameters = ( S ) ->
     [ mark, data, ] = event
     send event
     return unless mark is 'data'
-    send [ 'table', '', ]
+    # send [ 'table', '', ]
     #...................................................................................................
     unless S.keys?
-      switch type_of_data = CND.type_of data
-        when 'list'
-          S.keys    = ( idx for _, idx in data )
-        when 'pod'
-          S.keys    = ( key for key of data )
-          S.headings ?= S.keys
-        else
-          return send.error new Error "expected a list or a POD, got a #{type_of_data}"
-      if S._slice?
-        S.keys.length   = S._slice
+      if      CND.isa_list data then S.keys = ( idx for _, idx in data )
+      else if CND.isa_pod data  then S.keys = ( key for key of data )
+      else return send.error new Error "expected a list or a POD, got a #{CND.type_of data}"
+    S.headings = S.keys if S.headings is true
     #...................................................................................................
-    unless widths?
-      widths = ( S.width for key in S.keys )
+    if S.widths? then S.widths[ idx ] ?= S.width for idx in [ 0 ... S.widths.length ]
+    else              S.widths = ( S.width for key in S.keys )
     #...................................................................................................
-    if S.headings?
-      S.headings.length = S._slice if S._slice?
+    unless S.headings in [ null, false, ]
       send [ 'table', as_row S, S.headings ]
     #...................................................................................................
-    send [ 'table', '│──────────────────────│──────────────────────│',  ]
+    # send [ 'table', '│──────────────────────│──────────────────────│',  ]
 
 #-----------------------------------------------------------------------------------------------------------
 as_row = ( S, data, keys = null ) =>
@@ -232,8 +254,8 @@ $as_row = ( S ) ->
 #-----------------------------------------------------------------------------------------------------------
 $finalize = ( S ) ->
   return D.$on_stop ( send ) ->
-    send [ 'table', '│──────────────────────│──────────────────────│',  ]
-    send [ 'table', '',                                                 ]
+    # send [ 'table', '│──────────────────────│──────────────────────│',  ]
+    # send [ 'table', '',                                                 ]
 
 #-----------------------------------------------------------------------------------------------------------
 $cleanup = ( S ) ->

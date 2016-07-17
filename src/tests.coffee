@@ -20,7 +20,7 @@ D                         = require './main'
 #...........................................................................................................
 # D                         = Object.assign D, require './plugin-split-tsv'
 # D                         = Object.assign D, require './plugin-tabulate'
-require './plugin-split-tsv'
+require './plugin-tsv'
 require './plugin-tabulate'
 
 #...........................................................................................................
@@ -2595,7 +2595,8 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   #.........................................................................................................
   step ( resume ) =>
     yield show null, no,   null, resume
-    yield show { spacing: 'wide',   columns: 2, }, no,   null, resume
+    yield show { keys: [ 'name', 'date', ], }, no,   null, resume
+    yield show { keys: [ 'name', 'date', 'size', ], }, no,   null, resume
     # yield show { spacing: 'tight',  columns: 3, }, no,   null, resume
     # yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
@@ -2689,11 +2690,11 @@ unless module.parent?
     # "(v4) stream sigils"
     "(empty-string) $tabulate"
     ]
-  # @_prune()
-  # @_main()
+  @_prune()
+  @_main()
 
 
   # debug '5562', JSON.stringify key for key in Object.keys @
 
-  @[ "(empty-string) $tabulate" ] null, -> warn "not tested"
+  # @[ "(empty-string) $tabulate" ] null, -> warn "not tested"
 
