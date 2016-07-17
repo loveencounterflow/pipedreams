@@ -949,7 +949,99 @@ f = ( path, handler ) ->
 ```
 
 
-# PipeDreams v4 API
+<!-- ####################################################################################### -->
+
+# TL;DR: Things to Keep in Mind
+
+## Never Assume a Stream to be Synchronous
+
+## Always Use D.$on_finish to Detect End of Stream
+
+## Never Use Null to Send, Unless You Want the Stream to End
+
+
+## Don't Use a Pass Thru Stream in Front of a Read Stream
+
+Here's a Minimal Working Example, using PipeDreams' underlying
+[mississippi](https://github.com/maxogden/mississippi) library (assuming its methods are well-tested and
+reasonably bug-free); our only mistake is that the pipeline has a pass-thru stream *in front of* a
+file read stream:
+
+```coffee
+#-----------------------------------------------------------------------------------------------------------
+f = ( handler ) ->
+  MSP   = require 'mississippi'
+  pipeline = [
+    ( MSP.through.obj() )
+    ( ( require 'fs' ).createReadStream 'foo.txt', encoding: 'utf-8' )
+    ]
+  input = MSP.pipeline.obj pipeline...
+  input
+    .pipe D.$show()
+  MSP.finished input, ( error ) =>
+    return handler error if error
+    handler()
+  return null
+```
+
+Now it would be great if this code failed on pipeline construction time, preferrably with a sane error
+message and a helpful pointer into our code. It does not do that; instead, it fails with an obscure message
+and irrelevant (to the developper) pointers, to wit:
+
+```
+Error: premature close
+    at onclose (.../pipedreams/node_modules/end-of-stream/index.js:44:54)
+    at emitNone (events.js:85:20)
+    at emit (events.js:179:7)
+    at Duplexify._destroy (.../pipedreams/node_modules/duplexify/index.js:191:8)
+    at .../pipedreams/node_modules/duplexify/index.js:174:10
+    at _combinedTickCallback (node.js:370:9)
+    at process._tickDomainCallback (node.js:425:11)
+```
+
+## Always Use an Output and Wait for it
+
+## Beware of Incompatible Libraries
+
+When re-writing the algorithms of PipeDreams for version&nbsp;4, I wanted not only to weed out some odd bugs
+that appeared in strange corner cases, I also wanted to make sure that PipeDreams does not inadvertently
+cause some streams to fall back into pre-Streams-v3 mode. Consequently, I had to say good-bye to e.g.
+[github.com/dominictarr/event-stream](https://github.com/dominictarr/event-stream) and
+[github.com/dominictarr/split](https://github.com/dominictarr/split), both of which had served their purpose
+very well so far, but were no more up-to-date with the developement of NodeJS streams.
+
+Happy at first was I when finding [github.com/mcollina/split2](https://github.com/mcollina/split2), a
+library that says it "is inspired by @dominictarr split module, and it is totally API compatible with it";
+further, it promises to be "based on through2 by @rvagg and [to be] fully based on Stream3". That's great!
+Just swap the one for the other, done!
+
+Sadly, that didn't work out. I'm not claiming split2 has bugs, all I can say is that it did not reliably
+work within PipeDreams pipelines; the issue seems to be with stream end detection. Maybe there's something
+wrong with some PipeDreams method; I just don't know. All I do know is that
+[github.com/maxogden/binary-split](https://github.com/maxogden/binary-split) does work for me as advertised.
+
+I think the takeaway here is that **NodeJS streams are pretty complex beasts**. I realize that I've put a
+lot of work into understanding streams and how to use them right, and I still do think that it's a
+worthwhile effort. But in all that complexity, there's always a chance that one party gets it flat wrong, or
+has made some as-such-valid, but nevertheless conflicting design decisions—a fault may occur in the
+PipeDreams code, in the client code (i.e. Your Code), or in some 3rd party module.
+
+**When faced with some fault, try to write a minimal test case (also known as Minimal Working Example
+(MWE))** and cleanly delineate (for example, by switching parts of the code on and off and re-running the
+test) exactly where and under what conditions the test works and where and when it fails.
+
+# Plugins
+
+## PipeDreams Plugin: Tabulate
+
+See the [Plugin Tabulate Readme](./README-plugin-tabulate.md).
+
+## PipeDreams Plugin: TSV
+
+See the [Plugin TSV Readme](./README-plugin-tsv.md).
+
+
+# PipeDreams API
 
 > **Note** In the below, headings show the exact signature of each method as
 > defined in the source. `@` is CoffeeScript's symbol for JavaScript's
@@ -1267,97 +1359,6 @@ above.
 
 Given a stream and some data, send / write / push that data into the stream.
 
-
-<!-- ####################################################################################### -->
-
-# TL;DR: Things to Keep in Mind
-
-## Never Assume a Stream to be Synchronous
-
-## Always Use D.$on_finish to Detect End of Stream
-
-## Never Use Null to Send, Unless You Want the Stream to End
-
-
-## Don't Use a Pass Thru Stream in Front of a Read Stream
-
-Here's a Minimal Working Example, using PipeDreams' underlying
-[mississippi](https://github.com/maxogden/mississippi) library (assuming its methods are well-tested and
-reasonably bug-free); our only mistake is that the pipeline has a pass-thru stream *in front of* a
-file read stream:
-
-```coffee
-#-----------------------------------------------------------------------------------------------------------
-f = ( handler ) ->
-  MSP   = require 'mississippi'
-  pipeline = [
-    ( MSP.through.obj() )
-    ( ( require 'fs' ).createReadStream 'foo.txt', encoding: 'utf-8' )
-    ]
-  input = MSP.pipeline.obj pipeline...
-  input
-    .pipe D.$show()
-  MSP.finished input, ( error ) =>
-    return handler error if error
-    handler()
-  return null
-```
-
-Now it would be great if this code failed on pipeline construction time, preferrably with a sane error
-message and a helpful pointer into our code. It does not do that; instead, it fails with an obscure message
-and irrelevant (to the developper) pointers, to wit:
-
-```
-Error: premature close
-    at onclose (.../pipedreams/node_modules/end-of-stream/index.js:44:54)
-    at emitNone (events.js:85:20)
-    at emit (events.js:179:7)
-    at Duplexify._destroy (.../pipedreams/node_modules/duplexify/index.js:191:8)
-    at .../pipedreams/node_modules/duplexify/index.js:174:10
-    at _combinedTickCallback (node.js:370:9)
-    at process._tickDomainCallback (node.js:425:11)
-```
-
-## Always Use an Output and Wait for it
-
-## Beware of Incompatible Libraries
-
-When re-writing the algorithms of PipeDreams for version&nbsp;4, I wanted not only to weed out some odd bugs
-that appeared in strange corner cases, I also wanted to make sure that PipeDreams does not inadvertently
-cause some streams to fall back into pre-Streams-v3 mode. Consequently, I had to say good-bye to e.g.
-[github.com/dominictarr/event-stream](https://github.com/dominictarr/event-stream) and
-[github.com/dominictarr/split](https://github.com/dominictarr/split), both of which had served their purpose
-very well so far, but were no more up-to-date with the developement of NodeJS streams.
-
-Happy at first was I when finding [github.com/mcollina/split2](https://github.com/mcollina/split2), a
-library that says it "is inspired by @dominictarr split module, and it is totally API compatible with it";
-further, it promises to be "based on through2 by @rvagg and [to be] fully based on Stream3". That's great!
-Just swap the one for the other, done!
-
-Sadly, that didn't work out. I'm not claiming split2 has bugs, all I can say is that it did not reliably
-work within PipeDreams pipelines; the issue seems to be with stream end detection. Maybe there's something
-wrong with some PipeDreams method; I just don't know. All I do know is that
-[github.com/maxogden/binary-split](https://github.com/maxogden/binary-split) does work for me as advertised.
-
-I think the takeaway here is that **NodeJS streams are pretty complex beasts**. I realize that I've put a
-lot of work into understanding streams and how to use them right, and I still do think that it's a
-worthwhile effort. But in all that complexity, there's always a chance that one party gets it flat wrong, or
-has made some as-such-valid, but nevertheless conflicting design decisions—a fault may occur in the
-PipeDreams code, in the client code (i.e. Your Code), or in some 3rd party module.
-
-**When faced with some fault, try to write a minimal test case (also known as Minimal Working Example
-(MWE))** and cleanly delineate (for example, by switching parts of the code on and off and re-running the
-test) exactly where and under what conditions the test works and where and when it fails.
-
-## Plugins
-
-# PipeDreams Plugin: Tabulate
-
-See the [Plugin Tabulate Readme](./README-plugin-tabulate.md).
-
-# PipeDreams Plugin: TSV
-
-See the [Plugin TSV Readme](./README-plugin-tsv.md).
 >
 # Backmatter
 >
