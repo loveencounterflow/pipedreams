@@ -40,8 +40,8 @@ rm    ┤             ┤
 lb    └             ╰
 cb    ┴             ┴
 rb    ┘             ╯
-hc    │             │
-vc    ─             ─
+vs    │             │
+hs    ─             ─
 ```
 
 ## Settings
@@ -68,17 +68,16 @@ settings =
 **Formatting modes**: When width is given and a number, relative mode is used; otherwise, absolute mode.
 
 In absolute mode, the width of a column in terms of character cells is either given by a column-specific
-setting in `settings[ 'widths' ]` or by the fallback value in `settings[ 'width' ]`. The resulting table
-will take up as many character cells as needed for each column, plus the ones needed for padding and
-borders.
+setting `widths` or by the fallback value in setting `width`. The resulting table will take up as many
+character cells as needed for each column, plus the ones needed for padding and borders.
 
-In relative mode, an attempt is made to keep the overall width of the table—including paddings and
-borders—to the number of character cells given in `settings[ 'fit' ]`. Columns widths given in `settings[
-'widths' ]` are interpreted as proportional to their sum; columns may stretch or shrink to meet the desired
-table width. Since a minimum width of two character cells must be assumed and there is no way to fit
-arbitrarily many columns into a finite table width, overflow may occur. When `settings[ 'overflow' ]` is set
-to `'show'`, then overlong lines may occur; if it is set to `'hide'`, overlong lines are truncated so that
-line wrap is avoided on terminals.
+In relative mode, an attempt is made to keep the overall width of the table—including paddings, borders and
+all—to the number of character cells given by the setting `fit`. Columns widths given in setting `widths`
+are interpreted as proportional to their sum; columns may stretch or shrink to meet the desired table width.
+Since a minimum width of two character cells must be assumed and there is no way to fit arbitrarily many
+columns into a finite table width, overflow may occur. When setting `overflow` is set to `'show'`, then
+overlong lines may occur; if it is set to `'hide'`, overlong lines are truncated so that line wrap is
+avoided on terminals.
 
 **Keys, Column Headings, and Data Types**: PipeDreams `$tabulate` accepts data items from the stream and
 reformats them into a tabular format (or prints that table as a convenience shortcut). The table may or

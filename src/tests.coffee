@@ -2575,8 +2575,14 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   matchers  = []
   #.........................................................................................................
   $cast = =>
+    as_iso_date = ( date ) =>
+      R = date.toISOString()
+      R = R.replace 'T', '-'
+      R = R.replace /:/g, '-'
+      R = R.replace /\..*$/g, ''
+      return R
     return $ ( row, send ) =>
-      row[ 'date' ] = new Date row[ 'date' ]
+      row[ 'date' ] = as_iso_date new Date row[ 'date' ]
       row[ 'size' ] = parseInt row[ 'size' ], 10
       send row
   #.........................................................................................................
@@ -2597,7 +2603,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     yield show null, no,   null, resume
     yield show { keys: [ 'name', 'date', ], }, no,   null, resume
     yield show { keys: [ 'name', 'date', 'size', ], }, no,   null, resume
-    # yield show { spacing: 'tight',  columns: 3, }, no,   null, resume
+    yield show { pad: ' ', width: 20, widths: [ 30, 30, ] }, no,   null, resume
     # yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
