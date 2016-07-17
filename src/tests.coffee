@@ -2544,6 +2544,53 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   D.end   input
 
 #-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $on_first, $on_last not called in empty stream (1)" ] = ( T, done ) ->
+  count = 0
+  #.........................................................................................................
+  $top = ->
+    return D.$on_first ( event, send ) ->
+      count += +1
+      warn "D.$on_first called in empty stream", event
+      send event
+  #.........................................................................................................
+  $bottom = ->
+    return D.$on_last ( event, send ) ->
+      count += +1
+      warn "D.$on_last called in empty stream", event
+      send event
+  #.........................................................................................................
+  input = D.new_stream()
+  input
+    .pipe D.new_stream pipeline: [ $top(), $bottom(), ]
+    .pipe D.$on_finish =>
+      T.eq count, 0
+      done()
+  #.........................................................................................................
+  D.end input
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $on_first, $on_last not called in empty stream (2)" ] = ( T, done ) ->
+  count = 0
+  #.........................................................................................................
+  input = D.new_stream()
+  input
+    .pipe D.$on_first ( event, send ) ->
+      count += +1
+      warn "D.$on_first called in empty stream", event
+      send event
+    .pipe D.$on_last ( event, send ) ->
+      count += +1
+      warn "D.$on_last called in empty stream", event
+      send event
+    .pipe D.$on_finish =>
+      T.eq count, 0
+      done()
+  #.........................................................................................................
+  D.end input
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
 @[ "(empty-string) can send empty strings ($split) (2)" ] = ( T, done ) ->
   probe = """
     A text
@@ -2586,13 +2633,20 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       row[ 'size' ] = parseInt row[ 'size' ], 10
       send row
   #.........................................................................................................
+  $colorize = =>
+    return $ ( row, send ) =>
+      row[ 'date' ] = CND.yellow  row[ 'date' ]
+      row[ 'size' ] = CND.steel   row[ 'size' ]
+      row[ 'name' ] = CND.lime    row[ 'name' ]
+  #.........................................................................................................
   show = ( table_settings, as_lists, matcher, handler ) =>
     input     = D.new_stream 'read', path: resolve_path __dirname, '../test-data/files.tsv'
     # output    = D.new_stream 'devnull'
     input
       .pipe D.$split_tsv names: 'inline'
-      .pipe D.$sample 1 / 5, seed: 1.1
+      .pipe D.$sample 1 / 2, seed: 1.1
       .pipe $cast()
+      .pipe $colorize()
       .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass_through()
       .pipe D.$tabulate table_settings
       .pipe $ ( data ) => collector.push data
@@ -2603,7 +2657,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     yield show null, no,   null, resume
     yield show { keys: [ 'name', 'date', ], }, no,   null, resume
     yield show { keys: [ 'name', 'date', 'size', ], }, no,   null, resume
-    yield show { pad: ' ', width: 20, widths: [ 30, 30, ] }, no,   null, resume
+    yield show { pad: ' ', width: 50, widths: [ 19, 9, ] }, no,   null, resume
     # yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
@@ -2695,6 +2749,8 @@ unless module.parent?
     # "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
     # "(v4) stream sigils"
     "(empty-string) $tabulate"
+    "(v4) $on_first, $on_last not called in empty stream (1)"
+    "(v4) $on_first, $on_last not called in empty stream (2)"
     ]
   @_prune()
   @_main()
