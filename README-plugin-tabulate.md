@@ -15,6 +15,7 @@
 
 ## Box-Drawing Characters
 
+```
 ┌───┬───┐
 │   │   │
 ╞═══╪═══╡
@@ -41,6 +42,7 @@ cb    ┴             ┴
 rb    ┘             ╯
 hc    │             │
 vc    ─             ─
+```
 
 ## Settings
 
