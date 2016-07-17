@@ -982,19 +982,23 @@ MSP                       = require 'mississippi'
       end()
 
 #-----------------------------------------------------------------------------------------------------------
-@$on_first = ( method ) ->
+@$on_first = ( tags..., method ) ->
+  throw new Error "allowed tag is 'null', got #{rpr tags}" unless CND.is_subset tags, [ 'null', ]
   is_first = yes
   unless ( arity = method.length ) is 2
     throw new Error "expected method with 2 arguments, got one with #{arity}"
-  return @$ ( data, send ) ->
-    if is_first
-      method data, send
-      is_first = no
+  return @$ 'null', ( data, send ) ->
+    if data?
+      if is_first
+        method data, send
+        is_first = no
     else
+      method null, send if is_first and 'null' in tags
       send data
 
 #-----------------------------------------------------------------------------------------------------------
-@$on_last = ( method ) ->
+@$on_last = ( tags..., method ) ->
+  throw new Error "allowed tag is 'null', got #{rpr tags}" unless CND.is_subset tags, [ 'null', ]
   unless ( arity = method.length ) is 2
     throw new Error "expected method with 2 argument, got one with #{arity}"
   cache = null
@@ -1003,7 +1007,7 @@ MSP                       = require 'mississippi'
       send cache if cache?
       cache = data
     if end?
-      method cache, send
+      method cache, send if cache? or 'null' in tags
       cache = null
       end()
 

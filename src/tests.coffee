@@ -2570,21 +2570,26 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $on_first, $on_last not called in empty stream (2)" ] = ( T, done ) ->
+@[ "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)" ] = ( T, done ) ->
   count = 0
+  #.........................................................................................................
+  $top = ->
+    return D.$on_first 'null', ( event, send ) ->
+      count += +1
+      help "D.$on_first called in empty stream", event
+      send event
+  #.........................................................................................................
+  $bottom = ->
+    return D.$on_last 'null', ( event, send ) ->
+      count += +1
+      help "D.$on_last called in empty stream", event
+      send event
   #.........................................................................................................
   input = D.new_stream()
   input
-    .pipe D.$on_first ( event, send ) ->
-      count += +1
-      warn "D.$on_first called in empty stream", event
-      send event
-    .pipe D.$on_last ( event, send ) ->
-      count += +1
-      warn "D.$on_last called in empty stream", event
-      send event
+    .pipe D.new_stream pipeline: [ $top(), $bottom(), ]
     .pipe D.$on_finish =>
-      T.eq count, 0
+      T.eq count, 2
       done()
   #.........................................................................................................
   D.end input
@@ -2750,7 +2755,7 @@ unless module.parent?
     # "(v4) stream sigils"
     "(empty-string) $tabulate"
     "(v4) $on_first, $on_last not called in empty stream (1)"
-    "(v4) $on_first, $on_last not called in empty stream (2)"
+    "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
     ]
   @_prune()
   @_main()

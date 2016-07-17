@@ -59,6 +59,8 @@ Install as `npm install --save pipedreams`.
   - [@$lockstep](#@lockstep)
   - [@$on_end](#@on_end)
   - [@$on_first, @$on_last, @$on_start, @$on_stop](#@on_first-@on_last-@on_start-@on_stop)
+    - [@$on_first = ( tags..., method ) ->](#@on_first---tags-method---)
+    - [@$on_last = ( tags..., method ) ->](#@on_last---tags-method---)
   - [@$on_finish, @on_finish = ( stream, handler ) ->](#@on_finish-@on_finish---stream-handler---)
   - [@$parse_csv](#@parse_csv)
   - [@$pass_through](#@pass_through)
@@ -1208,6 +1210,28 @@ newline, the `inner_joiner` to a comma and a space.
 **DEPRECATED**
 
 ## @$on_first, @$on_last, @$on_start, @$on_stop
+### @$on_first = ( tags..., method ) ->
+### @$on_last = ( tags..., method ) ->
+
+Call
+
+* `@$on_first         ( data, send ) -> ...`
+* `@$on_first 'null', ( data, send ) -> ...`
+* `@$on_last          ( data, send ) -> ...`
+* `@$on_last  'null', ( data, send ) -> ...`
+
+to obtain a stream transform that is only called up to one time with eiter the first or the last data event
+in the stream, or—if you placed your `'null'` opt-in as first argument—with `null` for `data` in case the
+stream should finish with no events at all.
+
+These methods are great to sneak in additional data right in front or right behind the first or last events.
+The `null` tag signals that whatever you have to add to the stream should be there in any event; as an
+example, imagine you want to build a JSON serialization of a list of items. In that case, you'd sneak in a
+left square bracket `[` *before* the first and a right square bracket `]` *after* the last list element, and
+in case no elements are passed through the stream at all, you still want the serialization to contain both
+brackets to obtain `[]`, so clearly you'd go with the `'null'` tag in this case.
+
+
 
 ## @$on_finish, @on_finish = ( stream, handler ) ->
 
