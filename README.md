@@ -56,7 +56,6 @@ Install as `npm install --save pipedreams`.
   - [@$show](#@show)
   - [@$sort = ( sorter, settings ) ->](#@sort---sorter-settings---)
   - [@$split = ( matcher, mapper, settings ) ->](#@split---matcher-mapper-settings---)
-  - [@$split_tsv = ( settings ) ->](#@split_tsv---settings---)
   - [@$spread](#@spread)
   - [@$stop_time](#@stop_time)
   - [@$stringify = ( stringify ) ->](#@stringify---stringify---)
@@ -79,6 +78,9 @@ Install as `npm install --save pipedreams`.
   - [Don't Use a Pass Thru Stream in Front of a Read Stream](#dont-use-a-pass-thru-stream-in-front-of-a-read-stream)
   - [Always Use an Output and Wait for it](#always-use-an-output-and-wait-for-it)
   - [Beware of Incompatible Libraries](#beware-of-incompatible-libraries)
+  - [Plugins](#plugins)
+- [PipeDreams Plugin: Tabulate](#pipedreams-plugin-tabulate)
+- [PipeDreams Plugin: TSV](#pipedreams-plugin-tsv)
 - [Backmatter](#backmatter)
   - [Under the Hood: Base Libraries](#under-the-hood-base-libraries)
     - [Through2](#through2)
@@ -1206,32 +1208,6 @@ Uses [github.com/maxogden/binary-split](https://github.com/maxogden/binary-split
 a stream of buffers or texts into lines (in the default setting; for details
 see the binary-split project page).
 
-## @$split_tsv = ( settings ) ->
-
-A stream transform to help in reading files with data in
-[Tab-Separated Values (TSV)](http://www.iana.org/assignments/media-types/text/tab-separated-values)
-format. It accepts a stream of buffers or text, splits it into
-lines, and splits each line into fields (using the tab character, U+0009). In the process
-it can also skip empty and blank lines, omit comments, and name fields.
-
-+ `comments` defines how to recognize a comment. If it is a string, lines and individual fields that start
-  with the specified text are left out of the results. It is also possible to use a RegEx or a custom
-  function to recognize comments.
-
-+ When `empty` is set to `false`, empty lines (and lines that contain nothing but empty fields) are
-  left in the stream.
-
-* If `settings[ 'names' ]` is set to `'inline'`, field names are gleaned from the first non-discarded line
-  of input; if it is a list of `n` elements, it defines labels for the first `n` columns of data. Columns
-  with no defined name will be labelled as `'field-0'`, `'field-5'` and so on, depending on the zero-based
-  index of the respective column. Where naming of fields is used, each TSV data line will be turned into a
-  JS object with the appropriately named members, such as `{ name: 'John', age: 32, 'field-2': 'lawyer', }`;
-  where no naming is used, lists of values are sent into the stream, such as `[ 'John', 32, 'lawyer', ]`.
-
-Observe that `$split_tsv` has been (experimentally) factored out into a plugin of sorts; to use it, be sure
-has no interesting return value, but will provide `D.$split_tsv` for you to use.
-to `require 'pipedreams/lib/plugin-split-tsv'` after your `D = require 'pipedreams'` statement. This import
-
 ## @$spread
 ## @$stop_time
 
@@ -1373,7 +1349,15 @@ PipeDreams code, in the client code (i.e. Your Code), or in some 3rd party modul
 (MWE))** and cleanly delineate (for example, by switching parts of the code on and off and re-running the
 test) exactly where and under what conditions the test works and where and when it fails.
 
+## Plugins
 
+# PipeDreams Plugin: Tabulate
+
+See the [Plugin Tabulate Readme](./README-plugin-tabulate.md).
+
+# PipeDreams Plugin: TSV
+
+See the [Plugin TSV Readme](./README-plugin-tsv.md).
 >
 # Backmatter
 >
@@ -1505,4 +1489,3 @@ test) exactly where and under what conditions the test works and where and when 
 > to do the transformation work.
 
 <!-- cheatcode M42 -->
-xxx\n

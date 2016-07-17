@@ -1,3 +1,20 @@
+# PipeDreams Plugin: Tabulate
+
+
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Box-Drawing Characters](#box-drawing-characters)
+- [Settings](#settings)
+- [Usage](#usage)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
+## Box-Drawing Characters
+
 ┌───┬───┐
 │   │   │
 ╞═══╪═══╡
@@ -25,6 +42,9 @@ rb    ┘             ╯
 hc    │             │
 vc    ─             ─
 
+## Settings
+
+```
 settings =
 
   width:          <number>  ::                                                // 12
@@ -39,6 +59,9 @@ settings =
   alignments:     [ <text> ]
   headings:       [ <text> ]
   keys:           [ <text> | <number> ]
+```
+
+## Usage
 
 **Formatting modes**: When width is given and a number, relative mode is used; otherwise, absolute mode.
 

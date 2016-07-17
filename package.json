@@ -6,7 +6,8 @@
   "scripts": {
     "build": "coffee --map -o lib -c src",
     "push": "git add . && git commit -m'update' && git push",
-    "pub": "npm run build && doctoc README.md && npm run push && npm version patch && npm publish",
+    "doctoc": "doctoc README.md README-plugin-tabulate.md README-plugin-tsv.md",
+    "pub": "npm run build && npm run doctoc && npm run push && npm version patch && npm publish",
     "test-travis": "node lib/tests.js",
     "test": "npm run build && node lib/tests.js"
   },
