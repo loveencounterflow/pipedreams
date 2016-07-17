@@ -960,26 +960,19 @@ MSP                       = require 'mississippi'
 # STREAM START & END DETECTION
 #-----------------------------------------------------------------------------------------------------------
 @$on_start = ( method ) ->
-  is_first = yes
-  return @$ ( data, send ) ->
-    method send if is_first
-    is_first = no
+  unless 0 <= ( arity = method.length ) <= 1
+    throw new Error "expected method with up to 1 argument, got one with #{arity}"
+  return @$on_first 'null', ( data, send ) =>
+    if arity is 1 then method send else method()
     send data
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_stop = ( method ) ->
   unless 0 <= ( arity = method.length ) <= 1
     throw new Error "expected method with up to 1 argument, got one with #{arity}"
-  cache = null
-  return @$ ( data, send, end ) ->
-    if data?
-      send cache if cache?
-      cache = data
-    if end?
-      send cache if cache?
-      cache = null
-      if arity is 0 then method() else method send
-      end()
+  return @$on_last 'null', ( data, send ) =>
+    send data
+    if arity is 1 then method send else method()
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_first = ( tags..., method ) ->
@@ -992,9 +985,11 @@ MSP                       = require 'mississippi'
       if is_first
         method data, send
         is_first = no
+      else
+        send data
     else
-      method null, send if is_first and 'null' in tags
-      send data
+      if 'null' in tags then method data, send
+      else send null
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_last = ( tags..., method ) ->
@@ -1002,14 +997,14 @@ MSP                       = require 'mississippi'
   unless ( arity = method.length ) is 2
     throw new Error "expected method with 2 argument, got one with #{arity}"
   cache = null
-  return @$ ( data, send, end ) ->
+  return @$ 'null', ( data, send ) ->
     if data?
       send cache if cache?
       cache = data
-    if end?
-      method cache, send if cache? or 'null' in tags
+    else
+      if cache? or 'null' in tags then method cache, send
+      else send null
       cache = null
-      end()
 
 #-----------------------------------------------------------------------------------------------------------
 @on_finish = ( stream, handler ) ->
