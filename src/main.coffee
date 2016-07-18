@@ -1008,7 +1008,7 @@ insp                      = ( require 'util' ).inspect
 @_$on_start = ( method ) ->
   unless 0 <= ( arity = method.length ) <= 1
     throw new Error "expected method with up to 1 argument, got one with #{arity}"
-  return @$on_first 'null', ( data, send ) =>
+  return @_$on_first 'null', ( data, send ) =>
     if arity is 1 then method send else method()
     send data
 
@@ -1016,7 +1016,7 @@ insp                      = ( require 'util' ).inspect
 @_$on_stop = ( method ) ->
   unless 0 <= ( arity = method.length ) <= 1
     throw new Error "expected method with up to 1 argument, got one with #{arity}"
-  return @$on_last 'null', ( data, send ) =>
+  return @_$on_last 'null', ( data, send ) =>
     send data
     if arity is 1 then method send else method()
 
