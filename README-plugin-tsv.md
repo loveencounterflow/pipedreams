@@ -8,8 +8,8 @@
 
 - [Usage](#usage)
 - [API](#api)
-- [@$split_tsv = ( settings ) ->](#@split_tsv---settings---)
-- [@$as_tsv = ( names..., settings ) ->](#@as_tsv---names-settings---)
+- [@$split_tsv = ( settings ) ->](#split_tsv---settings---)
+- [@$as_tsv = ( names..., settings ) ->](#as_tsv---names-settings---)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
