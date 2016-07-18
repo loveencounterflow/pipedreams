@@ -1106,27 +1106,20 @@ insp                      = ( require 'util' ).inspect
   @$benchmark.registry[ title ] = me
   R                             = @new_stream()
   #.........................................................................................................
-  R.on 'data', =>
-    t0  ?= +new Date()
-    me.n += 1
-    echo title, me.n if me.n % 10000 is 0
-  #.........................................................................................................
-  R.on 'finish', =>
+  pipeline = []
+  pipeline.push @$ 'start',  => t0 = +new Date()
+  pipeline.push @$ ( data ) => me.n += 1
+  pipeline.push @$ 'finish', =>
     me.dt  = ( new Date() - t0 ) / 1000
     me.rps = me.n / me.dt
     @$benchmark._report me
-  return R
-
-# #-----------------------------------------------------------------------------------------------------------
-# @$benchmark.$summarize = =>
-#   R = @new_stream()
-#   R.on 'finish', => @$benchmark.summarize()
-#   return R
+  return @new_stream { pipeline, }
 
 #-----------------------------------------------------------------------------------------------------------
 @$benchmark.summarize = =>
-  urge "Benchmarks summary:"
-  @$benchmark._report me for _, me of @$benchmark.registry
+  return @$ 'finish', =>
+    urge "Benchmarks summary:"
+    @$benchmark._report me for _, me of @$benchmark.registry
 
 #-----------------------------------------------------------------------------------------------------------
 @$benchmark._report = ( me ) =>

@@ -1159,6 +1159,14 @@ This method is handy to put as a safeguard right in front of a `.pipe output_fil
 ## @$async
 ## @$batch
 
+## @$benchmark = ( title = null ) ->
+
+(see tests)
+
+## @$benchmark.summarize = =>
+
+(see tests)
+
 ## @$bridge = ( stream ) ->
 
 Make it so that the pipeline may be continued even below a writable but not
