@@ -995,6 +995,316 @@ D                         = require './main'
   D.send  input, "are empty."
   D.end   input
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(empty-string) duplexer2 works with empty strings" ] = ( T, done ) ->
+  MSP         = require 'mississippi'
+  matchers_1  = [ "A text", "with a few", "lines", "", "some", "", "of which", "are empty.", ]
+  matchers_2  = [ "", "", ]
+  collector_1 = []
+  collector_2 = []
+  #.........................................................................................................
+  collect_1   = $ ( data ) => collector_1.push data
+  collect_2   = $ ( data ) => collector_2.push data
+  show        = $ ( data ) => urge data
+  filter      = $ ( data, send ) => send data if data is ''
+  cause_error = $ ( data, send ) =>
+    return send data unless data is "some"
+    send.error new Error "test error"
+  input       = D.new_stream()
+  receiver    = D.new_stream()
+  sender      = D.new_stream()
+  #.........................................................................................................
+  handler     = ( error ) =>
+    return pipeline.emit 'error', error if error?
+    help 'ok'
+  #.........................................................................................................
+  # MSP.pipe receiver, collect_1, show, cause_error, filter, collect_2, sender, handler
+  MSP.pipe receiver, collect_1, show, filter, collect_2, sender, handler
+  pipeline = ( require 'duplexer2' ) { objectMode: yes, }, receiver, sender
+  #.........................................................................................................
+  input
+    .pipe pipeline
+    .pipe D.$on_finish =>
+      T.eq collector_1, matchers_1
+      T.eq collector_2, matchers_2
+      done()
+  #.........................................................................................................
+  D.send  input, "A text"
+  D.send  input, "with a few"
+  D.send  input, "lines"
+  D.send  input, ""
+  D.send  input, "some"
+  D.send  input, ""
+  D.send  input, "of which"
+  D.send  input, "are empty."
+  D.end   input
+
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_pipeline (1a)" ] = ( T, done ) ->
+  MSP                       = require 'mississippi'
+  create_frob_tee           = null
+  #.........................................................................................................
+  do ->
+    create_frob_tee = ( settings ) ->
+      multiply        = $ ( data, send ) => whisper 'multiply', data; send data *  2
+      add             = $ ( data, send ) => whisper 'add',      data; send data +  2
+      square          = $ ( data, send ) => whisper 'square',   data; send data ** 2
+      unsquared       = MSP.through.obj()
+      #.....................................................................................................
+      R               = source = MSP.through.obj()
+      source          = R
+      sink            = R
+      R               = R.pipe multiply
+      R               = R.pipe add
+      R               = R.pipe unsquared
+      R               = R.pipe square
+      R[ 'source' ]   = source
+      R[ 'sink'   ]   = R # square
+      return R
+  #.........................................................................................................
+  do ->
+    probes              = [ 1 ... 10 ]
+    output_matchers     = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
+    output_results      = []
+    frob                = create_frob_tee()
+    { source, sink, }   = frob
+    #.......................................................................................................
+    sink
+      #.....................................................................................................
+      .pipe $ ( data )        =>            help 'show #1', data
+      .pipe $ ( data, send )  => send data; help 'show #2', data
+      #.....................................................................................................
+      .pipe $ ( data, send, end ) =>
+        send data if data?
+        if end?
+          warn "pausing for a second"
+          setTimeout end, 1000
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        output_results.push data
+        send data
+      #.....................................................................................................
+      .pipe $ ( data, send, end ) =>
+        send data if data?
+        if end?
+          help "output_results", output_results
+          T.eq output_results, output_matchers
+          end()
+          done()
+    #.......................................................................................................
+    write_data_using_write = ->
+      for n in probes
+        urge 'write', n
+        source.write n
+      source.end()
+    #.......................................................................................................
+    write_data_using_push = ->
+      for n in probes
+        urge 'push', n
+        source.push n
+      source.push null
+    #.......................................................................................................
+    # write_data_using_write()
+    write_data_using_push()
+    #.......................................................................................................
+    return null
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_pipeline (3)" ] = ( T, done ) ->
+  create_frob_tee           = null
+  #.........................................................................................................
+  do ->
+    create_frob_tee = ( settings ) ->
+      multiply      = $ ( data, send ) => send data * 2
+      add           = $ ( data, send ) => send data + 2
+      square        = $ ( data, send ) => send data ** 2
+      unsquared     = D.new_stream()
+      #.....................................................................................................
+      return D.new_stream pipeline: [ multiply, add, unsquared, square, ]
+  #.........................................................................................................
+  do ->
+    probes              = [ 1 ... 10 ]
+    matchers            = [ 16, 36, 64, 100, 144, 196, 256, 324, 400, ]
+    results             = []
+    frob                = create_frob_tee()
+    #.......................................................................................................
+    frob
+      .pipe D.$show()
+      #.....................................................................................................
+      .pipe $ ( data, send ) =>
+        results.push data
+        send data
+    #.......................................................................................................
+    D.on_finish frob, =>
+      T.eq results, matchers
+      done()
+    #.......................................................................................................
+    frob.write n for n in probes
+    frob.end()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) stream / transform construction with through2 (1)" ] = ( T, T_done ) ->
+  FS          = require 'fs'
+  PATH        = require 'path'
+  MSP         = require 'mississippi'
+  t2_settings = {}
+  input       = FS.createReadStream PATH.resolve __dirname, '../package.json'
+  #.........................................................................................................
+  delay = ( name, f ) =>
+    dt = CND.random_integer 100, 500
+    # dt = 1
+    whisper "delay for #{rpr name}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  ### The main transform method accepts a line, takes it out of the stream unless it matches
+  either `"name"` or `"version"`, trims it, and emits two events (formatted as lists) per remaining
+  line. This method must be free (a.k.a. bound, using a slim arrow) so we can use `@push`. ###
+  transform_main = ( line, encoding, handler ) ->
+    throw new Error "unknown encoding #{rpr encoding}" unless encoding is 'utf8'
+    return handler() unless ( /"(name|version)"/ ).test line
+    line = line.trim()
+    delay line, =>
+      @push [ 'first-chr', ( Array.from line )[ 0 ], ]
+      handler null, [ 'text', line, ]
+  #.........................................................................................................
+  ### The 'flush' transform is called once, right before the stream has ended; the callback must be called
+  exactly once, and it's possible to put additional 'last-minute' data into the stream by calling `@push`.
+  Because we have to access `this`/`@`, the method must again be free and not bound, but of course we
+  can set up an alias for `@push`: ###
+  transform_flush = ( done ) ->
+    push = @push.bind @
+    delay 'flush', =>
+      push [ 'message', "ok", ]
+      push [ 'message', "we're done", ]
+      done()
+  #.........................................................................................................
+  input
+    .pipe D.$split()
+    # .pipe D.$observe ( line ) => whisper rpr line
+    .pipe MSP.through.obj t2_settings, transform_main, transform_flush
+    .pipe D.$show()
+    .pipe $ ( data, send, end ) =>
+      send data if data?
+      if end?
+        end()
+        T_done()
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) stream / transform construction with through2 (2)" ] = ( T, T_done ) ->
+  MSP         = require 'mississippi'
+  t2_settings = {}
+  S           = {}
+  S.input     = MSP.through.obj()
+  #.........................................................................................................
+  db = CND.shuffle [
+    [ '千', 'variant',     '仟',                         ]
+    [ '千', 'variant',     '韆',                         ]
+    [ '千', 'similarity',  '于',                         ]
+    [ '千', 'similarity',  '干',                         ]
+    [ '千', 'usagecode',   'CJKTHM',                    ]
+    [ '千', 'strokeorder', '312',                       ]
+    [ '千', 'reading',     'qian',                      ]
+    [ '千', 'reading',     'foo',                       ]
+    [ '千', 'reading',     'bar',                       ]
+    [ '仟', 'strokeorder', '32312',                     ]
+    [ '仟', 'usagecode',   'CJKTHm',                    ]
+    [ '仟', 'reading',     'qian',                      ]
+    [ '韆', 'strokeorder', '122125112125221134515454',  ]
+    [ '韆', 'usagecode',   'KTHm',                      ]
+    [ '韆', 'reading',     'qian',                      ]
+    ]
+  #.........................................................................................................
+  delay = ( name, f ) =>
+    dt = CND.random_integer 1, 100
+    # dt = 1
+    whisper "delay for #{rpr name}: #{dt}ms"
+    setTimeout f, dt
+  #.........................................................................................................
+  read_phrases = ( glyph, handler ) =>
+    delay glyph, =>
+      for phrase in db
+        [ sbj, prd, obj, ] = phrase
+        continue unless sbj is glyph
+        handler null, phrase
+      handler null, null
+  #.........................................................................................................
+  $retrieve_data_from_db = ( S ) =>
+    #.......................................................................................................
+    main = ( glyph, encoding, callback ) ->
+      push = @push.bind @
+      push [ glyph, 'start', ]
+      is_finished = no
+      read_phrases glyph, ( error, phrase ) =>
+        return callback error if error?
+        return push phrase if phrase?
+        push [ glyph, 'stop', ]
+        callback() unless is_finished
+        is_finished = yes
+      return null
+    #.......................................................................................................
+    flush = ( callback ) ->
+      push = @push.bind @
+      # delay 'flush', =>
+      push [ 'message', "ok", ]
+      push [ 'message', "we're done", ]
+      callback()
+    #.......................................................................................................
+    return MSP.through.obj t2_settings, main #, flush
+  #.........................................................................................................
+  $collect = ( S ) =>
+    matchers  = new Set ( JSON.stringify phrase for phrase in db )
+    collector = []
+    #.......................................................................................................
+    main = ( phrase, _, callback ) ->
+      probe = JSON.stringify phrase
+      [ sbj, prd, obj, ] = phrase
+      unless ( prd in [ 'start', 'stop', ] ) or ( sbj is 'message' )
+        T.ok matchers.has probe
+        matchers.delete probe
+      callback null, phrase
+    #.......................................................................................................
+    flush = ( callback ) ->
+      T.eq matchers.size, 0
+      callback()
+    #.......................................................................................................
+    return MSP.through.obj t2_settings, main, flush
+  #.........................................................................................................
+  $finalize = ( S ) =>
+    #.......................................................................................................
+    main = null
+    #.......................................................................................................
+    flush = ( callback ) ->
+      help "that’s all"
+      T_done()
+      callback()
+    #.......................................................................................................
+    return MSP.through.obj t2_settings, main, flush
+  #.........................................................................................................
+  S.input
+    .pipe $retrieve_data_from_db  S
+    .pipe $collect                S
+    .pipe D.$show()
+    .pipe $finalize               S
+  #.........................................................................................................
+  ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ###
+  ### TAINT this test causes a timeout for unknown reasons; postponing ###
+  T.fail "test fails with timeout for unknown reasons"
+  return T_done()
+  ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ###
+  #.........................................................................................................
+  for glyph in Array.from '千仟韆'
+    S.input.write glyph
+  S.input.end()
+  #.........................................................................................................
+  return null
+
 
 ### # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  ###
 ###  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ###

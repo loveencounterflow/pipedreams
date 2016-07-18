@@ -14,11 +14,6 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 insp                      = ( require 'util' ).inspect
-#...........................................................................................................
-# ### https://github.com/rvagg/through2 ###
-# through2                  = require 'through2'
-### https://github.com/maxogden/mississippi ###
-MSP                       = require 'mississippi'
 
 
 #===========================================================================================================
@@ -60,6 +55,11 @@ MSP                       = require 'mississippi'
 @_new_stream$split_buffer = ( matcher ) ->
   R = ( require 'binary-split' ) matcher
   return @_rpr "*✀", "*split", ( rpr matcher ), R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$through = ( P... ) ->
+  R = ( require 'through2' ).obj P...
+  return @_rpr "*⦵", "*through", null, R
 
 #-----------------------------------------------------------------------------------------------------------
 @_duplex$duplexer2 = ( receiver, sender ) ->
@@ -219,7 +219,7 @@ MSP                       = require 'mississippi'
   throw new Error "_new_stream doesn't accept 'seed', got #{rpr seed}" if seed?
   throw new Error "_new_stream doesn't accept 'hints', got #{rpr hints}" if hints?
   throw new Error "_new_stream doesn't accept 'settings', got #{rpr settings}" if settings?
-  return @_rpr "#", "plain", null, MSP.through.obj()
+  return @_rpr "#", "plain", null, @_new_stream$through()
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_devnull_stream = ->
@@ -403,7 +403,7 @@ MSP                       = require 'mississippi'
 @_new_stream_from_transform._hints = [ 'async', ]
 
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> @_rpr "⦵", "pass-through", null, MSP.through.obj()
+@$pass_through = -> @_rpr "⦵", "pass-through", null, @_new_stream$through()
 
 
 #===========================================================================================================
@@ -453,7 +453,7 @@ MSP                       = require 'mississippi'
       method null if send_null
       callback()
     #.......................................................................................................
-    return @_rpr "+", "$d", null, MSP.through.obj main, flush
+    return @_rpr "+", "$d", null, @_new_stream$through main, flush
   #.........................................................................................................
   else if arity is 2
     if send_null
@@ -502,8 +502,8 @@ MSP                       = require 'mississippi'
       callback() unless has_error
     return null
   #.....................................................................................................
-  return @_rpr "⧺", "$ds",  null, MSP.through.obj main, flush if arity is 2
-  return @_rpr "⧻", "$dse", null, MSP.through.obj main, flush
+  return @_rpr "⧺", "$ds",  null, @_new_stream$through main, flush if arity is 2
+  return @_rpr "⧻", "$dse", null, @_new_stream$through main, flush
 
 #===========================================================================================================
 # SENDING DATA

@@ -35,7 +35,6 @@
     "cnd": "^4.1.1",
     "coffeenode-suspend": "^0.1.11",
     "duplexer2": "^0.1.4",
-    "mississippi": "^1.2.0",
     "pump": "^1.0.1",
     "timsort": "^0.2.1",
     "tmp": "0.0.28",
