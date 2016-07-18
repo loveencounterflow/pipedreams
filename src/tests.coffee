@@ -819,9 +819,9 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   $tabulate = =>
     return D.new_stream pipeline: [
       ( $tabulate_row() )
-      ( D.$on_start ( send ) => send '┌' + ( '─'.repeat 68 ) + '┐' )
-      # ( D.$on_stop  ( send ) => send '├' + ( '─'.repeat 68 ) + '┤' )
-      ( D.$on_stop  ( send ) => send '└' + ( '─'.repeat 68 ) + '┘' )
+      ( $ 'start', ( send ) => send '┌' + ( '─'.repeat 68 ) + '┐' )
+      # ( $ 'stop',  ( send ) => send '├' + ( '─'.repeat 68 ) + '┤' )
+      ( $ 'stop',  ( send ) => send '└' + ( '─'.repeat 68 ) + '┘' )
       ]
   #.........................................................................................................
   sort = ( directions_and_keys..., matcher, handler ) =>
@@ -1743,8 +1743,8 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     source
       # .pipe D.$as_json_list()
       .pipe $ ( data, send ) => send ( JSON.stringify data ); send ','
-      .pipe D.$on_start ( send ) => send '['
-      .pipe D.$on_stop  ( send ) => send ']\n'
+      .pipe $ 'start', ( send ) => send '['
+      .pipe $ 'stop',  ( send ) => send ']\n'
       .pipe output
       .pipe D.$on_finish handler
     #.........................................................................................................
@@ -1778,8 +1778,8 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         return unless kind is 'json'
         send [ 'command', 'delimiter', ]
     #.......................................................................................................
-    $start_list = => D.$on_start ( send ) => send [ 'command', 'start-list', ]
-    $stop_list  = => D.$on_stop  ( send ) => send [ 'command', 'stop-list',  ]
+    $start_list = => $ 'start', ( send ) => send [ 'command', 'start-list', ]
+    $stop_list  = => $ 'stop',  ( send ) => send [ 'command', 'stop-list',  ]
     #.......................................................................................................
     $as_text = =>
       return $ ( event, send ) =>
@@ -1827,8 +1827,8 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     source
       .pipe $ ( data, send ) => if data is Symbol.for 'null' then send 'null' else send JSON.stringify data
       .pipe $ ( data, send ) => send data; send ','
-      .pipe D.$on_start ( send ) => send '['
-      .pipe D.$on_stop  ( send ) => send ']'
+      .pipe $ 'start', ( send ) => send '['
+      .pipe $ 'stop',  ( send ) => send ']'
       # .pipe D.$show()
       .pipe D.$collect()
       .pipe $ ( data, send ) => send data.join ''
@@ -2266,15 +2266,15 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   count = 0
   #.........................................................................................................
   $top = ->
-    return D.$on_first ( event, send ) ->
+    return $ 'first', ( event, send ) ->
       count += +1
-      warn "D.$on_first called in empty stream", event
+      warn "$ 'first', called in empty stream", event
       send event
   #.........................................................................................................
   $bottom = ->
-    return D.$on_last ( event, send ) ->
+    return $ 'last', ( event, send ) ->
       count += +1
-      warn "D.$on_last called in empty stream", event
+      warn "$ 'last', called in empty stream", event
       send event
   #.........................................................................................................
   input = D.new_stream()
@@ -2292,15 +2292,15 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   count = 0
   #.........................................................................................................
   $top = ->
-    return D.$on_first 'null', ( event, send ) ->
+    return $ 'first', 'null', ( event, send ) ->
       count += +1
-      help "D.$on_first called in empty stream", event
+      help "$ 'first', called in empty stream", event
       send event
   #.........................................................................................................
   $bottom = ->
-    return D.$on_last 'null', ( event, send ) ->
+    return $ 'last', 'null', ( event, send ) ->
       count += +1
-      help "D.$on_last called in empty stream", event
+      help "$ 'last', called in empty stream", event
       send event
   #.........................................................................................................
   input = D.new_stream()
@@ -2319,13 +2319,13 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   has_ended = no
   input     = D.new_stream()
   input
-    # .pipe D.$on_first ( data ) => help data
-    .pipe D.$on_first ( data, send ) => null
-    .pipe D.$on_first ( data, send ) => send "{#{data}}"
-    .pipe D.$on_last  ( data, send ) => null
-    .pipe D.$on_last  ( data, send ) => send "{#{data}}"
-    .pipe D.$on_start (       send ) => send "假"
-    .pipe D.$on_stop  (       send ) => send "名"
+    # .pipe $ 'first', ( data ) => help data
+    .pipe $ 'first', ( data, send ) => null
+    .pipe $ 'first', ( data, send ) => send "{#{data}}"
+    .pipe $ 'last',  ( data, send ) => null
+    .pipe $ 'last',  ( data, send ) => send "{#{data}}"
+    .pipe $ 'start', (       send ) => send "假"
+    .pipe $ 'stop',  (       send ) => send "名"
     # .pipe $ ( data ) => urge JSON.stringify data if data?
     #.......................................................................................................
     .pipe $ 'null', ( data, send ) =>
@@ -2352,11 +2352,11 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   has_ended = no
   input     = D.new_stream()
   input
-    # .pipe D.$on_first ( data ) => help data
-    .pipe D.$on_first 'null', ( data, send ) => null
-    .pipe D.$on_first 'null', ( data, send ) => send "{#{data}}"
-    .pipe D.$on_last  'null', ( data, send ) => null
-    .pipe D.$on_last  'null', ( data, send ) => send "{#{data}}"
+    # .pipe $ 'first', ( data ) => help data
+    .pipe $ 'first', 'null', ( data, send ) => null
+    .pipe $ 'first', 'null', ( data, send ) => send "{#{data}}"
+    .pipe $ 'last',  'null', ( data, send ) => null
+    .pipe $ 'last',  'null', ( data, send ) => send "{#{data}}"
     # .pipe $ ( data ) => urge JSON.stringify data if data?
     #.......................................................................................................
     .pipe $ 'null', ( data, send ) =>

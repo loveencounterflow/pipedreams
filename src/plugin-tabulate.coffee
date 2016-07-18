@@ -46,7 +46,7 @@ _new_state = ( settings ) ->
   S = {}
   ### TAINT better to use formal schema here? ###
   #.........................................................................................................
-  validate_keys "settings", "one or more out of", ( Object.keys settings ), keys_toplevel
+  D._validate_keys "settings", "one or more out of", ( Object.keys settings ), keys_toplevel
   #.........................................................................................................
   S.width             =       settings[ 'width'       ] ? 12
   S.alignment         =       settings[ 'alignment'   ] ? 'left'
@@ -77,8 +77,8 @@ _new_state = ( settings ) ->
   S.box.center_width  = width_of S.box.center
   S.box.right_width   = width_of S.box.right
   #.........................................................................................................
-  validate_keys "alignment", "one of", [ S.alignment, ], values_alignment
-  validate_keys "overflow",  "one of", [ S.overflow,  ], values_overflow
+  D._validate_keys "alignment", "one of", [ S.alignment, ], values_alignment
+  D._validate_keys "overflow",  "one of", [ S.overflow,  ], values_overflow
   #.........................................................................................................
   if S.overflow isnt 'show' then throw new Error "setting 'overflow' not yet supported"
   if S.fit?                 then throw new Error "setting 'fit' not yet supported"
@@ -87,16 +87,6 @@ _new_state = ( settings ) ->
   ### TAINT check values in headings, widths, keys (?) ###
   #.........................................................................................................
   return S
-
-#-----------------------------------------------------------------------------------------------------------
-validate_keys = ( title, arity, got, expected ) ->
-  return if CND.is_subset got, expected
-  got       = ( ( rpr x ) for x in got when x not in expected ).join ', '
-  expected  = ( ( rpr x ) for x in expected                   ).join ', '
-  throw new Error """
-    #{title}:
-    expected #{arity} #{expected},
-    got #{got}"""
 
 #-----------------------------------------------------------------------------------------------------------
 keys_toplevel     = [
@@ -118,7 +108,7 @@ values_alignment  = [ 'left',  'right', 'center', ]
 
 #-----------------------------------------------------------------------------------------------------------
 $set_widths_etc = ( S ) ->
-  return D.$on_first ( event, send ) ->
+  return $ 'first', ( event, send ) ->
     [ mark, data, ] = event
     return send event unless mark is 'data'
     #...................................................................................................
@@ -204,7 +194,7 @@ get_divider = ( S, position ) ->
 $dividers = ( S ) ->
   #.........................................................................................................
   $top = ->
-    return D.$on_first ( event, send ) ->
+    return $ 'first', ( event, send ) ->
       send [ 'table', get_divider S, 'top', ]
       #.....................................................................................................
       unless S.headings in [ null, false, ]
@@ -216,7 +206,7 @@ $dividers = ( S ) ->
   $mid = -> $ ( event ) ->
   #.........................................................................................................
   $bottom = ->
-    return D.$on_last ( event, send ) ->
+    return $ 'last', ( event, send ) ->
       send event
       send [ 'table', get_divider S, 'bottom', ]
   #.........................................................................................................

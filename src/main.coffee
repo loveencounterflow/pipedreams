@@ -247,10 +247,11 @@ insp                      = ( require 'util' ).inspect
   #.........................................................................................................
   if hints?
     #.......................................................................................................
-    unless CND.is_subset hints, @_new_stream_from_path._hints
-      expected  = ( rpr x for x in @_new_stream_from_path._hints ).join ', '
-      got       = ( rpr x for x in hints when x not in @_new_stream_from_path._hints ).join ', '
-      throw new Error "expected 'hints' out of #{expected}, got #{got}"
+    @_validate_keys "_new_stream_from_path", "one of", hints, @_new_stream_from_path._hints
+    # unless CND.is_subset hints, @_new_stream_from_path._hints
+    #   expected  = ( rpr x for x in @_new_stream_from_path._hints ).join ', '
+    #   got       = ( rpr x for x in hints when x not in @_new_stream_from_path._hints ).join ', '
+    #   throw new Error "expected 'hints' out of #{expected}, got #{got}"
     #.......................................................................................................
     use_line_mode = 'lines' in hints
     #.......................................................................................................
@@ -428,11 +429,41 @@ insp                      = ( require 'util' ).inspect
 @_new_remit = ( tags, mode, method ) ->
   throw new Error "unknown mode #{rpr mode}" unless mode in [ 'sync', 'async', ]
   #.........................................................................................................
-  unless CND.is_subset tags, [ 'null', ]
-    throw new Error "the only allowed tag is 'null', got #{rpr tags}"
+  @_validate_keys "_new_remit", "one or more", tags, @_new_remit.tags
+  # unless CND.is_subset tags, [ 'null', ]
+  #   throw new Error "the only allowed tag is 'null', got #{rpr tags}"
   send_null   = 'null' in tags
   if send_null and mode is 'async'
     throw new Error "tag 'null' not allowed for asynchronous transforms"
+  #.........................................................................................................
+  ### TAINT code duplication ###
+  if 'first'  in tags
+    throw new Error "cannot use async mode with tag 'first'" if mode is 'async'
+    if ( 'last' in tags ) or( 'start' in tags ) or( 'stop' in tags )
+      throw new Error "can only have one of 'first', 'last', 'start', 'stop' in tags"
+    return @_$on_first 'null', method if send_null
+    return @_$on_first method
+  #.........................................................................................................
+  if 'last'   in tags
+    throw new Error "cannot use async mode with tag 'last'" if mode is 'async'
+    if ( 'first' in tags ) or( 'start' in tags ) or( 'stop' in tags )
+      throw new Error "can only have one of 'first', 'last', 'start', 'stop' in tags"
+    return @_$on_last 'null', method if send_null
+    return @_$on_last method
+  #.........................................................................................................
+  if 'start'  in tags
+    throw new Error "cannot use async mode with tag 'start'" if mode is 'async'
+    if ( 'first' in tags ) or( 'last' in tags ) or( 'stop' in tags )
+      throw new Error "can only have one of 'first', 'last', 'start', 'stop' in tags"
+    throw new Error "cannot use 'null' with 'start'" if send_null
+    return @_$on_start method
+  #.........................................................................................................
+  if 'stop'   in tags
+    throw new Error "cannot use async mode with tag 'stop'" if mode is 'async'
+    if ( 'first' in tags ) or( 'last' in tags ) or( 'start' in tags )
+      throw new Error "can only have one of 'first', 'last', 'start', 'stop' in tags"
+    throw new Error "cannot use 'null' with 'stop'" if send_null
+    return @_$on_stop method
   #.........................................................................................................
   has_error = no
   arity     = method.length
@@ -504,6 +535,10 @@ insp                      = ( require 'util' ).inspect
   #.....................................................................................................
   return @_rpr "⧺", "$ds",  null, @_new_stream$through main, flush if arity is 2
   return @_rpr "⧻", "$dse", null, @_new_stream$through main, flush
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_remit.tags = [ 'null', 'first', 'last', 'start', 'stop', ]
+
 
 #===========================================================================================================
 # SENDING DATA
@@ -902,7 +937,7 @@ insp                      = ( require 'util' ).inspect
   headers = options?[ 'headers'     ] ? false
   seed    = options?[ 'seed'        ] ? null
   count   = 0
-  rnd     = rnd_from_seed seed
+  rnd     = @_rnd_from_seed seed
   #.........................................................................................................
   return @$ ( record, send ) =>
     count += 1
@@ -964,13 +999,13 @@ insp                      = ( require 'util' ).inspect
 #===========================================================================================================
 # STREAM START & END DETECTION
 #-----------------------------------------------------------------------------------------------------------
-@$on_start = ( P... ) -> deprecate "$on_start is deprecated; use $ 'start' instead";  @$ 'start', P...
-@$on_stop  = ( P... ) -> deprecate "$on_stop is deprecated; use $ 'stop' instead";    @$ 'stop',  P...
-@$on_first = ( P... ) -> deprecate "$on_first is deprecated; use $ 'first' instead";  @$ 'first', P...
-@$on_last  = ( P... ) -> deprecate "$on_last is deprecated; use $ 'last' instead";    @$ 'last',  P...
+@$on_start = ( P... ) -> @_deprecate "$on_start is deprecated; use $ 'start' instead";  @$ 'start', P...
+@$on_stop  = ( P... ) -> @_deprecate "$on_stop is deprecated; use $ 'stop' instead";    @$ 'stop',  P...
+@$on_first = ( P... ) -> @_deprecate "$on_first is deprecated; use $ 'first' instead";  @$ 'first', P...
+@$on_last  = ( P... ) -> @_deprecate "$on_last is deprecated; use $ 'last' instead";    @$ 'last',  P...
 
 #-----------------------------------------------------------------------------------------------------------
-@$_on_start = ( method ) ->
+@_$on_start = ( method ) ->
   unless 0 <= ( arity = method.length ) <= 1
     throw new Error "expected method with up to 1 argument, got one with #{arity}"
   return @$on_first 'null', ( data, send ) =>
@@ -978,7 +1013,7 @@ insp                      = ( require 'util' ).inspect
     send data
 
 #-----------------------------------------------------------------------------------------------------------
-@$_on_stop = ( method ) ->
+@_$on_stop = ( method ) ->
   unless 0 <= ( arity = method.length ) <= 1
     throw new Error "expected method with up to 1 argument, got one with #{arity}"
   return @$on_last 'null', ( data, send ) =>
@@ -986,7 +1021,7 @@ insp                      = ( require 'util' ).inspect
     if arity is 1 then method send else method()
 
 #-----------------------------------------------------------------------------------------------------------
-@$_on_first = ( tags..., method ) ->
+@_$on_first = ( tags..., method ) ->
   is_first = yes
   unless CND.is_subset tags, [ 'null', ]
     throw new Error "allowed tag is 'null', got #{rpr tags}"
@@ -1005,7 +1040,7 @@ insp                      = ( require 'util' ).inspect
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-@$_on_last = ( tags..., method ) ->
+@_$on_last = ( tags..., method ) ->
   unless CND.is_subset tags, [ 'null', ]
     throw new Error "allowed tag is 'null', got #{rpr tags}"
   unless ( arity = method.length ) is 2
@@ -1170,19 +1205,29 @@ insp                      = ( require 'util' ).inspect
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
-rnd_from_seed = ( seed ) ->
+@_rnd_from_seed = ( seed ) ->
   ### TAINT use CND method ###
   return if seed? then CND.get_rnd seed else Math.random
 
-#-----------------------------------------------------------------------------------------------------------
-pluck = ( x, key ) ->
-  ### TAINT use CND method ###
-  R = x[ key ]
-  delete x[ key ]
-  return R
+# #-----------------------------------------------------------------------------------------------------------
+# @_pluck = ( x, key ) ->
+#   ### TAINT use CND method ###
+#   R = x[ key ]
+#   delete x[ key ]
+#   return R
 
 #-----------------------------------------------------------------------------------------------------------
-deprecate = ( message ) -> warn "DEPRECATION WARNING:", message
+@_deprecate = ( message ) -> warn "DEPRECATION WARNING:", message
+
+#-----------------------------------------------------------------------------------------------------------
+@_validate_keys = ( title, arity, got, expected ) ->
+  return if CND.is_subset got, expected
+  got       = ( ( rpr x ) for x in got when x not in expected ).join ', '
+  expected  = ( ( rpr x ) for x in expected                   ).join ', '
+  throw new Error """
+    #{title}:
+    expected #{arity} #{expected},
+    got #{got}"""
 
 
 #===========================================================================================================
