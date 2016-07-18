@@ -1,6 +1,6 @@
 {
   "name": "pipedreams",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "Piping NodeJS streams made rad easy, no subclassing man",
   "main": "lib/main.js",
   "scripts": {
