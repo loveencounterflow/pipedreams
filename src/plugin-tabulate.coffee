@@ -30,13 +30,9 @@ D                         = require './main'
   pipeline = [
     $as_event           S
     $set_widths_etc     S
-    # D.$show '--------------------------2'
-    # $dividers           S
-    # D.$show '--------------------------3'
+    $dividers           S
     $as_row             S
-    # D.$show '--------------------------4'
     $cleanup            S
-    # D.$show '--------------------------6'
     ]
   #.........................................................................................................
   return @new_stream { pipeline, }
@@ -50,15 +46,7 @@ _new_state = ( settings ) ->
   S = {}
   ### TAINT better to use formal schema here? ###
   #.........................................................................................................
-  unless CND.is_subset ( keys = Object.keys settings ), keys_toplevel
-    throw new Error "### MEH 1 ### #{rpr keys}"
-  #.........................................................................................................
-  if settings[ 'default' ]?
-    if CND.is_subset ( keys = Object.keys settings[ 'default' ] ), keys_default
-      throw new Error "### MEH 2 ### #{rpr keys}"
-  #.........................................................................................................
-  # if settings[ 'widths'      ]? then throw new Error "'widths' not yet supported"
-  if settings[ 'alignments'  ]? then throw new Error "'alignments' not yet supported"
+  validate_keys "settings", "one or more out of", ( Object.keys settings ), keys_toplevel
   #.........................................................................................................
   S.width             =       settings[ 'width'       ] ? 12
   S.alignment         =       settings[ 'alignment'   ] ? 'left'
@@ -67,14 +55,17 @@ _new_state = ( settings ) ->
   ###
   S.fit               =       settings[ 'fit'         ] ? null
   S.ellipsis          =       settings[ 'ellipsis'    ] ? '…'
-  S.pad               =       settings[ 'pad'         ] ? ''
+  S.pad               =       settings[ 'pad'         ] ? ' '
   S.overflow          =       settings[ 'overflow'    ] ? 'show'
+  S.alignment         =       settings[ 'alignment'   ] ? 'left'
   #.........................................................................................................
   S.widths            = copy  settings[ 'widths'      ] ? []
   S.alignments        =       settings[ 'alignments'  ] ? []
   S.headings          =       settings[ 'headings'    ] ? yes
   S.keys              =       settings[ 'keys'        ] ? null
   S.box               = copy  settings[ 'box'         ] ? copy boxes[ 'plain' ]
+  #.........................................................................................................
+  S.pad               = ( ' '.repeat S.pad ) if CND.isa_number S.pad
   #.........................................................................................................
   S.box               = box_style = boxes[ S.box ] if CND.isa_text S.box
   throw new Error "unknown box style #{rpr box_style}" unless S.box?
@@ -86,34 +77,44 @@ _new_state = ( settings ) ->
   S.box.center_width  = width_of S.box.center
   S.box.right_width   = width_of S.box.right
   #.........................................................................................................
-  unless S.alignment in values_alignment
-    throw new Error "### MEH 3 ### #{rpr S.alignment}"
+  validate_keys "alignment", "one of", [ S.alignment, ], values_alignment
+  validate_keys "overflow",  "one of", [ S.overflow,  ], values_overflow
   #.........................................................................................................
-  unless S.overflow in values_overflow
-    throw new Error "### MEH 4 ### #{rpr S.overflow}"
+  if S.overflow isnt 'show' then throw new Error "setting 'overflow' not yet supported"
+  if S.fit?                 then throw new Error "setting 'fit' not yet supported"
   #.........................................................................................................
-  if S.fit?
-    throw new Error "setting `fit` not yet implemented"
-  #.........................................................................................................
-  #.........................................................................................................
-  ### TAINT check widths are non-zero integers ###
+  ### TAINT check widths etc. are non-zero integers ###
   ### TAINT check values in headings, widths, keys (?) ###
   #.........................................................................................................
   return S
 
-###
-  #.........................................................................................................
-  unless CND.is_subset ( keys = Object.keys settings ), @$tabulate._keys
-    expected  = ( rpr x for x in @$tabulate._keys                    ).join ', '
-    got       = ( rpr x for x in keys when x not in @$tabulate._keys ).join ', '
-    throw new Error "expected #{expected}, got #{got}"
-###
+#-----------------------------------------------------------------------------------------------------------
+validate_keys = ( title, arity, got, expected ) ->
+  return if CND.is_subset got, expected
+  got       = ( ( rpr x ) for x in got when x not in expected ).join ', '
+  expected  = ( ( rpr x ) for x in expected                   ).join ', '
+  throw new Error """
+    #{title}:
+    expected #{arity} #{expected},
+    got #{got}"""
 
 #-----------------------------------------------------------------------------------------------------------
-keys_toplevel     = [ 'default', 'widths', 'alignments', 'headings', 'keys', 'width', 'ellipsis', 'pad', ]
-keys_default      = [ 'width', 'alignment', ]
+keys_toplevel     = [
+  'alignment'
+  'alignments'
+  'box'
+  'default'
+  'ellipsis'
+  'fit'
+  'headings'
+  'keys'
+  'overflow'
+  'pad'
+  'width'
+  'widths'
+  ]
 values_overflow   = [ 'show',  'hide', ]
-values_alignment  = [ 'left',  'right', 'center', 'justify', ]
+values_alignment  = [ 'left',  'right', 'center', ]
 
 #-----------------------------------------------------------------------------------------------------------
 $set_widths_etc = ( S ) ->
@@ -127,20 +128,25 @@ $set_widths_etc = ( S ) ->
       else return send.error new Error "expected a list or a POD, got a #{CND.type_of data}"
     S.headings = S.keys if S.headings is true
     #...................................................................................................
-    if S.widths? then S.widths[ idx ]  ?= S.width for idx in [ 0 ... S.keys.length ]
-    else              S.widths          = ( S.width for key in S.keys )
+    if S.widths?      then  S.widths[ idx ]      ?= S.width for idx in [ 0 ... S.keys.length ]
+    else                    S.widths              = ( S.width for key in S.keys )
+    #...................................................................................................
+    if S.alignments?  then  S.alignments[ idx ]  ?= S.alignment for idx in [ 0 ... S.keys.length ]
+    else                    S.alignments          = ( S.alignment for key in S.keys )
     #...................................................................................................
     return send event
 
 #-----------------------------------------------------------------------------------------------------------
 as_row = ( S, data, keys = null ) =>
   R = []
-  if keys?
-    for key, idx in keys
-      R.push to_width ( as_text data[ key ] ), S.widths?[ idx ] ? S.width
-  else
-    for idx in [ 0 ... data.length ]
-      R.push to_width ( as_text data[ idx ] ), S.widths?[ idx ] ? S.width
+  if keys? then keys_and_idxs = ( [ key, idx, ] for key, idx in keys                  )
+  else          keys_and_idxs = ( [ idx, idx, ] for      idx in [ 0 ... data.length ] )
+  for [ key, idx, ] in keys_and_idxs
+    text      = as_text data[ key ]
+    width     = S.widths[ idx ]
+    align     = S.alignments[ idx ]
+    ellipsis  = S.ellipsis
+    R.push to_width text, width, { align, ellipsis, }
   #.......................................................................................................
   return S.box.left + ( R.join S.box.center ) + S.box.right
 
@@ -211,17 +217,10 @@ $dividers = ( S ) ->
   #.........................................................................................................
   $bottom = ->
     return D.$on_last ( event, send ) ->
-      debug '7141', event
       send event
       send [ 'table', get_divider S, 'bottom', ]
   #.........................................................................................................
   return D.new_stream pipeline: [ $top(), $mid(), $bottom(), ]
-
-# #-----------------------------------------------------------------------------------------------------------
-# $finalize = ( S ) ->
-#   return D.$on_stop ( send ) ->
-#     # send [ 'table', '│──────────────────────│──────────────────────│',  ]
-#     # send [ 'table', '',                                                 ]
 
 #-----------------------------------------------------------------------------------------------------------
 $cleanup = ( S ) ->
@@ -233,17 +232,29 @@ $cleanup = ( S ) ->
 #-----------------------------------------------------------------------------------------------------------
 boxes =
   plain:
-    lt:   '┌'           #  ╭
-    ct:   '┬'           #  ┬
-    rt:   '┐'           #  ╮
-    lm:   '├'           #  ├
-    cm:   '┼'           #  ┼
-    rm:   '┤'           #  ┤
-    lb:   '└'           #  ╰
-    cb:   '┴'           #  ┴
-    rb:   '┘'           #  ╯
-    vs:   '│'           #  │
-    hs:   '─'           #  ─
+    lt:   '┌'
+    ct:   '┬'
+    rt:   '┐'
+    lm:   '├'
+    cm:   '┼'
+    rm:   '┤'
+    lb:   '└'
+    cb:   '┴'
+    rb:   '┘'
+    vs:   '│'
+    hs:   '─'
+  round:
+    lt:   '╭'
+    ct:   '┬'
+    rt:   '╮'
+    lm:   '├'
+    cm:   '┼'
+    rm:   '┤'
+    lb:   '╰'
+    cb:   '┴'
+    rb:   '╯'
+    vs:   '│'
+    hs:   '─'
 
 
 #===========================================================================================================

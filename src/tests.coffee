@@ -2434,7 +2434,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$split_tsv names: 'inline'
       .pipe D.$sample 1 / 2, seed: 1.1
       .pipe $cast()
-      # .pipe $colorize()
+      .pipe $colorize()
       .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass_through()
       .pipe D.$tabulate table_settings
       .pipe $ ( data ) => collector.push data
@@ -2445,7 +2445,11 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     yield show null, no,   null, resume
     yield show { keys: [ 'name', 'date', ], }, no,   null, resume
     yield show { keys: [ 'name', 'date', 'size', ], }, no,   null, resume
-    yield show { pad: ' ', width: 50, widths: [ 19, 9, ] }, no,   null, resume
+    yield show { pad: 3, width: 50, widths: [ 19, 12, ] }, no,   null, resume
+    yield show { box: 'plain', width: 50, widths: [ 19, 12, ] }, no,   null, resume
+    yield show { box: 'round', alignment: 'right', width: 50, widths: [ 25, 12, ]                                         }, no,  null, resume
+    yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'left', ]    }, yes, null, resume
+    yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'center', ]  }, yes, null, resume
     # yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
