@@ -188,7 +188,7 @@ urge                      = CND.get_logger 'urge',      badge
   #.........................................................................................................
   pipeline = [
     ( @$ ( row, send ) => send ( ( ( stringify value ) for value in row ).join '\t' ) + '\n' )
-    ( @$on_start ( send ) => send ( names.join '\t' ) + '\n' )
+    ( @$ 'start', ( send ) => send ( names.join '\t' ) + '\n' )
     ]
   return @_rpr "as-tsv", "as-tsv", null, @new_stream { pipeline, }
 
