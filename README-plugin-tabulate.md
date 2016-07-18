@@ -50,7 +50,7 @@ hs    ─             ─
 settings =
 
   width:          <number>  ::                                                // 12
-  alignment:      <text>    :: 'left' | 'right' | 'center' | 'justify'        // 'left'
+  alignment:      <text>    :: 'left' | 'right' | 'center'                    // 'left'
   fit:            <number> | <null> ::                                        // null
   ellipsis:       <text>                                                      // '…'
   pad:            <number> | <text>                                           // ''

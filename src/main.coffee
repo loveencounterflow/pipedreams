@@ -964,7 +964,13 @@ insp                      = ( require 'util' ).inspect
 #===========================================================================================================
 # STREAM START & END DETECTION
 #-----------------------------------------------------------------------------------------------------------
-@$on_start = ( method ) ->
+@$on_start = ( P... ) -> deprecate "$on_start is deprecated; use $ 'start' instead";  @$ 'start', P...
+@$on_stop  = ( P... ) -> deprecate "$on_stop is deprecated; use $ 'stop' instead";    @$ 'stop',  P...
+@$on_first = ( P... ) -> deprecate "$on_first is deprecated; use $ 'first' instead";  @$ 'first', P...
+@$on_last  = ( P... ) -> deprecate "$on_last is deprecated; use $ 'last' instead";    @$ 'last',  P...
+
+#-----------------------------------------------------------------------------------------------------------
+@$_on_start = ( method ) ->
   unless 0 <= ( arity = method.length ) <= 1
     throw new Error "expected method with up to 1 argument, got one with #{arity}"
   return @$on_first 'null', ( data, send ) =>
@@ -972,7 +978,7 @@ insp                      = ( require 'util' ).inspect
     send data
 
 #-----------------------------------------------------------------------------------------------------------
-@$on_stop = ( method ) ->
+@$_on_stop = ( method ) ->
   unless 0 <= ( arity = method.length ) <= 1
     throw new Error "expected method with up to 1 argument, got one with #{arity}"
   return @$on_last 'null', ( data, send ) =>
@@ -980,7 +986,7 @@ insp                      = ( require 'util' ).inspect
     if arity is 1 then method send else method()
 
 #-----------------------------------------------------------------------------------------------------------
-@$on_first = ( tags..., method ) ->
+@$_on_first = ( tags..., method ) ->
   is_first = yes
   unless CND.is_subset tags, [ 'null', ]
     throw new Error "allowed tag is 'null', got #{rpr tags}"
@@ -999,7 +1005,7 @@ insp                      = ( require 'util' ).inspect
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-@$on_last = ( tags..., method ) ->
+@$_on_last = ( tags..., method ) ->
   unless CND.is_subset tags, [ 'null', ]
     throw new Error "allowed tag is 'null', got #{rpr tags}"
   unless ( arity = method.length ) is 2
@@ -1174,6 +1180,9 @@ pluck = ( x, key ) ->
   R = x[ key ]
   delete x[ key ]
   return R
+
+#-----------------------------------------------------------------------------------------------------------
+deprecate = ( message ) -> warn "DEPRECATION WARNING:", message
 
 
 #===========================================================================================================
