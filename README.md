@@ -176,7 +176,7 @@ D.new_stream 'read', file: 'foo.txt'
   .pipe D.new_stream 'write', file: 'copy-3.txt'
 ```
 
-## When to Call it a Day: Always Use On_Finish
+## When to Call it a Day: Always Use $ 'finish'
 
 Given the asynchronous nature of NodeJS' I/O handling, stream end detection can be a fickle thing and hard
 to get right. For example, when writing into a file, one might be tempted to wait for an `end` event:
@@ -199,8 +199,7 @@ write_sample = ( handler ) =>
 Stress tests have shown this pattern to produce a certain percentage of failures (1 in 10, but that might
 depend on details of the writing process).
 
-On the other hand, the pattern below passes tests; here, we use the PipeDreams `$on_finish` method and pass
-in the output stream (and the callback to be called when processing has completed):
+On the other hand, the pattern below passes tests; here, we use the PipeDreams `$ 'finish'` transform:
 
 ```coffee
 write_sample = ( handler ) =>
@@ -209,14 +208,11 @@ write_sample = ( handler ) =>
   input
     .pipe D.$show()
     .pipe output
-    .pipe D.$on_finish handler
+    .pipe $ 'finish', handler
   #.......................................................................................................
   D.send input, data for data in [ 'foo', 'bar', 'baz', ]
   D.end input
 ```
-
-Observe that `$on_finish` uses `setImmediate` to delay calling the callback handler until the next tick of
-the event loop; this too, helps to prevent prematurely leaving the writing procedure.
 
 
 
@@ -253,7 +249,7 @@ surprise, since nothing in the code suggests that the thing should not work in a
 still valid
 
 In order for the code to meet expectations, remember to always grab your results from within a stream
-transform or from a stream `finish` handler; commonly, this is done with `D.$on_finish`:
+transform; commonly, this is done with `$ 'finish'`:
 
 ```coffee
 @[ "(v4) new_stream_from_text (2)" ] = ( T, done ) ->
@@ -268,7 +264,7 @@ transform or from a stream `finish` handler; commonly, this is done with `D.$on_
       if end?
         T.eq collector, [ "first line", "second line", ]
         end()
-    .pipe D.$on_finish handler
+    .pipe $ 'finish', handler
   input.write "first line\nsecond line"
   input.end()
 ```
@@ -293,7 +289,7 @@ f = ( done ) ->
   input
     .pipe D.$split()
     .pipe D.$show()
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   input.write "helo\nworld"
   input.write "!"
   input.end()
@@ -320,7 +316,7 @@ f = ( done ) ->
     .pipe D.$split()
     .pipe thruput
     .pipe output
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   thruput
     .pipe $ ( data ) -> log 'thruput', rpr data
@@ -619,7 +615,7 @@ f = ( done ) ->
     .pipe D.$split()      # Convert buffer chunks into single-line strings.
     .pipe $show()
     .pipe $count()
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
 
   D.send input, """
     Here we write
@@ -699,7 +695,7 @@ f = ( done ) ->
     .pipe $add 12
     .pipe D.$sort()
     .pipe $show()
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
 
   D.send input, "20\n10\n50\n40\n30\n"
   D.end  input
@@ -779,7 +775,7 @@ f = ( path, handler ) ->
     .pipe D.$on_start ( send ) => send '['
     .pipe D.$on_last ( data, send ) => send ']\n'
     .pipe output
-    .pipe D.$on_finish handler
+    .pipe $ 'finish', handler
   #.........................................................................................................
   D.send  source, 42
   D.send  source, 'a string'
@@ -862,7 +858,7 @@ f = ( path, handler ) ->
     .pipe $stop_list()
     .pipe $as_text()
     .pipe output
-    .pipe D.$on_finish handler
+    .pipe $ 'finish', handler
   #.........................................................................................................
   D.send  source, [ 'data', 42,         ]
   D.send  source, [ 'data', 'a string', ]
@@ -942,7 +938,7 @@ f = ( path, handler ) ->
     .pipe D.$on_start (       send ) => send '['
     .pipe D.$on_last  ( data, send ) => send ']\n'
     .pipe output
-    .pipe D.$on_finish handler
+    .pipe $ 'finish', handler
   #.........................................................................................................
   data_items = [ 42, 'a string', null, false, ]
   for data in data_items
@@ -957,7 +953,7 @@ f = ( path, handler ) ->
 
 ## Never Assume a Stream to be Synchronous
 
-## Always Use D.$on_finish to Detect End of Stream
+## Always Use $ 'finish' to Detect End of Stream
 
 ## Never Use Null to Send, Unless You Want the Stream to End
 
@@ -1160,7 +1156,7 @@ demo = ( x..., handler ) =>
     .pipe $ ( data ) ->
       if data?
         help x, data.join ''
-    .pipe D.$on_finish handler
+    .pipe $ 'finish', handler
   D.send input, 'a'
   D.send input, 'b'
   D.send input, 'c'
@@ -1233,9 +1229,9 @@ brackets to obtain `[]`, so clearly you'd go with the `'null'` tag in this case.
 
 
 
-## @$on_finish, @on_finish = ( stream, handler ) ->
+## @$ 'finish', @on_finish = ( stream, handler ) ->
 
-The recommended way to detect write completion in a piped stream is to tack a `.pipe @$on_finish handler`
+The recommended way to detect write completion in a piped stream is to tack a `.pipe $ 'finish', handler`
 transform unto the end of your pipeline:
 
 ```coffee
@@ -1245,24 +1241,22 @@ f = ( handler ) ->
     .pipe $do_this()
     .pipe $do_that()
     .pipe output
-    .pipe D.$on_finish handler
+    .pipe $ 'finish', handler
 ```
 
 Alternatively, if you have an explicit ouput stream (say, `output`) in your
 pipeline, you can also call `D.on_finish output, handler`. Terminating stream
 processing from handlers for other events (e.g. `'end'`) and/or of other parts
 of the pipeline may lead to hard-to-find bugs. Observe that `on_finish` and
-`$on_finish` call `handler` only upon the following turn of the JavaScript event
+`$ 'finish'` call `handler` only upon the following turn of the JavaScript event
 loop.
 
-<!-- Also see [@$finish](#finish---). -->
-
 **Note** You should **not** attach anything in the pipeline after a
-`D.$on_finish` transform, since the behavior of such a transform is not well
+`$ 'finish'` transform, since the behavior of such a transform is not well
 defined. When the `finish` event is fired, then all the stream components have
 already packed their bags and are ready to return home. The very moment that
 `handler` is called, the show is over, and the last batch of events may or may
-not make it to any given transform below `$on_finish`.
+not make it to any given transform below `$ 'finish'`.
 
 
 ## @$parse_csv

@@ -465,6 +465,13 @@ insp                      = ( require 'util' ).inspect
     throw new Error "cannot use 'null' with 'stop'" if send_null
     return @_$on_stop method
   #.........................................................................................................
+  if 'finish'   in tags
+    throw new Error "cannot use async mode with tag 'finish'" if mode is 'async'
+    if ( 'first' in tags ) or( 'last' in tags ) or( 'start' in tags )
+      throw new Error "can only have one of 'first', 'last', 'start', 'finish' in tags"
+    throw new Error "cannot use 'null' with 'finish'" if send_null
+    return @_$on_finish method
+  #.........................................................................................................
   has_error = no
   arity     = method.length
   if mode is 'sync'
@@ -537,7 +544,7 @@ insp                      = ( require 'util' ).inspect
   return @_rpr "⧻", "$dse", null, @_new_stream$through main, flush
 
 #-----------------------------------------------------------------------------------------------------------
-@_new_remit.tags = [ 'null', 'first', 'last', 'start', 'stop', ]
+@_new_remit.tags = [ 'null', 'first', 'last', 'start', 'stop', 'finish', ]
 
 
 #===========================================================================================================
@@ -1064,26 +1071,13 @@ insp                      = ( require 'util' ).inspect
   stream.on 'finish', => setImmediate => handler()
 
 #-----------------------------------------------------------------------------------------------------------
-@$on_finish = ( method ) ->
+@_$on_finish = ( method ) ->
   ### NOTE For reason not well understood, using `@new_stream()` here instead ov a `devnull` stream
   will in some cases not work, as the finish event never fires. ###
   R = @new_stream 'devnull'
   @on_finish R, method
   return R
 
-#-----------------------------------------------------------------------------------------------------------
-@$on_end = ( method ) ->
-  unless 0 <= ( arity = method.length ) <= 1
-    throw new Error "expected method with 0 or 1 argument, got #{arity}"
-  return @$ ( data, send, end ) ->
-    alert "Use of PipeDreams `$on_end` is discouraged; use `$on_stop`/`$on_last` instead"
-    send data
-    if end?
-      if arity is 1
-        method end
-      else
-        method()
-        end()
 
 #===========================================================================================================
 # FILTERING

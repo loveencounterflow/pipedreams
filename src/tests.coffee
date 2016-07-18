@@ -200,7 +200,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     input
       # .pipe $ ( line, send ) => send line + '\n'
       .pipe output
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -211,7 +211,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -234,7 +234,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$show()
       .pipe D.$as_line()
       .pipe D.$bridge output
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     #.......................................................................................................
     D.send input, probe for probe in probes
     D.end input
@@ -245,7 +245,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$collect()
       # .pipe D.$show()
       .pipe $ ( lines ) => T.eq lines, matcher if lines?
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
   #.........................................................................................................
   step ( resume ) =>
     yield write_sample  resume
@@ -278,7 +278,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe output
     .pipe D.$show()
     .pipe $verify()
-    .pipe D.$on_finish => help 'done'; done()
+    .pipe $ 'finish', => help 'done'; done()
   #.......................................................................................................
   for probe in probes
     do ( probe ) =>
@@ -354,7 +354,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( lines ) => T.eq lines, matcher if lines?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  input, probe for probe in probes
   D.end   input
@@ -374,7 +374,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.new_stream { transform, }
     .pipe D.$collect()
     .pipe D.new_stream transform: ( ( lines ) => T.eq lines, matcher if lines? )
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  input, probe for probe in probes
   D.end   input
@@ -410,7 +410,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ 'null', ( data ) =>
       if data? then results.push data
       else T.eq results, matchers
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, n for n in probes
   D.end input
   #.........................................................................................................
@@ -433,7 +433,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ 'null', ( data ) =>
       if data? then results.push data
       else T.eq results, matchers
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, n for n in probes
   D.end input
   #.........................................................................................................
@@ -454,7 +454,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ 'null', ( data ) =>
       if data? then results.push data
       else T.eq results, matchers
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send confluence, n for n in probes
   D.end confluence
   # input = D.new_stream()
@@ -495,7 +495,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( line, send ) =>
       send line
       collector.push line
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.eq collector, [ "first line", "second line", ]
       done()
   input.write "first line\nsecond line"
@@ -517,7 +517,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
             received_null = yes
           else
             T.fail "received #{rpr data}, shouldn't happen"
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.fail "expected to receive null in observer transform" unless received_null
       T.eq collector, [ "helo", "world", ]
       done()
@@ -604,7 +604,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 4, 5, 6, 14, 15, 16, 24, 25, 26, ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send input, 5
   D.send input, 15
@@ -652,7 +652,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ [ 4, 5, 6, ], [ 14, 15, 16, ], [ 24, 25, 26, ], ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send input, 5
   D.send input, 15
@@ -670,7 +670,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -682,7 +682,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$show()
     .pipe D.$collect collect: yes
     .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -698,7 +698,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$show()
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
 
@@ -710,7 +710,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, [ +Infinity, 99, 98, 82, 55, 33, 23, 11, -Infinity, ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, n for n in [ 55, 82, 99, +Infinity, -Infinity, 23, 11, 98, 33, ]
   D.end input
 
@@ -727,7 +727,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$show()
       .pipe D.$collect()
       .pipe $ ( data ) -> T.eq data, matcher if data? and matcher?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
     D.send input, n for n in [
       [ 55,        121, 0, ]
       [ 23,        126, 5, ]
@@ -841,7 +841,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe $tabulate()
       .pipe $ ( row ) => info row if row?
       .pipe D.$benchmark title
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
       # .pipe D.$finish output, handler
  #.........................................................................................................
   step ( resume ) =>
@@ -865,7 +865,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$as_list 'date', 'size', 'name'
       .pipe D.$as_tsv  'date', 'size', 'name'
       .pipe D.$show()
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
       # .pipe D.$finish output, handler
     for probe in probes
       D.send input, probe
@@ -894,7 +894,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   # D.send input_1, word for word in "do re mi fa so la ti".split /\s+/
   matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
               [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], ]
@@ -935,7 +935,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   matcher = [ [ '以', 'i' ],  [ '呂', 'ro' ], [ '波', 'ha' ], [ '耳', 'ni' ],
               [ '本', 'ho' ], [ '部', 'he' ], [ '止', 'to' ], [ '千', null ], ]
   D.send input_1, word for word in "以 呂 波 耳 本 部 止 千".split /\s+/
@@ -962,7 +962,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
           ["や","ま","け","ふ","こ","え","て"]
           ["あ","さ","き","ゆ","め","み","し"]
           ["ゑ","ひ","も","せ","す"]]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, glyph for glyph in Array.from "いろはにほへとちりぬるをわかよたれそつねならむうゐのおくやまけふこえてあさきゆめみしゑひもせす"
   D.end input
   return null
@@ -978,7 +978,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data ) ->
       if data?
         T.eq data, [["い","ろ"]]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, glyph for glyph in Array.from "いろ"
   D.end input
   return null
@@ -992,7 +992,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$collect()
     .pipe D.$show()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   matcher = [ [ 0, '以' ], [ 1, '呂' ], [ 2, '波' ], [ 0, '耳' ], [ 1, '本' ], [ 2, '部' ], [ 0, '止' ] ]
   D.send input, word for word in "以 呂 波 耳 本 部 止".split /\s+/
   D.end input
@@ -1006,7 +1006,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   matcher = [
     ["a","text"]
     ["with","a number"]
@@ -1045,7 +1045,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   matcher = [
     {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
     {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
@@ -1079,7 +1079,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # .pipe $ ( data ) -> help JSON.stringify data if data?
     .pipe D.$collect()
     .pipe $ ( data ) -> T.eq data, matcher if data?
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   matcher = [
     {"fncr":"u-cjk/9e1f","glyph":"鸟","formula":"⿴乌丶"}
     {"fncr":"u-cjk/9e20","glyph":"鸠","formula":"⿰九鸟"}
@@ -1205,7 +1205,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         found = found or ( /<h1>Example Domain<\/h1>/ ).test line
     # .pipe D.$show()
     .pipe sink
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.ok found
       done()
   return null
@@ -1216,7 +1216,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input
     .pipe D.$split()
     .pipe D.$show()
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   input.write "helo\nworld"
   input.write "!"
   input.end()
@@ -1231,7 +1231,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input
     .pipe D.$split()
     .pipe thruput
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
     .pipe output
   #.........................................................................................................
   thruput
@@ -1254,7 +1254,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input
     .pipe D.$split()
     .pipe thruput
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
     .pipe output
     .pipe D.$show()
   #.........................................................................................................
@@ -1291,7 +1291,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     input
       .pipe D.$show()
       .pipe output
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     #.......................................................................................................
     D.send input, probe
     D.end  input
@@ -1302,7 +1302,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     input
       .pipe D.$collect()
       .pipe $ ( data ) => matchers[ encoding ] = data
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     return null
   #.........................................................................................................
   read_sample = ( encoding, use_hint, handler ) =>
@@ -1325,7 +1325,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
               expected #{rpr matchers[ encoding ]}
               got      #{rpr result}
               """
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     return null
   #.........................................................................................................
   step ( resume ) =>
@@ -1352,7 +1352,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     input
       .pipe D.$show()
       .pipe output
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     #.......................................................................................................
     D.send input, probe
     D.end  input
@@ -1377,7 +1377,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
               expected #{rpr matcher}
               got      #{rpr result}
               """
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     return null
   #.........................................................................................................
   step ( resume ) =>
@@ -1501,7 +1501,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い, ろ, は, に, ほ, へ, と"
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
@@ -1518,7 +1518,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い\nろ\nは\nに, ほ, へ, と\n諸\n行\n無\n常"
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろは"
   D.send  source, Array.from "にほへと"
@@ -1537,7 +1537,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い—ろ—は—に·ほ·へ·と—諸—行—無—常"
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろは"
   D.send  source, Array.from "にほへと"
@@ -1559,7 +1559,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "い,ろ,は,に,ほ,へ,と"
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
@@ -1579,7 +1579,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, "|い,ろ,は,に,ほ,へ,と|"
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
@@ -1598,7 +1598,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data, send ) =>
       # debug '5540', JSON.stringify data
       T.eq data, '["い","ろ","は","に","ほ","へ","と"]'
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
@@ -1618,7 +1618,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
@@ -1640,7 +1640,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
           result = data.join ''
           help x, result
           T.eq result, matchers[ matcher_idx ]
-      .pipe D.$on_finish done
+      .pipe $ 'finish', done
     D.send input, 'a'
     D.send input, 'b'
     D.send input, 'c'
@@ -1709,7 +1709,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '["い","ろ","は","に","ほ","へ","と"]'
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
@@ -1727,7 +1727,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '[\n  "い",\n  "ろ",\n  "は",\n  "に",\n  "ほ",\n  "へ",\n  "と"\n  ]\n'
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   D.send  source, kana for kana in Array.from "いろはにほへと"
   D.end   source
@@ -1746,7 +1746,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe $ 'start', ( send ) => send '['
       .pipe $ 'stop',  ( send ) => send ']\n'
       .pipe output
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     #.........................................................................................................
     D.send  source, 42
     D.send  source, 'a string'
@@ -1802,7 +1802,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe $stop_list()
       .pipe $as_text()
       .pipe output
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     #.........................................................................................................
     D.send  source, [ 'data', 42,         ]
     D.send  source, [ 'data', 'a string', ]
@@ -1835,7 +1835,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe $ ( data ) =>
         T.eq data, '[42,"a string",null,false,]'
       .pipe output
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
     #.........................................................................................................
     probes = [ 42, 'a string', null, false, ]
     for data in probes
@@ -1858,7 +1858,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       info '\n' + data
       # debug '5540', rpr data
       T.eq data, '[\n  "a text",\n  {"~isa":"symbol","value":"XXXXXXXX"},\n  42,\n  null,\n  true,\n  ["foo","bar"]\n  ]\n'
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   probes = [
     "a text"
@@ -1892,7 +1892,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         idx += +1
         info data
         T.eq data, probe[ idx ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   probe = [
     "a text"
@@ -1920,7 +1920,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         idx += +1
         # info data
         T.eq data, matchers[ idx ]
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   #.........................................................................................................
   probes = [
     "a text"
@@ -1949,7 +1949,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input
     # .pipe $ ( kana ) => info kana
     .pipe $ ( kana ) => if kana? then T.ok yes else T.fail "received `null` for data"
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, kana for kana in Array.from "アイウエオカキクケコ"
   D.end  input
 
@@ -1967,7 +1967,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       unless kana?
         T.eq data_count, 10
         T.eq null_count,  1
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, kana for kana in Array.from "アイウエオカキクケコ"
   D.end  input
 
@@ -1979,7 +1979,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( kana, send ) =>
       if kana? then T.ok yes else T.fail "received `null` for data"
       send kana
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, kana for kana in Array.from "アイウエオカキクケコ"
   D.end  input
 
@@ -2001,7 +2001,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         null_count += +1
         T.eq data_count, 20
         T.eq null_count,  2
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send input, kana for kana in Array.from "アイウエオカキクケコ"
   D.end  input
 
@@ -2071,7 +2071,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # .pipe D.$bridge process.stdout # bridge the stream, so data is passed through to next transform
     .pipe $verify()
     .pipe $summarize "position #2:"
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
 
   #.........................................................................................................
   for n in [ 4, 7, 9, 3, 5, 6, ]
@@ -2098,7 +2098,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$split()      # Convert buffer chunks into single-line strings.
     .pipe $show()
     .pipe $count()
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
 
   D.send input, """
     Here we write
@@ -2132,7 +2132,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $add 12
     .pipe D.$sort()
     .pipe $show()
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
 
   D.send input, "20\n10\n50\n40\n30\n"
   D.end  input
@@ -2154,7 +2154,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data ) => urge data
     .pipe $ ( data, send ) => send data if data is ''
     .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send  input, 'A text'
   D.send  input, 'with a few'
   D.send  input, ''
@@ -2176,7 +2176,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $ ( data ) => urge data
     .pipe $ ( data, send ) => send data if data is ''
     .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send  input, 'A text'
   D.send  input, 'with a few'
   D.send  input, ''
@@ -2221,7 +2221,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   #.........................................................................................................
   input
     .pipe confluence
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.eq collector_1, matchers_1
       T.eq collector_2, matchers_2
       done()
@@ -2257,7 +2257,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # .pipe $ ( data, send ) => send data if data is ''
     # .pipe D.$show()
     # .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send  input, probe
   D.end   input
 
@@ -2280,7 +2280,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input = D.new_stream()
   input
     .pipe D.new_stream pipeline: [ $top(), $bottom(), ]
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.eq count, 0
       done()
   #.........................................................................................................
@@ -2306,7 +2306,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input = D.new_stream()
   input
     .pipe D.new_stream pipeline: [ $top(), $bottom(), ]
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.eq count, 2
       done()
   #.........................................................................................................
@@ -2338,7 +2338,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         send null
       return null
     #.......................................................................................................
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.eq has_ended, yes
       done()
   #.........................................................................................................
@@ -2369,7 +2369,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         send null
       return null
     #.......................................................................................................
-    .pipe D.$on_finish =>
+    .pipe $ 'finish', =>
       T.eq has_ended, yes
       done()
   #.........................................................................................................
@@ -2397,7 +2397,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # .pipe $ ( data, send ) => send data if data is ''
     # .pipe D.$show()
     # .pipe $validate_probes T, matchers
-    .pipe D.$on_finish done
+    .pipe $ 'finish', done
   D.send  input, probe
   D.end   input
 
@@ -2439,7 +2439,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$tabulate table_settings
       .pipe $ ( data ) => collector.push data
       .pipe $ ( row ) => echo row
-      .pipe D.$on_finish handler
+      .pipe $ 'finish', handler
   #.........................................................................................................
   step ( resume ) =>
     yield show null, no,   null, resume
