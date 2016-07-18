@@ -29,6 +29,8 @@ Install as `npm install --save pipedreams`.
     - [Synchronous Transform, No Stream End Detection](#synchronous-transform-no-stream-end-detection)
     - [Synchronous Transform With Stream End Detection](#synchronous-transform-with-stream-end-detection)
     - [Asynchronous Transforms](#asynchronous-transforms)
+    - [One-Off Tramsforms to Run at the Beginning or the Ending of a Stream](#one-off-tramsforms-to-run-at-the-beginning-or-the-ending-of-a-stream)
+    - [@$ 'finish', @on_finish = ( stream, handler ) ->](#-finish-on_finish---stream-handler---)
   - [How to Send Null Without Ending the Stream](#how-to-send-null-without-ending-the-stream)
     - [Using Events instead of Data Items](#using-events-instead-of-data-items)
     - [Using a Symbolic Value for Null](#using-a-symbolic-value-for-null)
@@ -57,11 +59,6 @@ Install as `npm install --save pipedreams`.
   - [@$intersperse = ( joiners... ) ->](#intersperse---joiners---)
   - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#join---outer_joiner--%5Cn-inner_joiner------)
   - [@$lockstep](#lockstep)
-  - [@$on_end](#on_end)
-  - [@$on_first, @$on_last, @$on_start, @$on_stop](#on_first-on_last-on_start-on_stop)
-    - [@$on_first = ( tags..., method ) ->](#on_first---tags-method---)
-    - [@$on_last = ( tags..., method ) ->](#on_last---tags-method---)
-  - [@$ 'finish', @on_finish = ( stream, handler ) ->](#-finish-on_finish---stream-handler---)
   - [@$parse_csv](#parse_csv)
   - [@$pass_through](#pass_through)
   - [@$sample = ( p = 0.5, options ) ->](#sample---p--05-options---)
@@ -741,6 +738,87 @@ be prepared for an empty stream where it is called once with `data` being
 $async ( data, send, end ) -> ...
 ```
 
+### One-Off Tramsforms to Run at the Beginning or the Ending of a Stream
+
+Often you need to perform some action exactly once when a stream has just
+started or just ended. In PipeDreams, this can be done by using one of the tags
+`'start'`, `'stop'`, `'first'`, `'last'` or `'finish'` with a remit call.
+
+When you look at the many ways to 'remit with a tag' listed below, you may feel
+a little overwhelmed, but the API is in fact fairly straightforward:
+
+* with `'first'` and `'last'`, you listen in for the first or the last data
+  event of the stream (if any), respectively.
+
+* when a stream ends before any data item is sent (i.o.w. when you get an empty
+  stream), then `'first'` and `'last'` transforms are *only* called (with `null`
+  for the `data` argument) when the `'null'` tag is present; when no `'null'`
+  tag has been given, `data` will never be `null` or `undefined`.
+
+* with `'start'` and `'stop'`, you listen in for the start and the stop of the
+  stream; a transform with `'start'` will be called right *before* the first
+  data event comes down the stream, and a transform with `'stop'` will be called
+  right *after* the last data event has come down the stream. Both transforms
+  will be called once in any event, even when the stream happens to be empty.
+
+* `$ 'finish', ->` is much like `$ 'stop', ( send ) ->`, except that `$
+  'finish', ->` is called *after* the stream has finished (at which time all
+  participating transforms / streams in the pipeline should be positively done).
+  Naturally, sending data into the stream makes no sense at that point in time,
+  so a `'finish'` transform must not accept any arguments.
+
+* Observe that the `'null'` tag can only be used with `'first'` and `'last'`;
+  since `'start'`, `'stop'` and `'finish'` transforms do never receive data
+  events, using `'null'` makes no sense there.
+
+Call signatures:
+
+* `$ 'first',         ( data, send ) -> ...`
+* `$ 'first', 'null', ( data, send ) -> ...`
+* `$ 'last',          ( data, send ) -> ...`
+* `$ 'last',  'null', ( data, send ) -> ...`
+* `$ 'start',         (       send ) -> ...`
+* `$ 'stop',          (       send ) -> ...`
+* `$ 'finish',                       -> ...`
+
+These methods are great to sneak in additional data right in front or right behind the first or last events.
+The `null` tag signals that whatever you have to add to the stream should be there in any event; as an
+example, imagine you want to build a JSON serialization of a list of items. In that case, you'd sneak in a
+left square bracket `[` *before* the first and a right square bracket `]` *after* the last list element, and
+in case no elements are passed through the stream at all, you still want the serialization to contain both
+brackets to obtain `[]`, so clearly you'd go with the `'null'` tag in this case.
+
+
+
+### @$ 'finish', @on_finish = ( stream, handler ) ->
+
+The recommended way to detect write completion in a piped stream is to tack a `.pipe $ 'finish', handler`
+transform unto the end of your pipeline:
+
+```coffee
+f = ( handler ) ->
+  ...
+  input
+    .pipe $do_this()
+    .pipe $do_that()
+    .pipe output
+    .pipe $ 'finish', handler
+```
+
+Alternatively, if you have an explicit ouput stream (say, `output`) in your
+pipeline, you can also call `D.on_finish output, handler`. Terminating stream
+processing from handlers for other events (e.g. `'end'`) and/or of other parts
+of the pipeline may lead to hard-to-find bugs. Observe that `on_finish` and
+`$ 'finish'` call `handler` only upon the following turn of the JavaScript event
+loop.
+
+**Note** You should **not** attach anything in the pipeline after a
+`$ 'finish'` transform, since the behavior of such a transform is not well
+defined. When the `finish` event is fired, then all the stream components have
+already packed their bags and are ready to return home. The very moment that
+`handler` is called, the show is over, and the last batch of events may or may
+not make it to any given transform below `$ 'finish'`.
+
 ## How to Send Null Without Ending the Stream
 
 Had NodeJS streams be conceived at a point in time where JavaScript had already had
@@ -1195,62 +1273,7 @@ turned into a single string by joining them with the `outer_joiner`. The `outer_
 newline, the `inner_joiner` to a comma and a space.
 
 ## @$lockstep
-## @$on_end
 
-**DEPRECATED**
-
-## @$on_first, @$on_last, @$on_start, @$on_stop
-### @$on_first = ( tags..., method ) ->
-### @$on_last = ( tags..., method ) ->
-
-Call
-
-* `@$on_first         ( data, send ) -> ...`
-* `@$on_first 'null', ( data, send ) -> ...`
-* `@$on_last          ( data, send ) -> ...`
-* `@$on_last  'null', ( data, send ) -> ...`
-
-to obtain a stream transform that is only called up to one time with eiter the first or the last data event
-in the stream, or—if you placed your `'null'` opt-in as first argument—with `null` for `data` in case the
-stream should finish with no events at all.
-
-These methods are great to sneak in additional data right in front or right behind the first or last events.
-The `null` tag signals that whatever you have to add to the stream should be there in any event; as an
-example, imagine you want to build a JSON serialization of a list of items. In that case, you'd sneak in a
-left square bracket `[` *before* the first and a right square bracket `]` *after* the last list element, and
-in case no elements are passed through the stream at all, you still want the serialization to contain both
-brackets to obtain `[]`, so clearly you'd go with the `'null'` tag in this case.
-
-
-
-## @$ 'finish', @on_finish = ( stream, handler ) ->
-
-The recommended way to detect write completion in a piped stream is to tack a `.pipe $ 'finish', handler`
-transform unto the end of your pipeline:
-
-```coffee
-f = ( handler ) ->
-  ...
-  input
-    .pipe $do_this()
-    .pipe $do_that()
-    .pipe output
-    .pipe $ 'finish', handler
-```
-
-Alternatively, if you have an explicit ouput stream (say, `output`) in your
-pipeline, you can also call `D.on_finish output, handler`. Terminating stream
-processing from handlers for other events (e.g. `'end'`) and/or of other parts
-of the pipeline may lead to hard-to-find bugs. Observe that `on_finish` and
-`$ 'finish'` call `handler` only upon the following turn of the JavaScript event
-loop.
-
-**Note** You should **not** attach anything in the pipeline after a
-`$ 'finish'` transform, since the behavior of such a transform is not well
-defined. When the `finish` event is fired, then all the stream components have
-already packed their bags and are ready to return home. The very moment that
-`handler` is called, the show is over, and the last batch of events may or may
-not make it to any given transform below `$ 'finish'`.
 
 
 ## @$parse_csv
