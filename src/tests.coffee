@@ -45,7 +45,7 @@ delay = ( name, f ) =>
   if arguments.length is 1
     f     = name
     name  = null
-  dt = CND.random_integer 10, 200
+  dt = CND.random_integer 10, 20
   # dt = 1
   whisper "delay for #{rpr name}: #{dt}ms" if name?
   setTimeout f, dt
@@ -506,28 +506,69 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) _new_stream_from_pipeline (4)" ] = ( T, done ) ->
+@[ "(v4) _new_stream_from_pipeline (4a)" ] = ( T, done ) ->
   probes      = [ 10 .. 20 ]
-  matchers    = [20,22,24,26,28,30,32,34,36,38,40]
+  matchers    = [ 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44 ]
+  results     = []
+  input       = D.new_stream()
+  input
+    .pipe $ ( n, send ) => send n + 2
+    .pipe $ ( n, send ) => send n * 2
+    .pipe D.$show()
+    .pipe $ 'null', ( data ) =>
+      if data? then results.push data
+      else T.eq results, matchers
+    .pipe D.$on_finish done
+  D.send input, n for n in probes
+  D.end input
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_pipeline (4b)" ] = ( T, done ) ->
+  probes      = [ 10 .. 20 ]
+  matchers    = [ 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44 ]
+  results     = []
+  input       = D.new_stream()
+  pipeline    = [
+    ( $ ( n, send ) => send n + 2 )
+    ( $ ( n, send ) => send n * 2 )
+    D.$show()
+    ]
+  confluence  = D.new_stream { pipeline, }
+  input
+    .pipe confluence
+    .pipe $ 'null', ( data ) =>
+      if data? then results.push data
+      else T.eq results, matchers
+    .pipe D.$on_finish done
+  D.send input, n for n in probes
+  D.end input
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) _new_stream_from_pipeline (4c)" ] = ( T, done ) ->
+  probes      = [ 10 .. 20 ]
+  matchers    = [ 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44 ]
   results     = []
   pipeline    = [
-    ( $ ( data, send ) => send n + 2 )
-    ( $ ( data, send ) => send n * 2 )
+    ( $ ( n, send ) => send n + 2 )
+    ( $ ( n, send ) => send n * 2 )
     ]
   confluence  = D.new_stream { pipeline, }
   confluence
     .pipe D.$show()
-    .pipe $ ( data, send, end ) =>
-      if data?
-        send data
-        results.push data
-      if end?
-        T.eq results, matchers
-        end()
-        done()
-  for n in probes
-    confluence.write n
-  confluence.end()
+    .pipe $ 'null', ( data ) =>
+      if data? then results.push data
+      else T.eq results, matchers
+    .pipe D.$on_finish done
+  D.send confluence, n for n in probes
+  D.end confluence
+  # input = D.new_stream()
+  # input.pipe confluence
+  # D.send input, n for n in probes
+  # D.end input
   #.........................................................................................................
   return null
 
@@ -552,21 +593,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         end()
         done()
   return null
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) _new_stream_from_text doesn't work synchronously" ] = ( T, done ) ->
-  ### TAINT behavior changed now that we're using binary-split in place of split2 ###
-  collector = []
-  input     = D.new_stream()
-  input
-    .pipe D.$split()
-    .pipe $ ( line, send ) =>
-      send line
-      collector.push line
-  input.write "first line\nsecond line"
-  input.end()
-  T.eq collector, [ "first line", ]
-  done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) _new_stream_from_text (2)" ] = ( T, done ) ->
@@ -845,7 +871,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $calculate()
     .pipe D.$show()
     .pipe D.$collect()
-    .pipe $ ( data ) -> T.eq data, [ 4, 5, 6, 14, 15, 16, 24, 25, 26, ] if data?
+    .pipe $ ( data ) -> T.eq data, [ 4, 5, 6, 14, 15, 16, 24, 25, 26, ]
     .pipe D.$on_finish done
   #.........................................................................................................
   D.send input, 5
@@ -872,6 +898,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     last_n        = null
     current_group = null
     return $async ( n, send, end ) =>
+      debug rpr n
       delay "$group", =>
         if n?
           if last_n? and ( Math.abs n - last_n ) is 1
@@ -894,7 +921,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe $group()
     .pipe D.$show()
     .pipe D.$collect()
-    .pipe $ ( data ) -> T.eq data, [ [ 4, 5, 6, ], [ 14, 15, 16, ], [ 24, 25, 26, ], ] if data?
+    .pipe $ ( data ) -> T.eq data, [ [ 4, 5, 6, ], [ 14, 15, 16, ], [ 24, 25, 26, ], ]
     .pipe D.$on_finish done
   #.........................................................................................................
   D.send input, 5
@@ -912,7 +939,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$sort()
     .pipe D.$show()
     .pipe D.$collect()
-    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
+    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ]
     .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
@@ -924,7 +951,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$sort()
     .pipe D.$show()
     .pipe D.$collect collect: yes
-    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ] if data?
+    .pipe $ ( data ) -> T.eq data, [ 11, 23, 33, 55, 82, 98, 99, ]
     .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
@@ -940,7 +967,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$sort { sorter, }
     .pipe D.$show()
     .pipe D.$collect()
-    .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ] if data?
+    .pipe $ ( data ) -> T.eq data, [ 99, 98, 82, 55, 33, 23, 11, ]
     .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, 23, 11, 98, 33, ]
   D.end input
@@ -952,7 +979,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$sort { direction: 'descending', }
     .pipe D.$collect()
     .pipe D.$show()
-    .pipe $ ( data ) -> T.eq data, [ +Infinity, 99, 98, 82, 55, 33, 23, 11, -Infinity, ] if data?
+    .pipe $ ( data ) -> T.eq data, [ +Infinity, 99, 98, 82, 55, 33, 23, 11, -Infinity, ]
     .pipe D.$on_finish done
   D.send input, n for n in [ 55, 82, 99, +Infinity, -Infinity, 23, 11, 98, 33, ]
   D.end input
@@ -2067,21 +2094,27 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   f = ( path, handler ) ->
     source  = D.new_stream()
     output  = D.new_stream 'write', { path, }
+    info '3285', output
     source
       .pipe $ ( data, send ) => if data is Symbol.for 'null' then send 'null' else send JSON.stringify data
       .pipe $ ( data, send ) => send data; send ','
       .pipe D.$on_start ( send ) => send '['
-      .pipe D.$on_stop  ( send ) => send ']\n'
+      .pipe D.$on_stop  ( send ) => send ']'
+      # .pipe D.$show()
+      .pipe D.$collect()
+      .pipe $ ( data, send ) => send data.join ''
+      .pipe $ ( data ) =>
+        T.eq data, '[42,"a string",null,false,]'
       .pipe output
       .pipe D.$on_finish handler
     #.........................................................................................................
-    data_items = [ 42, 'a string', null, false, ]
-    for data in data_items
+    probes = [ 42, 'a string', null, false, ]
+    for data in probes
       D.send source, if data is null then Symbol.for 'null' else data
     D.end source
   #.........................................................................................................
-  # f ( resolve_temp_path '$as_json_list (2a)' ), ( error ) =>
-  f '/tmp/foo.json', ( error ) =>
+  # f '/tmp/foo.json', ( error ) =>
+  f ( resolve_temp_path '$as_json_list (2c)' ), ( error ) =>
     throw error if error?
     done()
   #.........................................................................................................
@@ -2602,16 +2635,53 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   input     = D.new_stream()
   input
     # .pipe D.$on_first ( data ) => help data
-    # .pipe D.$on_first ( data, send ) => null
-    # .pipe D.$on_first ( data, send ) => send "{#{data}}"
+    .pipe D.$on_first ( data, send ) => null
+    .pipe D.$on_first ( data, send ) => send "{#{data}}"
+    .pipe D.$on_last  ( data, send ) => null
+    .pipe D.$on_last  ( data, send ) => send "{#{data}}"
+    .pipe D.$on_start (       send ) => send "假"
+    .pipe D.$on_stop  (       send ) => send "名"
     # .pipe $ ( data ) => urge JSON.stringify data if data?
     #.......................................................................................................
     .pipe $ 'null', ( data, send ) =>
       if data?
         collector.push data
       else
-        T.eq collector, ["{ろ}","は","に","ほ","へ","と"]
+        T.eq collector, ["假","{ろ}","は","に","ほ","{へ}","名",]
         has_ended = yes
+        # CND.dir input
+        send null
+      return null
+    #.......................................................................................................
+    .pipe D.$on_finish =>
+      T.eq has_ended, yes
+      done()
+  #.........................................................................................................
+  D.send input, glyph for glyph in Array.from "いろはにほへと"
+  D.end  input
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)" ] = ( T, done ) ->
+  collector = []
+  has_ended = no
+  input     = D.new_stream()
+  input
+    # .pipe D.$on_first ( data ) => help data
+    .pipe D.$on_first 'null', ( data, send ) => null
+    .pipe D.$on_first 'null', ( data, send ) => send "{#{data}}"
+    .pipe D.$on_last  'null', ( data, send ) => null
+    .pipe D.$on_last  'null', ( data, send ) => send "{#{data}}"
+    # .pipe $ ( data ) => urge JSON.stringify data if data?
+    #.......................................................................................................
+    .pipe $ 'null', ( data, send ) =>
+      if data?
+        collector.push data
+      else
+        T.eq collector, ["{ろ}","は","に","ほ","{へ}"]
+        has_ended = yes
+        # CND.dir input
+        send null
       return null
     #.......................................................................................................
     .pipe D.$on_finish =>
@@ -2702,89 +2772,95 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 ############################################################################################################
 unless module.parent?
+  ### ----------------===#O#===--------------------###
+  ### Tests Known Not to Work for Unknown Reasons: ###
+  "(v4) stream / transform construction with through2 (2)"
+  "(v4) fail to read when thru stream comes before read stream"
+  "(v4) _new_stream_from_pipeline (4c)"
+  "(v4) $async with method arity 3 (2)"
+  ### ----------------===#O#===--------------------###
+
   include = [
-    # # "(v4) stream / transform construction with through2 (2)"
-    # # "(v4) fail to read when thru stream comes before read stream"
-    # # "(v4) _new_stream_from_text doesn't work synchronously"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 3 (1)"
-    # "(v4) $async with method arity 3 (2)"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) file stream events (1)"
-    # "(v4) transforms below output receive data events (1)"
-    # "(v4) transforms below output receive data events (2)"
-    # "(v4) _new_stream_from_url"
-    # "(v4) new_stream README example (1)"
-    # "(v4) new_stream README example (2)"
-    # "(v4) new_stream README example (3)"
-    # "(v4) _new_stream_from_path with encodings"
-    # "(v4) _new_stream_from_path (raw)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_path (1)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) read TSV file (1)"
-    # "(v4) TSV whitespace trimming"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $intersperse (1)"
-    # "(v4) $intersperse (2)"
-    # "(v4) $intersperse (3)"
-    # "(v4) $intersperse (3a)"
-    # "(v4) $intersperse (4)"
-    # "(v4) $join (1)"
-    # "(v4) $join (2)"
-    # "(v4) $join (3)"
-    # "(v4) $as_json_list (1)"
-    # "(v4) $as_json_list (2)"
-    # "(v4) $as_json_list (2a)"
-    # "(v4) $as_json_list (2b)"
-    # "(v4) $as_json_list (2c)"
-    # "(v4) $as_json_list (3)"
-    # "(v4) symbols as data events (1)"
-    # "(v4) symbols as data events (2)"
-    # "(v4) $as_tsv"
-    # "(v4) $batch (1)"
-    # "(v4) $batch (2)"
-    # "(v4) all remit methods have opt-in end detection (1)"
-    # "(v4) all remit methods have opt-in end detection (2)"
-    # "(v4) all remit methods have opt-in end detection (3)"
-    # "(v4) all remit methods have opt-in end detection (4)"
-    # "(v4) README demo (1)"
-    # "(v4) README demo (2)"
-    # "(v4) README demo (3)"
-    # "(v4) $async only allows 3 arguments in transformation (1)"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $sort 5"
-    # "(v4) $sort 6"
-    # "(empty-string) can send empty strings ($split) (1)"
-    # "(empty-string) can send empty strings ($split) (2)"
-    # "(empty-string) can send empty strings (w/out pipeline)"
-    # "(empty-string) can send empty strings (w/ pipeline)"
-    # "(empty-string) duplexer2 works with empty strings"
-    # "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4a)"
+    "(v4) _new_stream_from_pipeline (4b)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 3 (1)"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) file stream events (1)"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) _new_stream_from_url"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) read TSV file (1)"
+    "(v4) TSV whitespace trimming"
+    "(v4) $split_tsv (1)"
+    "(v4) $intersperse (1)"
+    "(v4) $intersperse (2)"
+    "(v4) $intersperse (3)"
+    "(v4) $intersperse (3a)"
+    "(v4) $intersperse (4)"
+    "(v4) $join (1)"
+    "(v4) $join (2)"
+    "(v4) $join (3)"
+    "(v4) $as_json_list (1)"
+    "(v4) $as_json_list (2)"
+    "(v4) $as_json_list (2a)"
+    "(v4) $as_json_list (2b)"
+    "(v4) $as_json_list (2c)"
+    "(v4) $as_json_list (3)"
+    "(v4) symbols as data events (1)"
+    "(v4) symbols as data events (2)"
+    "(v4) $as_tsv"
+    "(v4) $batch (1)"
+    "(v4) $batch (2)"
+    "(v4) all remit methods have opt-in end detection (1)"
+    "(v4) all remit methods have opt-in end detection (2)"
+    "(v4) all remit methods have opt-in end detection (3)"
+    "(v4) all remit methods have opt-in end detection (4)"
+    "(v4) README demo (1)"
+    "(v4) README demo (2)"
+    "(v4) README demo (3)"
+    "(v4) $async only allows 3 arguments in transformation (1)"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $sort 5"
+    "(v4) $sort 6"
+    "(empty-string) can send empty strings ($split) (1)"
+    "(empty-string) can send empty strings ($split) (2)"
+    "(empty-string) can send empty strings (w/out pipeline)"
+    "(empty-string) can send empty strings (w/ pipeline)"
+    "(empty-string) duplexer2 works with empty strings"
+    "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
     # # "(v4) stream sigils"
-    # "$tabulate"
-    # "(v4) $on_first, $on_last not called in empty stream (1)"
-    # "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
+    "$tabulate"
+    "(v4) $on_first, $on_last not called in empty stream (1)"
+    "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
     "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
+    "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
     ]
   @_prune()
   @_main()

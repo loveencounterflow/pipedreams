@@ -96,8 +96,8 @@ MSP                       = require 'mississippi'
   _sub        = CND.crimson
   _extra      = CND.orange
   sub_inspect = stream.inspect
-  show_subs   = no
-  show_names  = no
+  show_subs   = yes
+  show_names  = yes
   parts       = []
   parts.push _brackets start
   parts.push ' '
@@ -331,12 +331,17 @@ MSP                       = require 'mississippi'
   #.........................................................................................................
   handler = ( error ) => R.emit 'error', error if error?
   #.........................................................................................................
-  pipeline  = ( as_bridged transform for transform in pipeline )
-  receiver  = pipeline[ 0 ]
-  sender    = pipeline[ pipeline.length - 1 ]
-  @_new_stream$pump pipeline, handler
-  R         = @duplex receiver, sender
-  inner_rpr = ( rpr p for p in pipeline ).join ' '
+  pipeline    = ( as_bridged transform for transform in pipeline )
+  receiver    = pipeline[ 0 ]
+  sender      = pipeline[ pipeline.length - 1 ]
+  confluence  = @_new_stream$pump pipeline, handler
+  # receiver  = @new_stream()
+  # sender    = @new_stream()
+  # receiver
+  #   .pipe confluence
+  #   .pipe sender
+  R           = @duplex receiver, sender
+  inner_rpr   = ( rpr p for p in pipeline ).join ' '
   return @_rprx "[", null, "pipeline", inner_rpr, "]", R
 
 #-----------------------------------------------------------------------------------------------------------
@@ -976,8 +981,9 @@ MSP                       = require 'mississippi'
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_first = ( tags..., method ) ->
-  throw new Error "allowed tag is 'null', got #{rpr tags}" unless CND.is_subset tags, [ 'null', ]
   is_first = yes
+  unless CND.is_subset tags, [ 'null', ]
+    throw new Error "allowed tag is 'null', got #{rpr tags}"
   unless ( arity = method.length ) is 2
     throw new Error "expected method with 2 arguments, got one with #{arity}"
   return @$ 'null', ( data, send ) ->
@@ -988,23 +994,29 @@ MSP                       = require 'mississippi'
       else
         send data
     else
-      if 'null' in tags then method data, send
-      else send null
+      if is_first and 'null' in tags then method data, send
+      send null
+    return null
 
 #-----------------------------------------------------------------------------------------------------------
 @$on_last = ( tags..., method ) ->
-  throw new Error "allowed tag is 'null', got #{rpr tags}" unless CND.is_subset tags, [ 'null', ]
+  unless CND.is_subset tags, [ 'null', ]
+    throw new Error "allowed tag is 'null', got #{rpr tags}"
   unless ( arity = method.length ) is 2
     throw new Error "expected method with 2 argument, got one with #{arity}"
-  cache = null
+  cache     = null
+  is_first  = yes
   return @$ 'null', ( data, send ) ->
     if data?
+      is_first = no
       send cache if cache?
       cache = data
     else
-      if cache? or 'null' in tags then method cache, send
-      else send null
+      if cache?                            then method cache, send
+      else if is_first and 'null' in tags  then method null,  send
+      send null
       cache = null
+    return null
 
 #-----------------------------------------------------------------------------------------------------------
 @on_finish = ( stream, handler ) ->
@@ -1174,19 +1186,16 @@ pluck = ( x, key ) ->
   throw new Error "expected a single argument, got #{arity}"        unless ( arity = arguments.length ) is 1
   throw new Error "expected a stream, got a #{CND.type_of stream}"  unless @isa_stream stream
   throw new Error "expected a writable stream"                      if not @isa_writable_stream stream
-  # output      = @_rpr "output",     "output",     null, @new_stream()
-  output      = @new_stream()
-  throughput  = @$ ( data, send, end ) =>
-    if data?
-      send data
-      output.write data
-    if end?
-      end()
-      output.end()
+  sender      = @new_stream()
+  receiver    = @$ ( data, send ) =>
+    send data
+    @send sender, data
+  receiver.on 'finish', => sender.emit 'finish'
+  receiver.on 'end',    => sender.emit 'end'
   handler = ( error ) => R.emit 'error', error if error?
-  bridge  = @_new_stream$pump [ throughput, stream, ], handler
-  R       = @duplex bridge, output
-  extra = ( rpr bridge ) + ' ↝ ' + ( rpr output )
+  bridge  = @_new_stream$pump [ receiver, stream, ], handler
+  R       = @duplex receiver, sender
+  extra = ( rpr bridge ) + ' ↝ ' + ( rpr sender )
   return @_rpr "↷", "bridge", extra, R
 
 #-----------------------------------------------------------------------------------------------------------
