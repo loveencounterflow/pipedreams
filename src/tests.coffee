@@ -2580,6 +2580,7 @@ unless module.parent?
     # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
     # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
     "(v4) $benchmark (1)"
+    "(v4) $benchmark (2)"
     ]
   @_prune()
   @_main()
