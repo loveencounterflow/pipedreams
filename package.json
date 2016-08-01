@@ -30,13 +30,13 @@
   },
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
-    "async": "^2.0.0",
+    "async": "^2.0.1",
     "binary-split": "^1.0.2",
     "cnd": "^4.1.1",
     "coffeenode-suspend": "^0.1.11",
     "duplexer2": "^0.1.4",
     "pump": "^1.0.1",
-    "timsort": "^0.2.1",
+    "timsort": "^0.3.0",
     "tmp": "0.0.28",
     "to-width": "^1.0.3"
   },
