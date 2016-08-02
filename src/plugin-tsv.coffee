@@ -49,9 +49,9 @@ urge                      = CND.get_logger 'urge',      badge
   if settings?
     throw new Error "setting 'first' deprecated" if settings[ 'first' ]?
     throw new Error "setting 'trim' deprecated" if settings[ 'trim' ]?
-    throw new Error "setting 'splitter' not yet supported" if settings[ 'splitter' ]?
-  # splitter        =       settings?[ 'splitter'   ] ? '\t'
-  splitter          =       '\t'
+    # throw new Error "setting 'splitter' not yet supported" if settings[ 'splitter' ]?
+  splitter        =       settings?[ 'splitter'   ] ? '\t'
+  # splitter          =       '\t'
   skip_empty_lines  = not ( settings?[ 'empty'      ] ? no )
   use_names         =       settings?[ 'names'      ] ? null
   comment_pattern   =       settings?[ 'comments'   ] ? '#'
@@ -124,11 +124,10 @@ urge                      = CND.get_logger 'urge',      badge
         R[ names[ idx ] ? "field-#{idx}" ] = field
       return R
   #.........................................................................................................
-  # unless ( type_of_splitter = CND.type_of splitter ) in [ 'text', 'regex', 'function', ]
-  #   throw new Error "### MEH 3 ###"
-  $split_line = =>
-    return @$ ( line, send ) =>
-      send line.split splitter
+  switch type_of_splitter = CND.type_of splitter
+    when 'text', 'regex' then $split_line = => @$ ( line, send ) => send line.split splitter
+    when 'function'      then $split_line = => @$ ( line, send ) => send splitter line
+    else throw new Error "expected a text, a RegEx or a function for splitter, got a #{type_of_splitter}"
   #.........................................................................................................
   pipeline = []
   pipeline.push @$split()

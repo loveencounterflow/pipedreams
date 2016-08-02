@@ -2403,7 +2403,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $tabulate" ] = ( T, done ) ->
-  { step }            = require 'coffeenode-suspend'
+  { step }  = require 'coffeenode-suspend'
   #.........................................................................................................
   collector = []
   matchers  = []
@@ -2450,12 +2450,31 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     yield show { box: 'round', alignment: 'right', width: 50, widths: [ 25, 12, ]                                         }, no,  null, resume
     yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'left', ]    }, yes, null, resume
     yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'center', ]  }, yes, null, resume
-    yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'center', ], titles: [ 'Date', 'Size', 'Filename', ] }, yes, null, resume
+    yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'center', ], headings: [ 'Date', 'Size', 'Filename', ] }, yes, null, resume
     # yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
     # yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
     # T.eq collector, matchers
     done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $split_tsv with configurable splitter" ] = ( T, done ) ->
+  count = 0
+  input = D.new_stream text: """
+    u-arab                                  Arabic
+    u-arrow                                 Arrows
+    u-block                                 Block Elements
+    u-bopo                                  Bopomofo
+    """
+  input
+    .pipe D.$split_tsv splitter: /[\x20\t]{2,}/g
+    .pipe D.$collect()
+    .pipe $ ( result ) =>
+      count += 1
+      T.eq result, [ [ 'u-arab', 'Arabic' ], [ 'u-arrow', 'Arrows' ], [ 'u-block', 'Block Elements' ], [ 'u-bopo', 'Bopomofo' ], ]
+    .pipe $ 'finish', =>
+      T.eq count, 1
+      done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $benchmark (1)" ] = ( T, done ) ->
@@ -2499,6 +2518,9 @@ unless module.parent?
   ### ----------------===#O#===--------------------###
 
   include = [
+    # "(v4) stream sigils"
+    # "(v4) $benchmark (1)"
+    # "(v4) $benchmark (2)"
     "(v4) _new_stream_from_path (2)"
     "(v4) _new_stream_from_pipeline (1a)"
     "(v4) _new_stream_from_pipeline (3)"
@@ -2573,14 +2595,12 @@ unless module.parent?
     "(empty-string) can send empty strings (w/ pipeline)"
     "(empty-string) duplexer2 works with empty strings"
     "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
-    # # "(v4) stream sigils"
     "(v4) $tabulate"
     "(v4) $on_first, $on_last not called in empty stream (1)"
     "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
     "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
     "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
-    "(v4) $benchmark (1)"
-    "(v4) $benchmark (2)"
+    "(v4) $split_tsv with configurable splitter"
     ]
   @_prune()
   @_main()

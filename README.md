@@ -51,6 +51,8 @@ Install as `npm install --save pipedreams`.
   - [@$as_text = ( stringify ) ->](#as_text---stringify---)
   - [@$async](#async)
   - [@$batch](#batch)
+  - [@$benchmark = ( title = null ) ->](#benchmark---title--null---)
+  - [@$benchmark.summarize = =>](#benchmarksummarize--)
   - [@$bridge = ( stream ) ->](#bridge---stream---)
   - [@$collect](#collect)
   - [@$count](#count)
