@@ -1107,9 +1107,9 @@ insp                      = ( require 'util' ).inspect
   R                             = @new_stream()
   #.........................................................................................................
   pipeline = []
-  pipeline.push @$ 'start',  => t0 = +new Date()
-  pipeline.push @$ ( data ) => me.n += 1
-  pipeline.push @$ 'finish', =>
+  pipeline.push @$ 'start',   => t0 = +new Date()
+  pipeline.push @$ ( data )   => me.n += 1
+  pipeline.push @$ 'finish',  =>
     me.dt  = ( new Date() - t0 ) / 1000
     me.rps = me.n / me.dt
     @$benchmark._report me
