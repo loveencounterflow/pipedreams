@@ -2459,32 +2459,49 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $switch (study)" ] = ( T, done ) ->
-  ### Multiple streams can output to a single one ###
-  stream_2  = $ ( data, send ) ->
-    urge 'stream_2', data
-    if data %% 2 is 0
-      debug 'stream_2'
-      send data
-  # stream_3  = D.new_stream()
-  # stream_5  = D.new_stream()
+  even_multiplier_and_adder = D.new_stream pipeline: [
+    $ ( data, send ) -> send data if data % 2 is 0
+    $ ( data, send ) -> send 2 * data
+    $ ( data, send ) -> send data + 2
+    ]
   #.........................................................................................................
-  output    = D.new_stream()
+  output  = D.new_stream()
   output
     .pipe D.$show()
     .pipe $ 'finish', done
   #.........................................................................................................
-  stream_2_A = stream_2.pipe output
-  # stream_3.pipe output
-  # stream_5.pipe output
+  input   = D.new_stream()
+  input
+    # .pipe even_multiplier_and_adder
+    .pipe do ->
+      _send = null
+      _end  = null
+      # even_multiplier_and_adder.on 'data', ( data ) ->
+      #   debug 'even_multiplier_and_adder', data
+      #   _send data
+      foo = D.new_stream()
+      # bar = D.new_stream()
+      foo
+        .pipe even_multiplier_and_adder
+        .pipe $ ( data, send, end ) ->
+          if data?
+            _send data
+          if end?
+            _end()
+            end()
+      return $ ( data, send, end ) ->
+        debug 'sender', data
+        _send = send
+        if data?
+          D.send foo, data
+        if end?
+          _end = end
+          D.end foo
+    .pipe output
   #.........................................................................................................
-  for n in [ 1 .. 5 ]
-    D.send stream_2, n
-    # D.send stream_3, n
-    # D.send stream_5, n
-  #.........................................................................................................
-  D.end stream_2
-  # D.end stream_3
-  # D.end stream_5
+  for n in [ 0 .. 5 ]
+    D.send input, n
+  D.end input
   #.........................................................................................................
   return null
 
