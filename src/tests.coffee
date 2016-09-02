@@ -2460,9 +2460,13 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $switch (study)" ] = ( T, done ) ->
   even_multiplier_and_adder = D.new_stream pipeline: [
-    $ ( data, send ) -> send data if data % 2 is 0
+    # $ ( data, send ) -> send data if data % 2 is 0
     $ ( data, send ) -> send 2 * data
     $ ( data, send ) -> send data + 2
+    ]
+  odd_divider = D.new_stream pipeline: [
+    # $ ( data, send ) -> send data if data % 2 isnt 0
+    $ ( data, send ) -> send data / 2
     ]
   #.........................................................................................................
   output  = D.new_stream()
@@ -2470,38 +2474,39 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$show()
     .pipe $ 'finish', done
   #.........................................................................................................
-  input   = D.new_stream()
-  input
-    # .pipe even_multiplier_and_adder
-    .pipe do ->
-      _send = null
-      _end  = null
-      # even_multiplier_and_adder.on 'data', ( data ) ->
-      #   debug 'even_multiplier_and_adder', data
-      #   _send data
-      foo = D.new_stream()
-      # bar = D.new_stream()
-      foo
-        .pipe even_multiplier_and_adder
-        .pipe $ ( data, send, end ) ->
+  make_it_so = ( ONE_OF_THE_STREAMS ) ->
+    input   = D.new_stream()
+    input
+      .pipe do ->
+        _send = null
+        _end  = null
+        foo = D.new_stream()
+        foo
+          .pipe ONE_OF_THE_STREAMS
+          .pipe $ ( data, send, end ) ->
+            if data?
+              _send data
+            if end?
+              _end()
+              end()
+        return $ ( data, send, end ) ->
+          _send = send
           if data?
-            _send data
+            D.send foo, data
           if end?
-            _end()
-            end()
-      return $ ( data, send, end ) ->
-        debug 'sender', data
-        _send = send
-        if data?
-          D.send foo, data
-        if end?
-          _end = end
-          D.end foo
-    .pipe output
+            _end = end
+            D.end foo
+      .pipe output
+    return input
   #.........................................................................................................
+  sub_inputs = []
+  sub_inputs.push make_it_so even_multiplier_and_adder
+  sub_inputs.push make_it_so odd_divider
   for n in [ 0 .. 5 ]
-    D.send input, n
-  D.end input
+    for sub_input in sub_inputs
+      D.send sub_input, n
+  for sub_input in sub_inputs
+    D.end sub_input
   #.........................................................................................................
   return null
 
