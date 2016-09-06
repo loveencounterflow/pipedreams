@@ -1386,7 +1386,7 @@ The ususal alternative to splitting the processing into tracks is to maintain a 
 transforms. This has two disadvantages: for one thing, there will be a lot of code duplication because
 almost all transforms will need some kind of almost-identical `if` statement near the top to decide which
 events to deal with. On the other hand, transforms loose part of their 'innocence': a transform that, at its
-heart, only wants to deal with some text snippet has, all of a sudden, been requisited to dabble in event
+heart, only wants to deal with some text snippet has, all of a sudden, been requisitioned to dabble in event
 sieving as well.
 
 

@@ -14,6 +14,10 @@ help                      = CND.get_logger 'help',      badge
 urge                      = CND.get_logger 'urge',      badge
 echo                      = CND.echo.bind CND
 insp                      = ( require 'util' ).inspect
+#...........................................................................................................
+@σ_null                   = Symbol.for 'null'
+@σ_pass                   = Symbol.for 'pass'
+@σ_drop                   = Symbol.for 'drop'
 
 
 #===========================================================================================================
@@ -1284,21 +1288,26 @@ insp                      = ( require 'util' ).inspect
         key       = null
         value     = null
         #...................................................................................................
+        unless selection?
+          throw new Error "expected value for selection, got #{rpr selection}"
+        #...................................................................................................
         if CND.isa_list selection
           unless ( arity = selection.length ) is 2
             throw new Error "expected list with 2 elements, got one with #{arity}"
           [ key, value, ] = selection
         #...................................................................................................
+        else if selection is
+          key = selection
+        #...................................................................................................
         else
           key = selection
         #...................................................................................................
-        if key?
-          value  ?= Symbol.for 'null'
-          keys    = if CND.isa_list key then key else [ key, ]
-          for key in keys
-            target_stream = my_streams[ key ]
-            throw new Error "not a valid key: #{rpr key}" unless target_stream?
-            @send target_stream, value
+        value  ?= Symbol.for 'null'
+        keys    = if CND.isa_list key then key else [ key, ]
+        for key in keys
+          target_stream = my_streams[ key ]
+          throw new Error "not a valid key: #{rpr key}" unless target_stream?
+          @send target_stream, value
       #.....................................................................................................
       if end?
         ( Object.keys tracks ).forEach ( key ) => @end my_streams[ key ]
