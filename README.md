@@ -1336,7 +1336,25 @@ will always be a subset of a sample with a bigger `p` and vice versa.
 
 ## @$select = ( selector, tracks ) ->
 
+Sometimes it is convenient to split up stream processing depending on the 'kind' of data item at hand. For
+example, imagine you do a typesetting job where each bit coming down the line is either a typesetting
+command or else a bit of text; imagine you're doing multilingual typesetting in English and Arabic or
+Chinese and it's easy to see that the processing pipeling could at some time be split up like this:
 
+```
+╭
+┬
+╮
+├
+┼
+┤
+╰
+┴
+╯
+│
+─
+
+```
 
 ```coffee
 #.........................................................................................................
