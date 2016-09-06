@@ -2435,7 +2435,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
       .pipe D.$sample 1 / 2, seed: 1.1
       .pipe $cast()
       .pipe $colorize()
-      .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass_through()
+      .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass()
       .pipe D.$tabulate table_settings
       .pipe $ ( data ) => collector.push data
       .pipe $ ( row ) => echo row
@@ -2493,9 +2493,9 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     return null
   #.........................................................................................................
   selector = ( event ) ->
-    return Symbol.for 'drop' if event is 'drop this one'
-    return Symbol.for 'pass' if event is 'pass this one'
-    return 'SEP' if event is '---'
+    return D.$drop() if event is 'drop this one'
+    return 'PASS' if event is 'pass this one'
+    return 'SEP'  if event is '---'
     [ languages, number, ] = event
     if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
     else                       languages = ( language.toUpperCase() for language in languages.split ',' )
@@ -2506,6 +2506,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     FR:   say_it_in_french
     DE:   say_it_in_german
     SEP:  draw_a_separator
+    PASS: D.$pass()
   #.........................................................................................................
   probes = [
     [ 'fr', 1, ]
@@ -2530,6 +2531,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     "deux"
     "troix"
     "beaucoup"
+    "pass this one"
     "—————"
     "one"
     "un"
@@ -2596,12 +2598,20 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     send '—————'
     return null
   #.........................................................................................................
+  bridgehead  = D.$pass()
+  drop        = D.$drop()
+  #.........................................................................................................
+  select_drop_and_pass_events = ( event ) ->
+    return drop       if event is 'drop this one'
+    return bridgehead if event is 'dont process this one'
+    return Symbol.for 'pass'
+  #.........................................................................................................
   select_draw_line_events = ( event ) ->
-    return 'SEP' if event is '---'
-    return null
+    return Symbol.for 'pass' unless event is '---'
+    return 'SEP'
   #.........................................................................................................
   select_language_events = ( event ) ->
-    return null unless CND.isa_list event
+    return bridgehead unless CND.isa_list event
     [ languages, number, ] = event
     return [ [ 'EN', 'FR', 'DE', ], number, ] if  languages is '*'
     languages = ( language.toUpperCase() for language in languages.split ',' )
@@ -2620,9 +2630,11 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     [ 'fr', 2, ]
     [ 'fr', 3, ]
     [ 'fr', 4, ]
+    'dont process this one'
     '---'
     [ 'en,fr',  1, ]
     '---'
+    'drop this one'
     [ '*',  1, ]
     '---'
     [ 'en', 2, ]
@@ -2636,6 +2648,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     "deux"
     "troix"
     "beaucoup"
+    "pass this one"
     "—————"
     "one"
     "un"
@@ -2653,8 +2666,11 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   #.........................................................................................................
   my_input = D.new_stream()
   my_input
-    .pipe D.$select select_draw_line_events,  draw_line_track
-    .pipe D.$select select_language_events,   language_track
+    .pipe D.$select select_drop_and_pass_events
+    # .pipe D.$select select_draw_line_events,    draw_line_track
+    # .pipe $ ( data ) => whisper JSON.stringify data
+    .pipe D.$select select_language_events,     language_track
+    .pipe bridgehead
     .pipe $ ( data ) => urge JSON.stringify data
     .pipe D.$collect()
     # .pipe $ ( results ) =>

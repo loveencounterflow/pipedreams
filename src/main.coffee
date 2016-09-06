@@ -336,7 +336,7 @@ insp                      = ( require 'util' ).inspect
   #.........................................................................................................
   as_bridged = ( transform ) => if @isa_writeonly_stream transform then @$bridge transform else transform
   # as_bridged = ( transform ) => transform
-  return @$pass_through()         if pipeline.length is 0
+  return @$pass()                 if pipeline.length is 0
   return as_bridged pipeline[ 0 ] if pipeline.length is 1
   #.........................................................................................................
   handler = ( error ) => R.emit 'error', error if error?
@@ -426,7 +426,8 @@ insp                      = ( require 'util' ).inspect
 @_new_stream_from_transform._hints = [ 'async', ]
 
 #-----------------------------------------------------------------------------------------------------------
-@$pass_through = -> @_rpr "⦵", "pass-through", null, @_new_stream$through()
+@$pass  = -> @_rpr "⦵", "pass", null, @_new_stream$through()
+@$drop  = -> @_rpr "◯", "drop", null, @$ ( data, send ) => null
 
 
 #===========================================================================================================
@@ -752,8 +753,8 @@ insp                      = ( require 'util' ).inspect
 @$intersperse = ( joiners... ) ->
   ### Similar to `$join`, but inserts events between (and around) existing events. ###
   throw new Error "expected 0 to 3 joiners, got #{arity}" unless 0 <= ( arity = arguments.length ) <= 3
-  return @$pass_through() if arity is 0
-  return @$pass_through() if joiners[ 0 ] == ( joiners[ 1 ] ? null ) == ( joiners[ 2 ] ? null )
+  return @$pass() if arity is 0
+  return @$pass() if joiners[ 0 ] == ( joiners[ 1 ] ? null ) == ( joiners[ 2 ] ? null )
   #.........................................................................................................
   cache             = null
   call_joiner       = no
@@ -1268,16 +1269,21 @@ insp                      = ( require 'util' ).inspect
 #===========================================================================================================
 # SELECT
 #-----------------------------------------------------------------------------------------------------------
-@$select = ( selector, tracks ) ->
+@$select = ( selector, tracks = null ) ->
   receiver    = @new_stream()
   sender      = @new_stream()
+  drop        = @$drop()
+  pass        = @$pass()
+  pass.pipe sender
   my_streams  = {}
-  ( Object.keys tracks ).forEach ( key ) =>
-    stream            = tracks[ key ]
-    my_streams[ key ] = sub_input = @new_stream()
-    sub_input
-      .pipe stream
-      .pipe sender
+  #.........................................................................................................
+  if tracks?
+    ( Object.keys tracks ).forEach ( key ) =>
+      stream            = tracks[ key ]
+      my_streams[ key ] = sub_input = @new_stream()
+      sub_input
+        .pipe stream
+        .pipe sender
   #.........................................................................................................
   receiver
     .pipe @$ ( data, send, end ) =>
@@ -1290,27 +1296,41 @@ insp                      = ( require 'util' ).inspect
         #...................................................................................................
         unless selection?
           throw new Error "expected value for selection, got #{rpr selection}"
+        # if ( CND.type_of selection ) is 'symbol'
+        #   null
         #...................................................................................................
         if CND.isa_list selection
           unless ( arity = selection.length ) is 2
             throw new Error "expected list with 2 elements, got one with #{arity}"
           [ key, value, ] = selection
         #...................................................................................................
-        else if selection is
-          key = selection
-        #...................................................................................................
         else
           key = selection
         #...................................................................................................
-        value  ?= Symbol.for 'null'
+        unless key?
+          throw new Error "expected value for key, got #{rpr key}"
+        #...................................................................................................
+        if ( CND.type_of selection ) is 'symbol'
+          switch key
+            when @σ_pass then key = pass
+            when @σ_drop then key = drop
+            else throw new Error "expected symbol for 'pass' or 'drop', got #{rpr key}"
+        #...................................................................................................
+        value  ?= data
         keys    = if CND.isa_list key then key else [ key, ]
         for key in keys
-          target_stream = my_streams[ key ]
-          throw new Error "not a valid key: #{rpr key}" unless target_stream?
+          if @isa_stream key
+            target_stream = key
+          else
+            target_stream = my_streams[ key ]
+            throw new Error "not a valid key: #{rpr key}" unless target_stream?
           @send target_stream, value
       #.....................................................................................................
       if end?
-        ( Object.keys tracks ).forEach ( key ) => @end my_streams[ key ]
+        if tracks?
+          ( Object.keys tracks ).forEach ( key ) => @end my_streams[ key ]
+        @end drop
+        @end pass
         end()
   #.........................................................................................................
   # return @new_stream duplex: [ receiver, sender, ]
