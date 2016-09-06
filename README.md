@@ -1342,7 +1342,6 @@ command or else a bit of text; imagine you're doing multilingual typesetting in 
 Chinese and it's easy to see that the processing pipeling could at some time be split up like this:
 
 ```
-╭
 ┬
 ╮
 ├
@@ -1353,6 +1352,21 @@ Chinese and it's easy to see that the processing pipeling could at some time be 
 ╯
 │
 ─
+╭
+
+         main stream
+              │
+    ╭─────────┴─────────╮
+    │                 text
+    │           ╭───────┼────────╮
+    │           │       │        │
+commands     English  Arabic  Chinese
+    │           │       │        │
+    ╰─────────┬─┴───────┴────────╯
+              │
+         main stream
+
+
 
 ```
 
