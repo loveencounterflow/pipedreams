@@ -1377,6 +1377,10 @@ Chinese and it's easy to see that the processing pipeling could at some time be 
        │                               │
        │                        ┌──────┴──────┐
        │                        │ text events │
+       │                        └──────┬──────┘
+       │                               │
+       │                        ┌──────┴──────┐
+       │                        │   $select   │
        │                        └────▼─▼─▼────┘
        │                             │ │ │
        │               ┌─────────────┘ │ └─────────────┐
