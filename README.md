@@ -1380,11 +1380,12 @@ Chinese and it's easy to see that the processing pipeline could at some point be
 
 This way, we can have a 'branch' or 'track' of the pipeline that deals exclusively with commands, and
 another one that deals exclusively with text events; the latter could at some point again be split up to do
-some kind of text processing that only applies to a certain language or certain script. The ususal
-alternative to splitting the processing into tracks is to maintain a single chain of stream transforms and
-put a selecting device near the top of each transform—this has two disadvantages: for one thing, there will
-be a lot of code duplication because almost all transforms will need some kind of almost-identical `if`
-statement; and, on the other hand, transforms loose part of their 'innocence': a transform that, at its
+some kind of text processing that only applies to a certain language or certain script.
+
+The ususal alternative to splitting the processing into tracks is to maintain a single chain of stream
+transforms. This has two disadvantages: for one thing, there will be a lot of code duplication because
+almost all transforms will need some kind of almost-identical `if` statement near the top to decide which
+events to deal with. On the other hand, transforms loose part of their 'innocence': a transform that, at its
 heart, only wants to deal with some text snippet has, all of a sudden, been requisited to dabble in event
 sieving as well.
 
