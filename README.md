@@ -403,13 +403,12 @@ D.new_stream 'write', file: path
 D.new_stream 'write', 'lines', { file: '/tmp/foo.txt', }
 ```
 
-'file' / 'path'
-'pipeline'
-
-'text'
-'url'
-
-'transform'
+* 'file' / 'path'
+* 'pipeline'
+* 'text'
+* 'url'
+* 'transform'
+* 'duplex'
 
 ```coffee
 @new_stream = ( P... ) ->
@@ -1333,6 +1332,108 @@ property of the predictable sample is that—everything else being the same—a 
 will always be a subset of a sample with a bigger `p` and vice versa.
 
 ## @$show
+
+## @$select = ( selector, tracks ) ->
+
+
+
+```coffee
+#.........................................................................................................
+say_it_in_english = $ ( n, send, end ) ->
+  if n?
+    switch n
+      when 1 then send 'one'
+      when 2 then send 'two'
+      when 3 then send 'three'
+      else send 'many'
+  if end?
+    send "guess we're done here"
+    end()
+  return null
+#.........................................................................................................
+say_it_in_french = $ ( n, send ) ->
+  switch n
+    when 1 then send 'un'
+    when 2 then send 'deux'
+    when 3 then send 'troix'
+    else send 'beaucoup'
+  return null
+#.........................................................................................................
+say_it_in_german = $ ( n, send ) ->
+  switch n
+    when 1 then send 'eins'
+    when 2 then send 'zwei'
+    when 3 then send 'drei'
+    else send 'viele'
+  return null
+#.........................................................................................................
+draw_a_separator = $ ( ignore, send ) ->
+  send '—————'
+  return null
+#.........................................................................................................
+selector = ( event ) ->
+  return 'SEP' if event is '---'
+  [ languages, number, ] = event
+  if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
+  else                       languages = ( language.toUpperCase() for language in languages.split ',' )
+  return [ languages, number, ]
+#.........................................................................................................
+tracks =
+  EN:   say_it_in_english
+  FR:   say_it_in_french
+  DE:   say_it_in_german
+  SEP:  draw_a_separator
+#.........................................................................................................
+probes = [
+  [ 'fr', 1, ]
+  [ 'fr', 2, ]
+  [ 'fr', 3, ]
+  [ 'fr', 4, ]
+  '---'
+  [ 'en,fr',  1, ]
+  '---'
+  [ '*',  1, ]
+  '---'
+  [ 'en', 2, ]
+  '---'
+  [ 'de', 3, ]
+  [ 'de', 4, ]
+  ]
+#.........................................................................................................
+matchers = [
+  "un"
+  "deux"
+  "troix"
+  "beaucoup"
+  "—————"
+  "one"
+  "un"
+  "—————"
+  "one"
+  "un"
+  "eins"
+  "—————"
+  "two"
+  "—————"
+  "drei"
+  "viele"
+  "guess we're done here"
+  ]
+#.........................................................................................................
+my_input = D.new_stream()
+my_input
+  .pipe D.$select selector, tracks
+  # .pipe $ ( data ) => urge JSON.stringify data
+  .pipe D.$collect()
+  .pipe $ ( results ) =>
+    T.eq results.length, matchers.length
+    T.eq results[ idx ], matcher for matcher, idx in matchers
+  .pipe $ 'finish', done
+#.........................................................................................................
+# D.send  my_input, events[ 0 ] for n in [ 1 ... 1e3 ]
+D.send  my_input, probe for probe in probes
+D.end   my_input
+```
 
 ## @$sort = ( sorter, settings ) ->
 

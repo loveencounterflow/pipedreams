@@ -127,7 +127,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     ["*plain",null,["binary","append","~/some-file.txt"],null,null]
     ["file","~/some-file.txt",["omg","append"],null,null]
     # bad
-    [null,null,null,null,"expected a 'kind' out of '*plain', 'file', 'path', 'pipeline', 'text', 'url', 'transform', got 'route'"]
+    [null,null,null,null,"expected a 'kind' out of '*plain', 'file', 'path', 'pipeline', 'text', 'url', 'transform', 'duplex', got 'route'"]
     ]
   #.........................................................................................................
   for probe, probe_idx in probes
@@ -2459,50 +2459,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $select (demo)" ] = ( T, done ) ->
-  f = ->
-    #-----------------------------------------------------------------------------------------------------------
-    @$select = ( selector, tracks ) ->
-      input       = D.new_stream()
-      output      = D.new_stream()
-      my_streams  = {}
-      ( Object.keys tracks ).forEach ( key ) =>
-        stream            = tracks[ key ]
-        my_streams[ key ] = sub_input = D.new_stream()
-        sub_input
-          .pipe stream
-          .pipe output
-      #.........................................................................................................
-      input
-        .pipe $ ( data, send, end ) =>
-          #.....................................................................................................
-          if data?
-            #...................................................................................................
-            selection = selector data
-            key       = null
-            value     = null
-            #...................................................................................................
-            if CND.isa_list selection
-              unless ( arity = selection.length ) is 2
-                throw new Error "expected list with 2 elements, got one with #{arity}"
-              [ key, value, ] = selection
-            #...................................................................................................
-            else
-              key = selection
-            #...................................................................................................
-            if key?
-              value  ?= Symbol.for 'null'
-              keys    = if CND.isa_list key then key else [ key, ]
-              for key in keys
-                target_stream = my_streams[ key ]
-                throw new Error "not a valid key: #{rpr key}" unless target_stream?
-                @send target_stream, value
-          #.....................................................................................................
-          if end?
-            ( Object.keys tracks ).forEach ( key ) => @end my_streams[ key ]
-            end()
-      #.........................................................................................................
-      return @duplex input, output
-  f.apply D
   #.........................................................................................................
   say_it_in_english = $ ( n, send, end ) ->
     if n?
@@ -2549,7 +2505,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     DE:   say_it_in_german
     SEP:  draw_a_separator
   #.........................................................................................................
-  events = [
+  probes = [
     [ 'fr', 1, ]
     [ 'fr', 2, ]
     [ 'fr', 3, ]
@@ -2565,15 +2521,38 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     [ 'de', 4, ]
     ]
   #.........................................................................................................
+  matchers = [
+    "un"
+    "deux"
+    "troix"
+    "beaucoup"
+    "—————"
+    "one"
+    "un"
+    "—————"
+    "one"
+    "un"
+    "eins"
+    "—————"
+    "two"
+    "—————"
+    "drei"
+    "viele"
+    "guess we're done here"
+    ]
+  #.........................................................................................................
   my_input = D.new_stream()
   my_input
     .pipe D.$select selector, tracks
-    .pipe D.$show()
-    .pipe $ 'finish', =>
-      done()
+    # .pipe $ ( data ) => urge JSON.stringify data
+    .pipe D.$collect()
+    .pipe $ ( results ) =>
+      T.eq results.length, matchers.length
+      T.eq results[ idx ], matcher for matcher, idx in matchers
+    .pipe $ 'finish', done
   #.........................................................................................................
   # D.send  my_input, events[ 0 ] for n in [ 1 ... 1e3 ]
-  D.send  my_input, event for event in events
+  D.send  my_input, probe for probe in probes
   D.end   my_input
   #.........................................................................................................
   return null
@@ -2594,6 +2573,17 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   ### Y U NO ACCEPT DATA??? ###
   #.........................................................................................................
   setImmediate => done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) duplex stream creation" ] = ( T, done ) ->
+  ### Alternative call signatures (not sure yet, first one OK): ###
+  ###
+  D.new_stream duplex: [ receiver, sender, ]
+  D.new_stream { receiver, sender, }
+  D.new_stream receiver, sender
+  ###
+  warn "test '(v4) duplex stream creation' not implemented"
+  done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $benchmark (1)" ] = ( T, done ) ->
@@ -2720,8 +2710,9 @@ unless module.parent?
     "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
     "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
     "(v4) $split_tsv with configurable splitter"
-    "(v4) $select (demo)"
     "(v4) 'loose' transform accepts sent data (???)"
+    "(v4) $select (demo)"
+    "(v4) duplex stream creation"
     ]
   @_prune()
   @_main()

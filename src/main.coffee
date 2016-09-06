@@ -121,7 +121,9 @@ insp                      = ( require 'util' ).inspect
 # STREAM CREATION
 #-----------------------------------------------------------------------------------------------------------
 @new_stream = ( P... ) ->
+  ###
   @new_stream._read_arguments_2 P
+  ###
   [ kind, seed, hints, settings, ] = @new_stream._read_arguments P
   R = switch kind
     when '*plain'       then @_new_stream                seed, hints, settings
@@ -130,10 +132,12 @@ insp                      = ( require 'util' ).inspect
     when 'text'         then @_new_stream_from_text      seed, hints, settings
     when 'url'          then @_new_stream_from_url       seed, hints, settings
     when 'transform'    then @_new_stream_from_transform seed, hints, settings
+    when 'duplex'       then @_new_stream_from_duplex    seed, hints, settings
     else throw new Error "unknown kind #{rpr kind} (shouldn't happen)"
   #.....................................................................................................
   return R
 
+###
 #-----------------------------------------------------------------------------------------------------------
 @new_stream._read_arguments_2 = ( P ) =>
   R =
@@ -173,6 +177,7 @@ insp                      = ( require 'util' ).inspect
   # debug '3345', ( CND.yellow ( require 'util' ).inspect P, depth: 0 )#, ( CND.grey '=>' ), ( CND.lime R )
   #.....................................................................................................
   return R
+###
 
 #-----------------------------------------------------------------------------------------------------------
 @new_stream._read_arguments = ( P ) =>
@@ -210,7 +215,7 @@ insp                      = ( require 'util' ).inspect
   return [ kind, seed, hints, settings, ]
 
 #...........................................................................................................
-@new_stream._kinds = [ '*plain', 'file', 'path', 'pipeline', 'text', 'url', 'transform', ]
+@new_stream._kinds = [ '*plain', 'file', 'path', 'pipeline', 'text', 'url', 'transform', 'duplex', ]
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream = ( seed, hints, settings ) ->
@@ -341,7 +346,7 @@ insp                      = ( require 'util' ).inspect
   # receiver
   #   .pipe confluence
   #   .pipe sender
-  R           = @duplex receiver, sender
+  R           = @_duplex$duplexer2 receiver, sender
   inner_rpr   = ( rpr p for p in pipeline ).join ' '
   return @_rprx "[", null, "pipeline", inner_rpr, "]", R
 
@@ -359,6 +364,19 @@ insp                      = ( require 'util' ).inspect
   R.write text
   R.end()
   return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream_from_duplex = ( streams, hints, settings ) ->
+  throw new Error "_new_stream_from_duplex doesn't accept 'hints', got #{rpr hints}"        if hints?
+  throw new Error "_new_stream_from_duplex doesn't accept 'settings', got #{rpr settings}"  if settings?
+  throw new Error "expected a list, got a #{type}" unless ( type = CND.type_of streams ) is 'list'
+  throw new Error "expected list with 2 elements, git one with #{streams.length}" unless streams.length is 2
+  #.........................................................................................................
+  [ receiver, sender, ] = streams
+  throw new Error "expected readable stream" unless @isa_readable_stream receiver
+  throw new Error "expected writable stream" unless @isa_writable_stream sender
+  #.........................................................................................................
+  return @_duplex$duplexer2 receiver, sender
 
 #-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_url = ( url, hints, settings ) ->
@@ -957,7 +975,7 @@ insp                      = ( require 'util' ).inspect
 @$count = ( on_end = null ) ->
   count = 0
   #.........................................................................................................
-  return $ ( data, send, end ) ->
+  return @$ ( data, send, end ) ->
     if data?
       send data
       count += +1
@@ -1235,12 +1253,59 @@ insp                      = ( require 'util' ).inspect
   receiver.on 'end',    => sender.emit 'end'
   handler = ( error ) => R.emit 'error', error if error?
   bridge  = @_new_stream$pump [ receiver, stream, ], handler
-  R       = @duplex receiver, sender
+  R       = @_duplex$duplexer2 receiver, sender
   extra = ( rpr bridge ) + ' ↝ ' + ( rpr sender )
   return @_rpr "↷", "bridge", extra, R
 
+# #-----------------------------------------------------------------------------------------------------------
+# @duplex = ( receiver, sender ) -> @_duplex$duplexer2 receiver, sender
+
+
+#===========================================================================================================
+# SELECT
 #-----------------------------------------------------------------------------------------------------------
-@duplex = ( receiver, sender ) -> @_duplex$duplexer2 receiver, sender
+@$select = ( selector, tracks ) ->
+  receiver    = @new_stream()
+  sender      = @new_stream()
+  my_streams  = {}
+  ( Object.keys tracks ).forEach ( key ) =>
+    stream            = tracks[ key ]
+    my_streams[ key ] = sub_input = @new_stream()
+    sub_input
+      .pipe stream
+      .pipe sender
+  #.........................................................................................................
+  receiver
+    .pipe @$ ( data, send, end ) =>
+      #.....................................................................................................
+      if data?
+        #...................................................................................................
+        selection = selector data
+        key       = null
+        value     = null
+        #...................................................................................................
+        if CND.isa_list selection
+          unless ( arity = selection.length ) is 2
+            throw new Error "expected list with 2 elements, got one with #{arity}"
+          [ key, value, ] = selection
+        #...................................................................................................
+        else
+          key = selection
+        #...................................................................................................
+        if key?
+          value  ?= Symbol.for 'null'
+          keys    = if CND.isa_list key then key else [ key, ]
+          for key in keys
+            target_stream = my_streams[ key ]
+            throw new Error "not a valid key: #{rpr key}" unless target_stream?
+            @send target_stream, value
+      #.....................................................................................................
+      if end?
+        ( Object.keys tracks ).forEach ( key ) => @end my_streams[ key ]
+        end()
+  #.........................................................................................................
+  # return @new_stream duplex: [ receiver, sender, ]
+  return @_duplex$duplexer2 receiver, sender
 
 
 #===========================================================================================================
