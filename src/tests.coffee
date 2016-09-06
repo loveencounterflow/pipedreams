@@ -2648,7 +2648,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     "deux"
     "troix"
     "beaucoup"
-    "pass this one"
+    "dont process this one"
     "—————"
     "one"
     "un"
@@ -2667,15 +2667,14 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   my_input = D.new_stream()
   my_input
     .pipe D.$select select_drop_and_pass_events
-    # .pipe D.$select select_draw_line_events,    draw_line_track
-    # .pipe $ ( data ) => whisper JSON.stringify data
+    .pipe D.$select select_draw_line_events,    draw_line_track
     .pipe D.$select select_language_events,     language_track
     .pipe bridgehead
     .pipe $ ( data ) => urge JSON.stringify data
     .pipe D.$collect()
-    # .pipe $ ( results ) =>
-    #   T.eq results.length, matchers.length
-    #   T.eq results[ idx ], matcher for matcher, idx in matchers
+    .pipe $ ( results ) =>
+      T.eq results.length, matchers.length
+      T.eq results[ idx ], matcher for matcher, idx in matchers
     .pipe $ 'finish', done
   #.........................................................................................................
   # D.send  my_input, events[ 0 ] for n in [ 1 ... 1e3 ]
