@@ -2458,7 +2458,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #     done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $switch (study)" ] = ( T, done ) ->
+@[ "(v4) $select (study)" ] = ( T, done ) ->
   even_multiplier_and_adder = D.new_stream pipeline: [
     # $ ( data, send ) -> send data if data % 2 is 0
     $ ( data, send ) -> send 2 * data
@@ -2474,7 +2474,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$show()
     .pipe $ 'finish', done
   #.........................................................................................................
-  make_it_so = ( ONE_OF_THE_STREAMS ) ->
+  make_it_so = ( stream ) ->
     input   = D.new_stream()
     input
       .pipe do ->
@@ -2482,7 +2482,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
         _end  = null
         foo = D.new_stream()
         foo
-          .pipe ONE_OF_THE_STREAMS
+          .pipe stream
           .pipe $ ( data, send, end ) ->
             if data?
               _send data
@@ -2510,92 +2510,143 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   #.........................................................................................................
   return null
 
-# #-----------------------------------------------------------------------------------------------------------
-# @[ "(v4) $switch (demo)" ] = ( T, done ) ->
-#   #.........................................................................................................
-#   $switch = ( switcher, streams ) ->
-#     input     = D.new_stream()
-#     output    = D.new_stream()
-#     # receivers = Object.assign {}, streams
-#     ( Object.keys streams ).forEach ( key ) -> streams[ key ] = D.new_stream pipeline: [ streams[ key ], output, ]
-#     #.......................................................................................................
-#     input
-#       .pipe $ ( data ) -> urge data
-#       .pipe $ 'null', ( data ) =>
-#         if data?
-#           key             = switcher data
-#           [ key, data, ]  = key if CND.isa_list key
-#           target_stream   = streams[ key ]
-#           throw new Error '3348329 XXX' unless target_stream?
-#           debug '23101', ( rpr key ), ( rpr data )
-#           D.send target_stream, data
-#         else
-#           warn 'end'
-#           ( Object.keys streams ).forEach ( key ) -> D.end streams[ key ]
-#       .pipe $ ( data ) -> help data
-#       # .pipe output
-#     #.......................................................................................................
-#     return D.duplex input, output
-#   #.........................................................................................................
-#   events = [
-#     [ 'en', 1, ]
-#     # [ 'en', 2, ]
-#     # [ 'en', 3, ]
-#     # [ 'en', 4, ]
-#     # [ 'fr', 1, ]
-#     # [ 'fr', 2, ]
-#     # [ 'fr', 3, ]
-#     # [ 'fr', 4, ]
-#     # [ 'de', 1, ]
-#     # [ 'de', 2, ]
-#     # [ 'de', 3, ]
-#     [ 'de', 4, ]
-#     ]
-#   #.........................................................................................................
-#   my_english_stream = $ ( data, send, end ) ->
-#     debug '80709', data
-#     if data?
-#       switch data
-#         when 1 then send 'one'
-#         when 2 then send 'two'
-#         when 3 then send 'three'
-#         else send 'many'
-#     if end?
-#       warn '^*~'
-#       end()
-#     return null
-#   #.........................................................................................................
-#   my_french_stream = $ ( data, send ) ->
-#     switch data
-#       when 1 then send 'un'
-#       when 2 then send 'deux'
-#       when 3 then send 'troix'
-#       else send 'beaucoup'
-#     return null
-#   #.........................................................................................................
-#   my_german_stream = $ ( data, send ) ->
-#     switch data
-#       when 1 then send 'eins'
-#       when 2 then send 'zwei'
-#       when 3 then send 'drei'
-#       else send 'viele'
-#     return null
-#   #.........................................................................................................
-#   switcher = ( event ) ->
-#     [ language, number, ] = event
-#     return [ language.toUpperCase(), number, ]
-#   #.........................................................................................................
-#   my_input = D.new_stream()
-#   my_input
-#     .pipe $switch switcher, { EN: my_english_stream, FR: my_french_stream, DE: my_german_stream, }
-#     .pipe D.$show()
-#     .pipe $ 'finish', =>
-#       done()
-#   #.........................................................................................................
-#   D.send  my_input, event for event in events
-#   D.end   my_input
-#   #.........................................................................................................
-#   return null
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $select (demo)" ] = ( T, done ) ->
+  f = ->
+    #-----------------------------------------------------------------------------------------------------------
+    @$select = ( selector, tracks ) ->
+      input       = D.new_stream()
+      output      = D.new_stream()
+      my_streams  = {}
+      ( Object.keys tracks ).forEach ( key ) =>
+        stream            = tracks[ key ]
+        my_streams[ key ] = sub_input = D.new_stream()
+        sub_input
+          .pipe stream
+          .pipe output
+      #.........................................................................................................
+      input
+        .pipe $ ( data, send, end ) =>
+          #.....................................................................................................
+          if data?
+            #...................................................................................................
+            selection = selector data
+            key       = null
+            value     = null
+            #...................................................................................................
+            if CND.isa_list selection
+              unless ( arity = selection.length ) is 2
+                throw new Error "expected list with 2 elements, got one with #{arity}"
+              [ key, value, ] = selection
+            #...................................................................................................
+            else
+              key = selection
+            #...................................................................................................
+            if key?
+              value  ?= Symbol.for 'null'
+              keys    = if CND.isa_list key then key else [ key, ]
+              for key in keys
+                target_stream = my_streams[ key ]
+                throw new Error "not a valid key: #{rpr key}" unless target_stream?
+                @send target_stream, value
+          #.....................................................................................................
+          if end?
+            ( Object.keys tracks ).forEach ( key ) => @end my_streams[ key ]
+            end()
+      #.........................................................................................................
+      return @duplex input, output
+  f.apply D
+  #.........................................................................................................
+  say_it_in_english = $ ( n, send, end ) ->
+    if n?
+      switch n
+        when 1 then send 'one'
+        when 2 then send 'two'
+        when 3 then send 'three'
+        else send 'many'
+    if end?
+      send "guess we're done here"
+      end()
+    return null
+  #.........................................................................................................
+  say_it_in_french = $ ( n, send ) ->
+    switch n
+      when 1 then send 'un'
+      when 2 then send 'deux'
+      when 3 then send 'troix'
+      else send 'beaucoup'
+    return null
+  #.........................................................................................................
+  say_it_in_german = $ ( n, send ) ->
+    switch n
+      when 1 then send 'eins'
+      when 2 then send 'zwei'
+      when 3 then send 'drei'
+      else send 'viele'
+    return null
+  #.........................................................................................................
+  draw_a_separator = $ ( ignore, send ) ->
+    send '—————'
+    return null
+  #.........................................................................................................
+  selector = ( event ) ->
+    return 'SEP' if event is '---'
+    [ languages, number, ] = event
+    if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
+    else                       languages = ( language.toUpperCase() for language in languages.split ',' )
+    return [ languages, number, ]
+  #.........................................................................................................
+  tracks =
+    EN:   say_it_in_english
+    FR:   say_it_in_french
+    DE:   say_it_in_german
+    SEP:  draw_a_separator
+  #.........................................................................................................
+  events = [
+    [ 'fr', 1, ]
+    [ 'fr', 2, ]
+    [ 'fr', 3, ]
+    [ 'fr', 4, ]
+    '---'
+    [ 'en,fr',  1, ]
+    '---'
+    [ '*',  1, ]
+    '---'
+    [ 'en', 2, ]
+    '---'
+    [ 'de', 3, ]
+    [ 'de', 4, ]
+    ]
+  #.........................................................................................................
+  my_input = D.new_stream()
+  my_input
+    .pipe D.$select selector, tracks
+    .pipe D.$show()
+    .pipe $ 'finish', =>
+      done()
+  #.........................................................................................................
+  # D.send  my_input, events[ 0 ] for n in [ 1 ... 1e3 ]
+  D.send  my_input, event for event in events
+  D.end   my_input
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) 'loose' transform accepts sent data (???)" ] = ( T, done ) ->
+  #.........................................................................................................
+  ### this works: ###
+  d = $ ( data ) -> urge data
+  input = D.new_stream()
+  input
+    .pipe d
+  D.send input, 'foobar'
+  #.........................................................................................................
+  ### but this doesn't: ###
+  d = $ ( data ) -> urge data
+  D.send d, 'foobar'
+  ### Y U NO ACCEPT DATA??? ###
+  #.........................................................................................................
+  setImmediate => done()
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $benchmark (1)" ] = ( T, done ) ->
@@ -2722,8 +2773,9 @@ unless module.parent?
     # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
     # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
     # "(v4) $split_tsv with configurable splitter"
-    "(v4) $switch (study)"
-    "(v4) $switch (demo)"
+    # "(v4) $select (study)"
+    "(v4) $select (demo)"
+    "(v4) 'loose' transform accepts sent data (???)"
     ]
   @_prune()
   @_main()
@@ -2731,5 +2783,5 @@ unless module.parent?
 
   # debug '5562', JSON.stringify key for key in Object.keys @
 
-  # @[ "(empty-string) $tabulate" ] null, -> warn "not tested"
+  # @[ "(v4) $select (demo)" ] null, -> warn "not tested"
 
