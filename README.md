@@ -65,6 +65,7 @@ Install as `npm install --save pipedreams`.
   - [@$pass_through](#pass_through)
   - [@$sample = ( p = 0.5, options ) ->](#sample---p--05-options---)
   - [@$show](#show)
+  - [@$select = ( selector, tracks ) ->](#select---selector-tracks---)
   - [@$sort = ( sorter, settings ) ->](#sort---sorter-settings---)
   - [@$split = ( matcher, mapper, settings ) ->](#split---matcher-mapper-settings---)
   - [@$spread](#spread)
