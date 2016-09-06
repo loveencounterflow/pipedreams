@@ -1353,17 +1353,21 @@ Chinese and it's easy to see that the processing pipeling could at some time be 
 ┘
 │
 ─
-         main stream
+             all
+            events
               │
     ┌─────────┴─────────┐
+    │                   │
     │                 text
+    │                   │
     │           ┌───────┼────────┐
     │           │       │        │
 commands     English  Arabic  Chinese
     │           │       │        │
     └─────────┬─┴───────┴────────┘
               │
-         main stream
+             all
+            events
 
 
 
