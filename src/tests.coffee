@@ -2489,7 +2489,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     send '—————'
     return null
   #.........................................................................................................
-  selector = ( event ) ->
+  dispatch = ( event ) ->
     return key: Symbol.for 'drop'  if event is 'drop this one'
     return key: Symbol.for 'pass'  if event is 'pass this one'
     return key: 'SEP'              if event is '---'
@@ -2544,7 +2544,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   #.........................................................................................................
   my_input = D.new_stream()
   my_input
-    .pipe D.$select selector, tracks
+    .pipe D.$select dispatch, tracks
     # .pipe $ ( data ) => urge JSON.stringify data
     .pipe D.$collect()
     .pipe $ ( results ) =>
@@ -2596,16 +2596,16 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   bridgehead  = D.$pass()
   drop        = D.$drop()
   #.........................................................................................................
-  select_drop_and_pass_events = ( event ) ->
+  dispatch_drop_and_pass_events = ( event ) ->
     return key: drop       if event is 'drop this one'
     return key: bridgehead if event is 'dont process this one'
     return key: Symbol.for 'pass'
   #.........................................................................................................
-  select_draw_line_events = ( event ) ->
+  dispatch_draw_line_events = ( event ) ->
     return key: Symbol.for 'pass' unless event is '---'
     return key: 'SEP'
   #.........................................................................................................
-  select_language_events = ( event ) ->
+  dispatch_language_events = ( event ) ->
     return key: bridgehead unless CND.isa_list event
     [ languages, number, ] = event
     return key: [ 'EN', 'FR', 'DE', ], data: number if  languages is '*'
@@ -2661,9 +2661,9 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   #.........................................................................................................
   my_input = D.new_stream()
   my_input
-    .pipe D.$select select_drop_and_pass_events
-    .pipe D.$select select_draw_line_events,    draw_line_track
-    .pipe D.$select select_language_events,     language_track
+    .pipe D.$select dispatch_drop_and_pass_events
+    .pipe D.$select dispatch_draw_line_events,    draw_line_track
+    .pipe D.$select dispatch_language_events,     language_track
     .pipe bridgehead
     # .pipe $ ( data ) => urge JSON.stringify data
     .pipe D.$collect()
@@ -2693,6 +2693,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   D.send d, 'foobar'
   ### Y U NO ACCEPT DATA??? ###
   #.........................................................................................................
+  warn "test '(v4) 'loose' transform accepts sent data (???)' not implemented"
   setImmediate => done()
 
 #-----------------------------------------------------------------------------------------------------------
