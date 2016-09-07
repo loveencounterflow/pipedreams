@@ -1286,45 +1286,33 @@ insp                      = ( require 'util' ).inspect
         .pipe sender
   #.........................................................................................................
   receiver
-    .pipe @$ ( data, send, end ) =>
+    .pipe @$ ( raw_data, send, end ) =>
       #.....................................................................................................
-      if data?
+      if raw_data?
         #...................................................................................................
-        selection = selector data
-        key       = null
-        value     = null
+        keys        = null
+        data        = null
+        selection   = selector raw_data
+        throw new Error "expected value for selection, got #{rpr selection}" unless selection?
         #...................................................................................................
-        unless selection?
-          throw new Error "expected value for selection, got #{rpr selection}"
-        # if ( CND.type_of selection ) is 'symbol'
-        #   null
+        { key
+          data }    = selection
+        throw new Error "expected value for key, got #{rpr key}" unless key?
+        data       ?= raw_data
+        keys        = if ( CND.isa_list key ) then key else [ key, ]
         #...................................................................................................
-        if CND.isa_list selection
-          unless ( arity = selection.length ) is 2
-            throw new Error "expected list with 2 elements, got one with #{arity}"
-          [ key, value, ] = selection
-        #...................................................................................................
-        else
-          key = selection
-        #...................................................................................................
-        unless key?
-          throw new Error "expected value for key, got #{rpr key}"
-        #...................................................................................................
-        if ( CND.type_of selection ) is 'symbol'
-          switch key
-            when @σ_pass then key = pass
-            when @σ_drop then key = drop
-            else throw new Error "expected symbol for 'pass' or 'drop', got #{rpr key}"
-        #...................................................................................................
-        value  ?= data
-        keys    = if CND.isa_list key then key else [ key, ]
         for key in keys
           if @isa_stream key
             target_stream = key
+          else if ( CND.type_of key ) is 'symbol'
+            switch key
+              when @σ_pass then target_stream = pass
+              when @σ_drop then target_stream = drop
+              else throw new Error "expected symbol for 'pass' or 'drop', got #{rpr key}"
           else
             target_stream = my_streams[ key ]
             throw new Error "not a valid key: #{rpr key}" unless target_stream?
-          @send target_stream, value
+          @send target_stream, data
       #.....................................................................................................
       if end?
         if tracks?

@@ -2460,16 +2460,13 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) $select (1)" ] = ( T, done ) ->
   #.........................................................................................................
-  say_it_in_english = $ ( n, send, end ) ->
+  say_it_in_english = $ ( n, send ) ->
     if n?
       switch n
         when 1 then send 'one'
         when 2 then send 'two'
         when 3 then send 'three'
         else send 'many'
-    if end?
-      send "guess we're done here"
-      end()
     return null
   #.........................................................................................................
   say_it_in_french = $ ( n, send ) ->
@@ -2493,20 +2490,19 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     return null
   #.........................................................................................................
   selector = ( event ) ->
-    return D.$drop() if event is 'drop this one'
-    return 'PASS' if event is 'pass this one'
-    return 'SEP'  if event is '---'
+    return key: Symbol.for 'drop'  if event is 'drop this one'
+    return key: Symbol.for 'pass'  if event is 'pass this one'
+    return key: 'SEP'              if event is '---'
     [ languages, number, ] = event
     if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
     else                       languages = ( language.toUpperCase() for language in languages.split ',' )
-    return [ languages, number, ]
+    return key: languages, data: number
   #.........................................................................................................
   tracks =
     EN:   say_it_in_english
     FR:   say_it_in_french
     DE:   say_it_in_german
     SEP:  draw_a_separator
-    PASS: D.$pass()
   #.........................................................................................................
   probes = [
     [ 'fr', 1, ]
@@ -2544,7 +2540,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     "—————"
     "drei"
     "viele"
-    "guess we're done here"
     ]
   #.........................................................................................................
   my_input = D.new_stream()
@@ -2602,20 +2597,20 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   drop        = D.$drop()
   #.........................................................................................................
   select_drop_and_pass_events = ( event ) ->
-    return drop       if event is 'drop this one'
-    return bridgehead if event is 'dont process this one'
-    return Symbol.for 'pass'
+    return key: drop       if event is 'drop this one'
+    return key: bridgehead if event is 'dont process this one'
+    return key: Symbol.for 'pass'
   #.........................................................................................................
   select_draw_line_events = ( event ) ->
-    return Symbol.for 'pass' unless event is '---'
-    return 'SEP'
+    return key: Symbol.for 'pass' unless event is '---'
+    return key: 'SEP'
   #.........................................................................................................
   select_language_events = ( event ) ->
-    return bridgehead unless CND.isa_list event
+    return key: bridgehead unless CND.isa_list event
     [ languages, number, ] = event
-    return [ [ 'EN', 'FR', 'DE', ], number, ] if  languages is '*'
+    return key: [ 'EN', 'FR', 'DE', ], data: number if  languages is '*'
     languages = ( language.toUpperCase() for language in languages.split ',' )
-    return [ languages, number, ]
+    return key: languages, data: number
   #.........................................................................................................
   draw_line_track =
     SEP:  draw_a_separator
@@ -2670,7 +2665,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$select select_draw_line_events,    draw_line_track
     .pipe D.$select select_language_events,     language_track
     .pipe bridgehead
-    .pipe $ ( data ) => urge JSON.stringify data
+    # .pipe $ ( data ) => urge JSON.stringify data
     .pipe D.$collect()
     .pipe $ ( results ) =>
       T.eq results.length, matchers.length
@@ -2751,92 +2746,95 @@ unless module.parent?
   "(v4) _new_stream_from_pipeline (4c)"
   "(v4) $async with method arity 3 (2)"
   ### ----------------===#O#===--------------------###
+  ### Tests Known to be Problematic:               ###
+  ### ----------------===#O#===--------------------###
+  "(v4) _new_stream_from_url" # should include mock server or test for connectivity
+  ### ----------------===#O#===--------------------###
 
   include = [
-    # # "(v4) stream sigils"
-    # # "(v4) $benchmark (1)"
-    # # "(v4) $benchmark (2)"
-    # "(v4) _new_stream_from_path (2)"
-    # "(v4) _new_stream_from_pipeline (1a)"
-    # "(v4) _new_stream_from_pipeline (3)"
-    # "(v4) _new_stream_from_pipeline (4a)"
-    # "(v4) _new_stream_from_pipeline (4b)"
-    # "(v4) _new_stream_from_text"
-    # "(v4) _new_stream_from_text (2)"
-    # "(v4) observer transform called with data `null` on stream end"
-    # "(v4) D.new_stream"
-    # "(v4) stream / transform construction with through2 (1)"
-    # "(v4) D._new_stream_from_pipeline"
-    # "(v4) $async with method arity 3 (1)"
-    # "(v4) $lockstep 1"
-    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    # "(v4) $batch and $spread"
-    # "(v4) streams as transforms and v/v (1)"
-    # "(v4) streams as transforms and v/v (2)"
-    # "(v4) file stream events (1)"
-    # "(v4) transforms below output receive data events (1)"
-    # "(v4) transforms below output receive data events (2)"
-    # "(v4) _new_stream_from_url"
-    # "(v4) new_stream README example (1)"
-    # "(v4) new_stream README example (2)"
-    # "(v4) new_stream README example (3)"
-    # "(v4) _new_stream_from_path with encodings"
-    # "(v4) _new_stream_from_path (raw)"
-    # "(v4) new new_stream signature (1)"
-    # "(v4) new new_stream signature (2)"
-    # "(v4) _new_stream_from_path (1)"
-    # "(v4) $split_tsv (3)"
-    # "(v4) $split_tsv (4)"
-    # "(v4) read TSV file (1)"
-    # "(v4) TSV whitespace trimming"
-    # "(v4) $split_tsv (1)"
-    # "(v4) $intersperse (1)"
-    # "(v4) $intersperse (2)"
-    # "(v4) $intersperse (3)"
-    # "(v4) $intersperse (3a)"
-    # "(v4) $intersperse (4)"
-    # "(v4) $join (1)"
-    # "(v4) $join (2)"
-    # "(v4) $join (3)"
-    # "(v4) $as_json_list (1)"
-    # "(v4) $as_json_list (2)"
-    # "(v4) $as_json_list (2a)"
-    # "(v4) $as_json_list (2b)"
-    # "(v4) $as_json_list (2c)"
-    # "(v4) $as_json_list (3)"
-    # "(v4) symbols as data events (1)"
-    # "(v4) symbols as data events (2)"
-    # "(v4) $as_tsv"
-    # "(v4) $batch (1)"
-    # "(v4) $batch (2)"
-    # "(v4) all remit methods have opt-in end detection (1)"
-    # "(v4) all remit methods have opt-in end detection (2)"
-    # "(v4) all remit methods have opt-in end detection (3)"
-    # "(v4) all remit methods have opt-in end detection (4)"
-    # "(v4) README demo (1)"
-    # "(v4) README demo (2)"
-    # "(v4) README demo (3)"
-    # "(v4) $async only allows 3 arguments in transformation (1)"
-    # "(v4) $sort 1"
-    # "(v4) $sort 2"
-    # "(v4) $sort 3"
-    # "(v4) $sort 4"
-    # "(v4) $sort 5"
-    # "(v4) $sort 6"
-    # "(empty-string) can send empty strings ($split) (1)"
-    # "(empty-string) can send empty strings ($split) (2)"
-    # "(empty-string) can send empty strings (w/out pipeline)"
-    # "(empty-string) can send empty strings (w/ pipeline)"
-    # "(empty-string) duplexer2 works with empty strings"
-    # "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
-    # "(v4) $tabulate"
-    # "(v4) $on_first, $on_last not called in empty stream (1)"
-    # "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
-    # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
-    # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
-    # "(v4) $split_tsv with configurable splitter"
-    # "(v4) 'loose' transform accepts sent data (???)"
+    # "(v4) stream sigils"
+    # "(v4) $benchmark (1)"
+    # "(v4) $benchmark (2)"
+    "(v4) _new_stream_from_path (2)"
+    "(v4) _new_stream_from_pipeline (1a)"
+    "(v4) _new_stream_from_pipeline (3)"
+    "(v4) _new_stream_from_pipeline (4a)"
+    "(v4) _new_stream_from_pipeline (4b)"
+    "(v4) _new_stream_from_text"
+    "(v4) _new_stream_from_text (2)"
+    "(v4) observer transform called with data `null` on stream end"
+    "(v4) D.new_stream"
+    "(v4) stream / transform construction with through2 (1)"
+    "(v4) D._new_stream_from_pipeline"
+    "(v4) $async with method arity 3 (1)"
+    "(v4) $lockstep 1"
+    "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    "(v4) $batch and $spread"
+    "(v4) streams as transforms and v/v (1)"
+    "(v4) streams as transforms and v/v (2)"
+    "(v4) file stream events (1)"
+    "(v4) transforms below output receive data events (1)"
+    "(v4) transforms below output receive data events (2)"
+    "(v4) new_stream README example (1)"
+    "(v4) new_stream README example (2)"
+    "(v4) new_stream README example (3)"
+    "(v4) _new_stream_from_path with encodings"
+    "(v4) _new_stream_from_path (raw)"
+    "(v4) new new_stream signature (1)"
+    "(v4) new new_stream signature (2)"
+    "(v4) _new_stream_from_path (1)"
+    "(v4) $split_tsv (3)"
+    "(v4) $split_tsv (4)"
+    "(v4) read TSV file (1)"
+    "(v4) TSV whitespace trimming"
+    "(v4) $split_tsv (1)"
+    "(v4) $intersperse (1)"
+    "(v4) $intersperse (2)"
+    "(v4) $intersperse (3)"
+    "(v4) $intersperse (3a)"
+    "(v4) $intersperse (4)"
+    "(v4) $join (1)"
+    "(v4) $join (2)"
+    "(v4) $join (3)"
+    "(v4) $as_json_list (1)"
+    "(v4) $as_json_list (2)"
+    "(v4) $as_json_list (2a)"
+    "(v4) $as_json_list (2b)"
+    "(v4) $as_json_list (2c)"
+    "(v4) $as_json_list (3)"
+    "(v4) symbols as data events (1)"
+    "(v4) symbols as data events (2)"
+    "(v4) $as_tsv"
+    "(v4) $batch (1)"
+    "(v4) $batch (2)"
+    "(v4) all remit methods have opt-in end detection (1)"
+    "(v4) all remit methods have opt-in end detection (2)"
+    "(v4) all remit methods have opt-in end detection (3)"
+    "(v4) all remit methods have opt-in end detection (4)"
+    "(v4) README demo (1)"
+    "(v4) README demo (2)"
+    "(v4) README demo (3)"
+    "(v4) $async only allows 3 arguments in transformation (1)"
+    "(v4) $sort 1"
+    "(v4) $sort 2"
+    "(v4) $sort 3"
+    "(v4) $sort 4"
+    "(v4) $sort 5"
+    "(v4) $sort 6"
+    "(empty-string) can send empty strings ($split) (1)"
+    "(empty-string) can send empty strings ($split) (2)"
+    "(empty-string) can send empty strings (w/out pipeline)"
+    "(empty-string) can send empty strings (w/ pipeline)"
+    "(empty-string) duplexer2 works with empty strings"
+    "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
+    "(v4) $tabulate"
+    "(v4) $on_first, $on_last not called in empty stream (1)"
+    "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
+    "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
+    "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
+    "(v4) $split_tsv with configurable splitter"
+    "(v4) 'loose' transform accepts sent data (???)"
     "(v4) $select (1)"
     "(v4) $select (2)"
     "(v4) duplex stream creation"

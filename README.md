@@ -1389,19 +1389,28 @@ events to deal with. On the other hand, transforms loose part of their 'innocenc
 heart, only wants to deal with some text snippet has, all of a sudden, been requisitioned to dabble in event
 sieving as well.
 
+-----
+
+The selector may return one of a number of kinds of values:
+
+* `Symbol.for 'pass'` to make `$select` pass the value through without submitting it to any kind of
+  processing;
+* a stream or a transform to send the value to;
+* a valid key of the object or list passed as second argument to `select`.
+
+Further, observe that
+
+* when the selector returns a list, that list
 
 ```coffee
 #------------------------------------------------------------------------------
-say_it_in_english = $ ( n, send, end ) ->
+say_it_in_english = $ ( n, send ) ->
   if n?
     switch n
       when 1 then send 'one'
       when 2 then send 'two'
       when 3 then send 'three'
       else send 'many'
-  if end?
-    send "guess we're done here"
-    end()
   return null
 
 #------------------------------------------------------------------------------
@@ -1428,14 +1437,14 @@ draw_a_separator = $ ( ignore, send ) ->
   return null
 
 #------------------------------------------------------------------------------
-selector = ( event ) ->
-  return D.$drop() if event is 'drop this one'
-  return 'PASS' if event is 'pass this one'
-  return 'SEP'  if event is '---'
-  [ languages, number, ] = event
-  if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
-  else                       languages = ( language.toUpperCase() for language in languages.split ',' )
-  return [ languages, number, ]
+  selector = ( event ) ->
+    return key: Symbol.for 'drop'  if event is 'drop this one'
+    return key: Symbol.for 'pass'  if event is 'pass this one'
+    return key: 'SEP'              if event is '---'
+    [ languages, number, ] = event
+    if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
+    else                       languages = ( language.toUpperCase() for language in languages.split ',' )
+    return key: languages, data: number
 
 #------------------------------------------------------------------------------
 tracks =
@@ -1483,14 +1492,12 @@ matchers = [
   "—————"
   "drei"
   "viele"
-  "guess we're done here"
   ]
 
 #------------------------------------------------------------------------------
 my_input = D.new_stream()
 my_input
   .pipe D.$select selector, tracks
-  # .pipe $ ( data ) => urge JSON.stringify data
   .pipe D.$collect()
   .pipe $ ( results ) =>
     T.eq results.length, matchers.length
