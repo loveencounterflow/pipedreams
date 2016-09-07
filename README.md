@@ -1204,6 +1204,7 @@ input
 ## @$collect
 ## @$count
 ## @$decode = ( encoding = 'utf-8' ) ->
+## @$drop
 ## @$filter
 
 <!-- ## @$finish = ->
@@ -1287,7 +1288,7 @@ newline, the `inner_joiner` to a comma and a space.
 
 
 ## @$parse_csv
-## @$pass_through
+## @$pass
 
 ## @$sample = ( p = 0.5, options ) ->
 
@@ -1389,18 +1390,23 @@ events to deal with. On the other hand, transforms loose part of their 'innocenc
 heart, only wants to deal with some text snippet has, all of a sudden, been requisitioned to dabble in event
 sieving as well.
 
------
+Below we demonstrate a rather simpler example than the one outlined above. In that example, there are three
+'translator' stream transforms that turn incoming numbers into the corresponding English, French, and German
+words. Further, there's a transform that draws a separator line. These four functions are registered in the
+`tracks` object. Also, there's a `dispatch` function that accepts a piece of `data` and returns an
+object to indicate where to direct the incoming data.
 
-The selector may return one of a number of kinds of values:
+In general, the `dispatch` function should return a plain old dictionary (POD) with the obligatory element
+`key` (to select the target stream) and the facultative element `data` (to replace the data originally
+passed into `$select`). The `key` element may be
 
-* `Symbol.for 'pass'` to make `$select` pass the value through without submitting it to any kind of
+* `Symbol.for 'pass'` to make `$select` pass the data through without submitting it to any kind of
   processing;
-* a stream or a transform to send the value to;
-* a valid key of the object or list passed as second argument to `select`.
+* `Symbol.for 'drop` to make `$select` drop the data;
+* a stream or transform to send the value to;
+* a valid key of the object or list passed as second argument to `select`;
+* or a list of zero or more of any of the above to send `data` to any number of destinations.
 
-Further, observe that
-
-* when the selector returns a list, that list
 
 ```coffee
 #------------------------------------------------------------------------------
@@ -1437,14 +1443,14 @@ draw_a_separator = $ ( ignore, send ) ->
   return null
 
 #------------------------------------------------------------------------------
-  selector = ( event ) ->
-    return key: Symbol.for 'drop'  if event is 'drop this one'
-    return key: Symbol.for 'pass'  if event is 'pass this one'
-    return key: 'SEP'              if event is '---'
-    [ languages, number, ] = event
-    if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
-    else                       languages = ( language.toUpperCase() for language in languages.split ',' )
-    return key: languages, data: number
+dispatch = ( data ) ->
+  return key: Symbol.for 'drop'  if data is 'drop this one'
+  return key: Symbol.for 'pass'  if data is 'pass this one'
+  return key: 'SEP'              if data is '---'
+  [ languages, number, ] = data
+  if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
+  else                       languages = ( language.toUpperCase() for language in languages.split ',' )
+  return key: languages, data: number
 
 #------------------------------------------------------------------------------
 tracks =
@@ -1452,7 +1458,6 @@ tracks =
   FR:   say_it_in_french
   DE:   say_it_in_german
   SEP:  draw_a_separator
-  PASS: D.$pass()
 
 #------------------------------------------------------------------------------
 probes = [
@@ -1497,7 +1502,7 @@ matchers = [
 #------------------------------------------------------------------------------
 my_input = D.new_stream()
 my_input
-  .pipe D.$select selector, tracks
+  .pipe D.$select dispatch, tracks
   .pipe D.$collect()
   .pipe $ ( results ) =>
     T.eq results.length, matchers.length
@@ -1506,6 +1511,34 @@ my_input
 #..............................................................................
 D.send  my_input, probe for probe in probes
 D.end   my_input
+```
+
+We send in data events that take on the form of a list as in `[ language, number, ]`, or a string that
+indicates a `'special value'`. One of the special values is dropped, another one passed through (to remain
+as-is), and yet another one is turned into a separator line. The remaining events indicate one or more
+specific language or have an asterisk to symbolize 'all languages'; in these cases, the dispatcher turns the
+language indicator into a valid target stream key and isolates the number from the data event, since the
+transforms accept only a number, not a `[ language, number, ]` pair.
+
+In the source file with the test cases, you will find a test case named `"(v4) $select (2)"`; it
+demonstrates an interesting techniques to deal with multiple, stacked `$select` transforms: here, we define
+a pass-through stream named `bridgehead` that serves as a mid-way entry point into the stream. We can then
+direct select events to that bridgehead entry point to bypass certain stream transforms. An excerpt:
+
+```coffee
+bridgehead  = D.$pass()
+
+dispatch_drop_and_pass_events = ( event ) ->
+  return key: σ_drop     if event is 'drop this one'
+  return key: bridgehead if event is 'dont process this one'
+  return key: σ_pass
+
+my_input    = D.new_stream()
+my_input
+  .pipe D.$select dispatch_drop_and_pass_events
+  .pipe D.$select dispatch_draw_line_events,    draw_line_track
+  .pipe D.$select dispatch_language_events,     language_track
+  .pipe bridgehead
 ```
 
 ## @$sort = ( sorter, settings ) ->
