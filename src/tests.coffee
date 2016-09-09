@@ -29,8 +29,8 @@ allows to inspect folder contents after tests have terminated. It would probably
 the `keep: yes` setting at a later point in time. ###
 TMP                       = require 'tmp'
 TMP.setGracefulCleanup()
-_temp_thing               = TMP.dirSync keep: yes, unsafeCleanup: no, prefix: 'pipedreams-'
-# _temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
+# _temp_thing               = TMP.dirSync keep: yes, unsafeCleanup: no, prefix: 'pipedreams-'
+_temp_thing               = TMP.dirSync keep: no, unsafeCleanup: yes, prefix: 'pipedreams-'
 temp_home                 = _temp_thing[ 'name' ]
 resolve_path              = ( require 'path' ).resolve
 resolve_temp_path         = ( P... ) -> resolve_path temp_home, ( p.replace /^[.\/]/g, '' for p in P )...
@@ -78,7 +78,40 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #-----------------------------------------------------------------------------------------------------------
 @_main = ->
   info "temporary files, if any, written to #{temp_home}"
-  test @, 'timeout': 3000
+  test @, 'timeout': 30000
+
+
+#===========================================================================================================
+# BENCHMARKS
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $benchmark (1)" ] = ( T, done ) ->
+  input   = D.new_stream()
+  output  = D.new_stream 'devnull'
+  input
+    .pipe D.$benchmark 'foo/bar/1'
+    .pipe $ ( n, send ) => send n ** 2
+    .pipe $ ( n ) => urge n if n % 12345679 is 0
+    .pipe D.$benchmark 'foo/bar/2'
+    .pipe D.$benchmark.summarize()
+    .pipe output
+    .pipe $ 'finish', done
+  D.send  input, n for n in [ 1 .. 1e4 ]
+  D.end   input
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $benchmark (2)" ] = ( T, done ) ->
+  input   = D.new_stream()
+  output  = D.new_stream 'devnull'
+  input
+    .pipe D.$benchmark.summarize()
+    .pipe D.$benchmark 'foo/bar/1'
+    .pipe $ ( n, send ) => send n ** 2
+    .pipe $ ( n ) => urge n if n % 12345679 is 0
+    .pipe D.$benchmark 'foo/bar/2'
+    .pipe output
+    .pipe $ 'finish', done
+  D.send  input, n for n in [ 1 .. 1e4 ]
+  D.end   input
 
 
 #===========================================================================================================
@@ -2708,34 +2741,88 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $benchmark (1)" ] = ( T, done ) ->
-  input   = D.new_stream()
-  output  = D.new_stream 'devnull'
-  input
-    .pipe D.$benchmark 'foo/bar/1'
-    .pipe $ ( n, send ) => send n ** 2
-    .pipe $ ( n ) => urge n if n % 12345679 is 0
-    .pipe D.$benchmark 'foo/bar/2'
-    .pipe D.$benchmark.summarize()
-    .pipe output
-    .pipe $ 'finish', done
-  D.send  input, n for n in [ 1 .. 1e4 ]
-  D.end   input
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $benchmark (2)" ] = ( T, done ) ->
-  input   = D.new_stream()
-  output  = D.new_stream 'devnull'
-  input
-    .pipe D.$benchmark.summarize()
-    .pipe D.$benchmark 'foo/bar/1'
-    .pipe $ ( n, send ) => send n ** 2
-    .pipe $ ( n ) => urge n if n % 12345679 is 0
-    .pipe D.$benchmark 'foo/bar/2'
-    .pipe output
-    .pipe $ 'finish', done
-  D.send  input, n for n in [ 1 .. 1e4 ]
-  D.end   input
+@[ "(v4) file reading gauge" ] = ( T, done ) ->
+  { step }  = require 'coffeenode-suspend'
+  path      = resolve_path __dirname, '../test-data/Unihan_RadicalStrokeCounts.txt'
+  #.........................................................................................................
+  collector = []
+  matchers  = []
+  #.........................................................................................................
+  $cast = =>
+    as_iso_date = ( date ) =>
+      R = date.toISOString()
+      R = R.replace 'T', '-'
+      R = R.replace /:/g, '-'
+      R = R.replace /\..*$/g, ''
+      return R
+    return $ ( row, send ) =>
+      row[ 'date' ] = as_iso_date new Date row[ 'date' ]
+      row[ 'size' ] = parseInt row[ 'size' ], 10
+      send row
+  #.........................................................................................................
+  $colorize = =>
+    return $ ( row, send ) =>
+      row[ 'date' ] = CND.yellow  row[ 'date' ]
+      row[ 'size' ] = CND.steel   row[ 'size' ]
+      row[ 'name' ] = CND.lime    row[ 'name' ]
+      send row
+  #.........................................................................................................
+  show = ( table_settings, as_lists, matcher, handler ) =>
+    input     = D.new_stream 'read', { path, }
+    # output    = D.new_stream 'devnull'
+    input
+      #.....................................................................................................
+      .pipe D.$throttle_bytes 1e5
+      #.....................................................................................................
+      .pipe do =>
+        file_size     = ( ( require 'fs' ).statSync path )[ 'size' ]
+        Progress_bar  = require 'progress'
+        progress_bar_settings =
+          complete:     CND.reverse CND.cyan '\x20'
+          incomplete:   CND.reverse CND.grey  '\x20'
+          total:        file_size
+          width:        50
+          clear:        no
+        format        = '  [:bar] :current/:total (:percent) :elapseds (:etas)'
+        bar           = new Progress_bar format, progress_bar_settings
+        # ticker = ->
+          # bar.tick ( CND.random_integer 0, 120 ) - 50
+          # if bar.complete
+        return $ ( data ) =>
+          bar.tick data.length
+      #.....................................................................................................
+      .pipe D.$split()
+      #.....................................................................................................
+      .pipe do =>
+        count = 0
+        return $ ( data ) =>
+          count += +1
+          urge CND.format_number count if count % 1e4 is 0
+      #.....................................................................................................
+      # .pipe D.$sample 1 / 2, seed: 1.1
+      # .pipe $cast()
+      # .pipe $colorize()
+      # .pipe do => if as_lists then ( D.$as_list 'date', 'size', 'name' ) else D.$pass()
+      # .pipe D.$tabulate table_settings
+      # .pipe $ ( data ) => collector.push data
+      # .pipe $ ( row ) => echo row
+      .pipe $ 'finish', handler
+  #.........................................................................................................
+  step ( resume ) =>
+    # yield show null, no,   null, resume
+    # yield show { keys: [ 'name', 'date', ], }, no,   null, resume
+    # yield show { keys: [ 'name', 'date', 'size', ], }, no,   null, resume
+    # yield show { pad: 3, width: 50, widths: [ 19, 12, ] }, no,   null, resume
+    # yield show { box: 'plain', width: 50, widths: [ 19, 12, ] }, no,   null, resume
+    # yield show { box: 'round', alignment: 'right', width: 50, widths: [ 25, 12, ]                                         }, no,  null, resume
+    # yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'left', ]    }, yes, null, resume
+    # yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'center', ]  }, yes, null, resume
+    yield show {               alignment: 'right', width: 50, widths: [ 25, 12, ], alignments: [ null, null, 'center', ], headings: [ 'Date', 'Size', 'Filename', ] }, yes, null, resume
+    # yield show { spacing: 'wide',   columns: 2, }, yes,  null, resume
+    # yield show { spacing: 'tight',  columns: 2, }, yes,  null, resume
+    # yield show { spacing: 'tight',  columns: 3, }, yes,  null, resume
+    # T.eq collector, matchers
+    done()
 
 
 ############################################################################################################
@@ -2839,6 +2926,7 @@ unless module.parent?
     "(v4) $select (1)"
     "(v4) $select (2)"
     "(v4) duplex stream creation"
+    "(v4) file reading gauge"
     ]
   @_prune()
   @_main()

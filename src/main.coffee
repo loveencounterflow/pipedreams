@@ -78,6 +78,10 @@ insp                      = ( require 'util' ).inspect
   return @_rpr "*❡", "*pump", null, R
   return R
 
+#-----------------------------------------------------------------------------------------------------------
+@_new_stream$throttle_bytes = ( bytes_per_second ) ->
+  return new ( require 'throttle' ) bytes_per_second
+
 
 #===========================================================================================================
 # CONSTANTS
@@ -521,6 +525,7 @@ insp                      = ( require 'util' ).inspect
       flush = ( callback ) ->
         send = get_send @, callback
         method null, send
+        callback() unless has_error
         return null
     else
       flush = null
@@ -1160,8 +1165,7 @@ insp                      = ( require 'util' ).inspect
 # THROUGHPUT LIMITING
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_bytes = ( bytes_per_second ) ->
-  throw new Error "$throttle_bytes on hold"
-  # return @_new_stream$throttle_bytes bytes_per_second
+  return @_new_stream$throttle_bytes bytes_per_second
 
 #-----------------------------------------------------------------------------------------------------------
 @$throttle_items = ( items_per_second ) ->
