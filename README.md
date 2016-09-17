@@ -1105,7 +1105,12 @@ test) exactly where and under what conditions the test works and where and when 
 ## Handle Errors Asynchronously
 
 Error handling in NodeJS (and, generally, in any JavaScript VM) can be a bitch. Be it said that this
-part of the language could be and should be vastly improved. For the time being, consider to
+part of the language could be and should be vastly improved. For the time being, consider to use
+`CND.run`.
+
+**NOTE that running production code with `CND.run` is not recommended as it does come with a hefty
+performance penalty.**
+
 
 ```sh
 npm install --save cnd
