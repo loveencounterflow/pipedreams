@@ -1102,6 +1102,42 @@ PipeDreams code, in the client code (i.e. Your Code), or in some 3rd party modul
 (MWE))** and cleanly delineate (for example, by switching parts of the code on and off and re-running the
 test) exactly where and under what conditions the test works and where and when it fails.
 
+## Handle Errors Asynchronously
+
+Error handling in NodeJS (and, generally, in any JavaScript VM) can be a bitch. Be it said that this
+part of the language could be and should be vastly improved. For the time being, consider to
+
+```sh
+npm install --save cnd
+```
+
+To run a method, catch all the synchronous and asynchronous errors and print a stacktrace
+to `process.stderr` (using `console.error`):
+
+```coffee
+CND = require `cnd`
+CND.run -> f 42
+```
+
+Same as the above, but do the error handling yourself:
+
+```coffee
+CND.run ( -> f 42 ), ( error ) -> foobar()
+```
+
+Same as the last, except have CND output the error's stacktrace and be called back afterwards:
+
+```coffee
+CND.run ( -> f 42 ), null, ( error ) -> foobar()
+```
+
+NB.: `CND.run` may be made configurable in the future; as of now, it is hardwired to use colors
+and always provide long (cross-event) stack traces. Colors used are blue for NodeJS VM built-ins,
+green for errors originating from modules installed under `node_modules`, and yellow for everything
+else.
+
+
+
 # Plugins
 
 ## PipeDreams Plugin: Tabulate
