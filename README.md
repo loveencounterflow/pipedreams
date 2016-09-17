@@ -57,12 +57,13 @@ Install as `npm install --save pipedreams`.
   - [@$collect](#collect)
   - [@$count](#count)
   - [@$decode = ( encoding = 'utf-8' ) ->](#decode---encoding--utf-8---)
+  - [@$drop](#drop)
   - [@$filter](#filter)
   - [@$intersperse = ( joiners... ) ->](#intersperse---joiners---)
   - [@$join = ( outer_joiner = '\n', inner_joiner = ', ' ) ->](#join---outer_joiner--%5Cn-inner_joiner------)
   - [@$lockstep](#lockstep)
   - [@$parse_csv](#parse_csv)
-  - [@$pass_through](#pass_through)
+  - [@$pass](#pass)
   - [@$sample = ( p = 0.5, options ) ->](#sample---p--05-options---)
   - [@$show](#show)
   - [@$select = ( selector, tracks ) ->](#select---selector-tracks---)
@@ -81,7 +82,6 @@ Install as `npm install --save pipedreams`.
   - [@isa_duplex_stream = ( x ) ->](#isa_duplex_stream---x---)
   - [@new_stream](#new_stream)
   - [@remit, @$, @remit_async, @$async](#remit--remit_async-async)
-  - [@run](#run)
   - [@send = ( me, data ) ->](#send---me-data---)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -1604,8 +1604,6 @@ Return whether `x` is a stream that is both readable and writable.
 
 See the extensive [section on the Remit and Remit-Async Methods](#the-remit-and-remit-async-methods),
 above.
-
-## @run
 
 ## @send = ( me, data ) ->
 
