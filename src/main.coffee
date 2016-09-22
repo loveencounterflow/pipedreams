@@ -1004,6 +1004,15 @@ insp                      = ( require 'util' ).inspect
       end()
 
 #-----------------------------------------------------------------------------------------------------------
+@tap = ( stream, P..., handler ) ->
+  pipeline = []
+  pipeline.push stream
+  pipeline.push @$sample P... if P.length > 0
+  pipeline.push @$collect()
+  pipeline.push @$ ( collector ) => handler null, collector
+  return @_rpr "tap", "tap", null, @new_stream { pipeline, }
+
+#-----------------------------------------------------------------------------------------------------------
 @$spread = ( settings ) ->
   indexed   = settings?[ 'indexed'  ] ? no
   # end       = settings?[ 'end'      ] ? no

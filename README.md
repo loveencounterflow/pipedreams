@@ -41,6 +41,7 @@ Install as `npm install --save pipedreams`.
   - [Don't Use a Pass Thru Stream in Front of a Read Stream](#dont-use-a-pass-thru-stream-in-front-of-a-read-stream)
   - [Always Use an Output and Wait for it](#always-use-an-output-and-wait-for-it)
   - [Beware of Incompatible Libraries](#beware-of-incompatible-libraries)
+  - [Handle Errors Asynchronously](#handle-errors-asynchronously)
 - [Plugins](#plugins)
   - [PipeDreams Plugin: Tabulate](#pipedreams-plugin-tabulate)
   - [PipeDreams Plugin: TSV](#pipedreams-plugin-tsv)
@@ -72,6 +73,7 @@ Install as `npm install --save pipedreams`.
   - [@$spread](#spread)
   - [@$stop_time](#stop_time)
   - [@$stringify = ( stringify ) ->](#stringify---stringify---)
+  - [@tap = ( stream, P..., handler ) ->](#tap---stream-p-handler---)
   - [@$throttle_bytes](#throttle_bytes)
   - [@$throttle_items](#throttle_items)
   - [@$transform = ( method ) ->](#transform---method---)
@@ -1607,6 +1609,32 @@ datra stream (at least as far as JSON output is concerned).
 
 If `stringify` is given, `D.$stringify f` is little more that `D.$transform f`, except the
 return value is type-checked to be either `null` or a text.
+
+## @tap = ( stream, P..., handler ) ->
+
+PipeDreams `tap` is a convenience method that transforms a stream into an asynchronous value using
+`$collect`, optionally thinned out to a few samples using `$sample`. Its implementation is quite
+straightforward and may be used *in lieu* for documentation:
+
+```coffee
+@tap = ( stream, P..., handler ) ->
+  pipeline = []
+  pipeline.push stream
+  pipeline.push @$sample P... if P.length > 0
+  pipeline.push @$collect()
+  pipeline.push @$ ( collector ) => handler null, collector
+  return @_rpr "tap", "tap", null, @new_stream { pipeline, }
+```
+
+`tap` is a great tool to retrieve partial file contents, especially to obtain a random, but possibly (if
+argument `seed` is used) deterministic, sample of lines from a text file. This will give you every fifth
+line on average from the file identified by `path`; since `seed` is used, the lines will be the same lines
+every time you run the code. Omit `seed` to obtain a (probably) different sample each time:
+
+```coffee
+file_reader = D.new_stream 'lines', { path, }
+D.tap file_reader, 1 / 5, seed: 123, ( error, lines ) -> ...
+```
 
 ## @$throttle_bytes
 ## @$throttle_items

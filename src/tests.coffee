@@ -2824,6 +2824,21 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # T.eq collector, matchers
     done()
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) tap" ] = ( T, done ) ->
+  { step }  = require 'coffeenode-suspend'
+  # path      = resolve_path __dirname, '../test-data/Unihan_RadicalStrokeCounts.txt'
+  path      = resolve_path __dirname, '../test-data/files.tsv'
+  #.........................................................................................................
+  step ( resume ) =>
+    result = yield D.tap ( D.new_stream 'lines', { path, } ), 1 / 5, seed: 123, resume
+    T.eq result, [
+      'Tue Apr 19 2016 00:00:00 GMT+0200 (CEST)\t1069547520\tubuntu-14.04.4-desktop-amd64.iso',
+      'Wed May 04 2016 00:00:00 GMT+0200 (CEST)\t1537474560\tmanjaro-xfce-15.12-x86_64.iso',
+      'Sat Oct 17 2015 00:00:00 GMT+0200 (CEST)\t19351620\tLegge1899.pdf'
+      ]
+    done()
+
 
 ############################################################################################################
 unless module.parent?
@@ -2927,6 +2942,7 @@ unless module.parent?
     "(v4) $select (2)"
     "(v4) duplex stream creation"
     "(v4) file reading gauge"
+    "(v4) tap"
     ]
   @_prune()
   @_main()
