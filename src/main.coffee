@@ -289,11 +289,11 @@ insp                      = ( require 'util' ).inspect
       if key in hints
         throw new Error "hints contain multiple encodings: #{rpr hints}" if encoding?
         encoding = key
-  #.........................................................................................................
-  if 'progress' in hints
-    unless role is 'read'
-      throw new Error "hint 'progress' can only be used with readstreams"
-    show_progress_bar = @_new_stream_from_path.$_show_progress_bar path
+    #.......................................................................................................
+    if 'progress' in hints
+      unless role is 'read'
+        throw new Error "hint 'progress' can only be used with readstreams"
+      show_progress_bar = @_new_stream_from_path.$_show_progress_bar path
   #.........................................................................................................
   ### TAINT must simplify handling of encoding as tag and in settings ###
   extra     = "#{rpr path}"
