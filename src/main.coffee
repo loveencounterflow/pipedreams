@@ -252,11 +252,12 @@ insp                      = ( require 'util' ).inspect
   unless type = ( CND.type_of path ) is 'text'
     throw new Error "expected path to be a text, got a #{type}"
   #.........................................................................................................
-  role          = 'read'
-  encoding      = null
-  use_line_mode = null
-  pipeline      = []
-  settings      = Object.assign {}, settings
+  role              = 'read'
+  encoding          = null
+  use_line_mode     = null
+  show_progress_bar = null
+  pipeline          = []
+  settings          = Object.assign {}, settings
   #.........................................................................................................
   if hints?
     #.......................................................................................................
@@ -289,6 +290,11 @@ insp                      = ( require 'util' ).inspect
         throw new Error "hints contain multiple encodings: #{rpr hints}" if encoding?
         encoding = key
   #.........................................................................................................
+  if 'progress' in hints
+    unless role is 'read'
+      throw new Error "hint 'progress' can only be used with readstreams"
+    show_progress_bar = @_new_stream_from_path.$_show_progress_bar path
+  #.........................................................................................................
   ### TAINT must simplify handling of encoding as tag and in settings ###
   extra     = "#{rpr path}"
   _encoding = encoding ? settings[ 'encoding' ]
@@ -299,13 +305,15 @@ insp                      = ( require 'util' ).inspect
     else                    extra += ' ' + "∮"
   if role is 'read'
     if use_line_mode
-      return @_rpr "🖹 △", "file-read", extra, @new_stream pipeline: [
-        ( @_new_stream$read_from_file path, settings )
-        ( @$split { encoding, }                      )
-        ]
+      pipeline.push @_new_stream$read_from_file path, settings
+      pipeline.push show_progress_bar if show_progress_bar?
+      pipeline.push @$split { encoding, }
+      return @_rpr "🖹 △", "file-read", extra, @new_stream { pipeline, }
     else
       settings[ 'encoding' ]?= if encoding is 'buffer' then null else encoding
-      return @_rpr "🖹 △", "file-read", extra, @_new_stream$read_from_file path, settings
+      pipeline.push @_new_stream$read_from_file path, settings
+      pipeline.push show_progress_bar if show_progress_bar?
+      return @_rpr "🖹 △", "file-read", extra, @new_stream { pipeline, }
   #.........................................................................................................
   settings[ 'encoding' ]?= encoding unless encoding is 'buffer'
   #.........................................................................................................
@@ -324,9 +332,24 @@ insp                      = ( require 'util' ).inspect
   return null
 
 #-----------------------------------------------------------------------------------------------------------
+@_new_stream_from_path.$_show_progress_bar = ( path ) =>
+  file_size     = ( ( require 'fs' ).statSync path )[ 'size' ]
+  Progress_bar  = require 'progress'
+  progress_bar_settings =
+    complete:     CND.reverse CND.cyan '\x20'
+    incomplete:   CND.reverse CND.grey '\x20'
+    total:        file_size
+    width:        50
+    clear:        no
+  format        = '  [:bar] :current/:total (:percent) :elapseds (:etas)'
+  bar           = new Progress_bar format, progress_bar_settings
+  return @$ ( data ) =>
+    bar.tick data.length
+
+#-----------------------------------------------------------------------------------------------------------
 @_new_stream_from_path._hints = [
   'ascii', 'utf8', 'utf-8', 'ucs2', 'base64', 'binary', 'hex', 'buffer',
-  'read', 'write', 'append',
+  'read', 'write', 'append', 'progress',
   'lines', ]
 
 #-----------------------------------------------------------------------------------------------------------
