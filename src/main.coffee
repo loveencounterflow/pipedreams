@@ -1023,7 +1023,6 @@ insp                      = ( require 'util' ).inspect
   copy  = settings?.copy
   copy  = ( ( data ) -> data ) if copy is null
   copy ?= CND.deep_copy
-  debug '30301', copy
   return @$ ( data, send, end ) =>
     if data?
       stream.write  copy data

@@ -2843,14 +2843,18 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 @[ "(v4) $tap, $as_json_line" ] = ( T, done ) ->
   path        = resolve_path __dirname, '../test-data/files.tsv'
   input       = D.new_stream { path, }
+  check_count = 0
   #.........................................................................................................
-  by_stream   = D.new_stream pipeline: [
-    # D.$deep_copy()
-    # $ ( data, send ) -> send CND.deep_copy data
+  bystream    = D.new_stream pipeline: [
     D.$as_json_line()
     $ ( data ) => urge rpr data
-    D.$collect ( collection ) ->
-      debug collection
+    D.$collect()
+    $ ( collection ) ->
+      debug 'bystream', collection
+      T.eq collection, [ '{"date":"2016-06-15T22:00:00.000Z","size":452146120,"title":"Go for Pythonistas.mp4"}\n',
+        '{"date":"2016-06-15T22:00:00.000Z","size":70266384,"title":"Celsius Didn\'t Invent Celsius.mp4"}\n',
+        '{"date":"2016-05-03T22:00:00.000Z","size":1537474560,"title":"manjaro-xfce-15.12-x86_64.iso"}\n' ]
+      check_count += +1
     ]
   #.........................................................................................................
   $cast_1   = => $ ( record ) =>
@@ -2859,7 +2863,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     return null
   #.........................................................................................................
   $cast_2   = => $ ( record, send ) =>
-    record[ 'date' ] = 0 # +record[ 'date' ]
+    delete record[ 'date' ]
     send JSON.stringify record
     # send record
     return null
@@ -2868,10 +2872,23 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$split_tsv names: [ 'date', 'size', 'title', ]
     .pipe D.$sample 1 / 10, seed: 998791
     .pipe $cast_1()
-    .pipe D.$tap by_stream
+    .pipe D.$tap bystream
     .pipe $cast_2()
     .pipe $ ( data ) => help rpr data
-    .pipe $ 'finish', done
+    .pipe D.$collect()
+    .pipe $ ( collection ) =>
+      debug 'mainstream', collection
+      T.eq collection, [ '{"size":452146120,"title":"Go for Pythonistas.mp4"}',
+        '{"size":70266384,"title":"Celsius Didn\'t Invent Celsius.mp4"}',
+        '{"size":1537474560,"title":"manjaro-xfce-15.12-x86_64.iso"}' ]
+      check_count += +1
+    .pipe $ 'finish', =>
+      T.fail "missed some tests" unless check_count is 2
+      done()
+  #.........................................................................................................
+  return null
+
+
 
 
 
