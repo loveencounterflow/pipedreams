@@ -1044,8 +1044,11 @@ insp                      = ( require 'util' ).inspect
 @$tap = ( stream, settings ) ->
   ### TAINT this didn't work with `@send stream, data`, `stream.push data`—why? ###
   copy  = settings?.copy
-  copy  = ( ( data ) -> data ) if copy is null
-  copy ?= CND.deep_copy
+  switch copy
+    when null, undefined, no  then copy = ( data ) -> data
+    when yes                  then copy = CND.deep_copy
+    else
+      throw new Error "expected a function, got a #{type}" unless ( type = CND.type_of copy ) is 'function'
   return @$ ( data, send, end ) =>
     if data?
       stream.write  copy data

@@ -1644,10 +1644,26 @@ Echo all events from the main stream (so to speak) into the bystream (as it were
 on reading after a writestream, and / or turn arbitrary data events into text events that are written to a
 file in the bystream while they remain unchanged in the main stream for further processing.
 
-Note that by default, the bystream will be sent a deep copy (produced with
-[CND.deep_copy](https://github.com/loveencounterflow/cnd)) of the original data event so as to shield the
-mainstream from any transformations that the data objects sent down the bystream my experience. You can
-define your own copying method by setting the `copy` member of the `settings` argument:
+Note that by default, the bystream will be sent the exact same event objects as the mainstream. As long as
+data events are JS primitive values (numbers, strings, `true`, `false`), that's at any rate OK. However,
+lists (arrays) and general objects as well as their non-primitive elements and properties *may* get modified
+along the chain of pipelined transformations, and this can lead to hard-to-understand bugs in case you, say,
+delete an item from a list in the one stream that you then inadvertently miss in the other (seemingly
+unrelated) stream.
+
+To prevent such errors, PipeDreams `$tap` can be instructed to make a new copy of each data event (produced
+with [CND.deep_copy](https://github.com/loveencounterflow/cnd)) by setting the `copy` member of the
+`settings` argument to `true`:
+
+```coffee
+input
+  .pipe ...
+  .pipe D.$tap bystream, { copy: yes, }
+  .pipe ...
+```
+
+Sometimes a shallow copy is sufficient and a deep copy is too costly; in these cases, pass in your custom
+copying function, e.g. using `Object.assign` (which is fast, reliable and easy to use):
 
 ```coffee
 input
@@ -1656,7 +1672,10 @@ input
   .pipe ...
 ```
 
-By passing `{ copy: null, }`, you can prevent any implicit data copying.
+In the future, PipeDreams may support symbolic values like `'deep'` and `'shallow'` for the sake of clarity;
+for the time being, you can make the default choice—to not copy data events—explicit with `copy: false` or
+`copy: null`.
+
 ## @$throttle_bytes
 ## @$throttle_items
 

@@ -2808,7 +2808,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     .pipe D.$split_tsv names: [ 'date', 'size', 'title', ]
     .pipe D.$sample 1 / 10, seed: 998791
     .pipe $cast_1()
-    .pipe D.$tap bystream
+    .pipe D.$tap bystream, copy: yes
     .pipe $cast_2()
     .pipe $ ( data ) => help rpr data
     .pipe D.$collect()
