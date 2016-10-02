@@ -1833,9 +1833,9 @@ Given a stream and some data, send / write / push that data into the stream.
 
 # ToDo
 
-* [ ] `$as_json_line`—cast each data event as JSON plus newline character
+* [X] `$as_json_line`—cast each data event as JSON plus newline character
 * [ ] `$gauge` / `$progress`—display progress bar
-* [ ] `$tap`—deliver data events from mid-stream into another stream, without interrupting
+* [X] `$tap`—deliver data events from mid-stream into another stream, without interrupting
   or changing the original pipeline
 * [ ] ?retire `$bridge`—functionality replaced by `$tap`?
 * [ ] replace `$as_json_line`, `$as_json_list` with `$as_json` with tags 'line', 'list'
