@@ -85,6 +85,7 @@ Install as `npm install --save pipedreams`.
   - [@new_stream](#new_stream)
   - [@remit, @$, @remit_async, @$async](#remit--remit_async-async)
   - [@send = ( me, data ) ->](#send---me-data---)
+  - [ToDo](#todo)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -1809,3 +1810,12 @@ Given a stream and some data, send / write / push that data into the stream.
 > to do the transformation work.
 
 <!-- cheatcode M42 -->
+
+## ToDo
+
+* [ ] `$as_json_line`—cast each data event as JSON plus newline character
+* [ ] `$gauge` / `$progress`—display progress bar
+* [ ] `$tap`—deliver data events from mid-stream into another stream, without interrupting
+  or changing the original pipeline
+
+
