@@ -834,6 +834,11 @@ insp                      = ( require 'util' ).inspect
     ( @$join ''       ) ]
   return @_rpr "as_json_list", "as_json_list", ( if pretty then "pretty" else null ), R
 
+#-----------------------------------------------------------------------------------------------------------
+@$as_json_line = ->
+  R = @$ ( data, send ) => send ( JSON.stringify data ) + '\n'
+  return @_rpr "as_json_line", "as_json_line", null, R
+
 
 #===========================================================================================================
 # LOCKSTEP
@@ -1011,6 +1016,22 @@ insp                      = ( require 'util' ).inspect
   pipeline.push @$collect()
   pipeline.push @$ ( collector ) => handler null, collector
   return @_rpr "tap", "tap", null, @new_stream { pipeline, }
+
+#-----------------------------------------------------------------------------------------------------------
+@$tap = ( stream, settings ) ->
+  ### TAINT this didn't work with `@send stream, data`, `stream.push data`—why? ###
+  copy  = settings?.copy
+  copy  = ( ( data ) -> data ) if copy is null
+  copy ?= CND.deep_copy
+  debug '30301', copy
+  return @$ ( data, send, end ) =>
+    if data?
+      stream.write  copy data
+      send          data
+    if end?
+      stream.end()
+      end()
+    return null
 
 #-----------------------------------------------------------------------------------------------------------
 @$spread = ( settings ) ->

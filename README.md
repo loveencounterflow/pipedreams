@@ -74,6 +74,7 @@ Install as `npm install --save pipedreams`.
   - [@$stop_time](#stop_time)
   - [@$stringify = ( stringify ) ->](#stringify---stringify---)
   - [@tap = ( stream, P..., handler ) ->](#tap---stream-p-handler---)
+  - [@$tap = ( stream, settings ) ->](#tap---stream-settings---)
   - [@$throttle_bytes](#throttle_bytes)
   - [@$throttle_items](#throttle_items)
   - [@$transform = ( method ) ->](#transform---method---)
@@ -85,7 +86,7 @@ Install as `npm install --save pipedreams`.
   - [@new_stream](#new_stream)
   - [@remit, @$, @remit_async, @$async](#remit--remit_async-async)
   - [@send = ( me, data ) ->](#send---me-data---)
-  - [ToDo](#todo)
+- [ToDo](#todo)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -1637,6 +1638,25 @@ file_reader = D.new_stream 'lines', { path, }
 D.tap file_reader, 1 / 5, seed: 123, ( error, lines ) -> ...
 ```
 
+## @$tap = ( stream, settings ) ->
+
+Echo all events from the main stream (so to speak) into the bystream (as it were); this allows e.g. to go
+on reading after a writestream, and / or turn arbitrary data events into text events that are written to a
+file in the bystream while they remain unchanged in the main stream for further processing.
+
+Note that by default, the bystream will be sent a deep copy (produced with
+[CND.deep_copy](https://github.com/loveencounterflow/cnd)) of the original data event so as to shield the
+mainstream from any transformations that the data objects sent down the bystream my experience. You can
+define your own copying method by setting the `copy` member of the `settings` argument:
+
+```coffee
+input
+  .pipe ...
+  .pipe D.$tap bystream, { copy: ( data ) ->  return Object.assign [], data }
+  .pipe ...
+```
+
+By passing `{ copy: null, }`, you can prevent any implicit data copying.
 ## @$throttle_bytes
 ## @$throttle_items
 
@@ -1811,11 +1831,14 @@ Given a stream and some data, send / write / push that data into the stream.
 
 <!-- cheatcode M42 -->
 
-## ToDo
+# ToDo
 
 * [ ] `$as_json_line`—cast each data event as JSON plus newline character
 * [ ] `$gauge` / `$progress`—display progress bar
 * [ ] `$tap`—deliver data events from mid-stream into another stream, without interrupting
   or changing the original pipeline
+* [ ] ?retire `$bridge`—functionality replaced by `$tap`?
+* [ ] replace `$as_json_line`, `$as_json_list` with `$as_json` with tags 'line', 'list'
+
 
 
