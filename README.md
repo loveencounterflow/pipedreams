@@ -1672,9 +1672,35 @@ input
   .pipe ...
 ```
 
-In the future, PipeDreams may support symbolic values like `'deep'` and `'shallow'` for the sake of clarity;
-for the time being, you can make the default choice—to not copy data events—explicit with `copy: false` or
-`copy: null`.
+In the future, PipeDreams `$tap` may support symbolic values like `'deep'` and `'shallow'` for the sake of
+clarity; for the time being, you can make the default choice—to not copy data events—explicit with `copy:
+false` or `copy: null`.
+
+```
+                               │
+                        ┌──────▼──────┐
+                        │  all events │
+                        └──────┬──────┘
+                               ▼
+                        ┌─────────────┐
+                        │     $tap    │
+                        └──────▼────▼─┘
+                               │    └───────────────┐
+                               ▼                    ▼
+                        ┌─────────────┐      ┌─────────────┐
+                        │  mainstream │      │   bystream  │
+                        │  processing │      │  processing │
+                        └──────┬──────┘      └──────┬──────┘
+                               │                    │
+                               │                    │
+                               ▼                    ▼
+                        ┌─────────────┐      ┌─────────────┐
+                        │ write to A  │      │ write to B  │
+                        └──────┬──────┘      └──────┬──────┘
+                               ▼                    ▼
+                               𝄘                    𝄘
+```
+
 
 ## @$throttle_bytes
 ## @$throttle_items
