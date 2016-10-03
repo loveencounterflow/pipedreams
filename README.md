@@ -1672,9 +1672,13 @@ input
   .pipe ...
 ```
 
-In the future, PipeDreams `$tap` may support symbolic values like `'deep'` and `'shallow'` for the sake of
-clarity; for the time being, you can make the default choice—to not copy data events—explicit with `copy:
-false` or `copy: null`.
+In the future, PipeDreams `$tap` may support symbolic values like `'deep'` and `'shallow'`; for the sake of
+clarity, you can make the default—to inhibit copying of data events—explicit with `copy: false` or `copy:
+null`.
+
+Conceptually, a `$tap`ped bystream 'taps' into the mainstream and produces a secondary pipeline, potentially
+one with its own set of processing steps and its own targets. And, of course, nothing keeps you from tapping
+into that secondary stream and so on:
 
 ```
                         ┌─────────────┐
