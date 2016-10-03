@@ -1651,6 +1651,11 @@ modified along the chain of pipelined transformations, and this can lead to hard
 you, say, delete an item from a list in the one stream that you then inadvertently miss in the other
 (seemingly unrelated) stream.
 
+Remember, all streams should always be considered asynchronous, so in all but the simplest of cases you
+should never assume knowledge about a definitve ordering. In other words, you cannot say for certain at
+which point in time a given transform in the bystream will be called with respect to some other transform in
+the mainstream, so its better to always program defensively.
+
 To prevent such errors, PipeDreams `$tap` can be instructed to make a new copy of each data event (produced
 with [CND.deep_copy](https://github.com/loveencounterflow/cnd)) by setting the `copy` member of the
 `settings` argument to `true`:
