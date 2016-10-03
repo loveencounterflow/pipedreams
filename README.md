@@ -1646,10 +1646,10 @@ file in the bystream while they remain unchanged in the main stream for further 
 
 Note that by default, the bystream will be sent the exact same event objects as the mainstream. As long as
 data events are JS primitive values (numbers, strings, `true`, `false`), that's at any rate OK. However,
-lists (arrays) and general objects as well as their non-primitive elements and properties *may* get modified
-along the chain of pipelined transformations, and this can lead to hard-to-understand bugs in case you, say,
-delete an item from a list in the one stream that you then inadvertently miss in the other (seemingly
-unrelated) stream.
+lists (arrays) and general objects as well as their non-primitive elements and properties just *might* get
+modified along the chain of pipelined transformations, and this can lead to hard-to-understand bugs in case
+you, say, delete an item from a list in the one stream that you then inadvertently miss in the other
+(seemingly unrelated) stream.
 
 To prevent such errors, PipeDreams `$tap` can be instructed to make a new copy of each data event (produced
 with [CND.deep_copy](https://github.com/loveencounterflow/cnd)) by setting the `copy` member of the
