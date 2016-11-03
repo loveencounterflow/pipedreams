@@ -2,7 +2,10 @@
 
 ############################################################################################################
 CND                       = require 'cnd'
-rpr                       = CND.rpr
+_rpr                       = CND.rpr
+### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
+rpr = ( P... ) -> debug '33321', ( require  'util' ).inspect P
+### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
 badge                     = 'PIPEDREAMS'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
@@ -18,6 +21,7 @@ insp                      = ( require 'util' ).inspect
 @σ_null                   = Symbol.for 'null'
 @σ_pass                   = Symbol.for 'pass'
 @σ_drop                   = Symbol.for 'drop'
+
 
 
 #===========================================================================================================
@@ -60,10 +64,15 @@ insp                      = ( require 'util' ).inspect
   R = ( require 'binary-split' ) matcher
   return @_rpr "*✀", "*split", ( rpr matcher ), R
 
+### !!!!!!!!!!!!!!!!!!!! ####
+# #-----------------------------------------------------------------------------------------------------------
+# @_new_stream$through = ( P... ) ->
+#   R = ( require 'through2' ).obj P...
+#   return @_rpr "*⦵", "*through", null, R
+
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream$through = ( P... ) ->
-  R = ( require 'through2' ).obj P...
-  return @_rpr "*⦵", "*through", null, R
+@_new_stream$through = ( P... ) -> ( require 'through2' ).obj P...
+### !!!!!!!!!!!!!!!!!!!! ####
 
 #-----------------------------------------------------------------------------------------------------------
 @_duplex$duplexer2 = ( receiver, sender ) ->
@@ -86,16 +95,22 @@ insp                      = ( require 'util' ).inspect
 #===========================================================================================================
 # CONSTANTS
 #-----------------------------------------------------------------------------------------------------------
-@NULL = Symbol.for 'null'
-
-
-#-----------------------------------------------------------------------------------------------------------
 @_rpr = ( symbol, name, extra, stream ) ->
   throw new Error "expected 4 arguments, got #{arity}" unless ( arity = arguments.length ) is 4
   return @_rprx '(', symbol, name, extra, ')', stream
 
+x_count = 0
 #-----------------------------------------------------------------------------------------------------------
 @_rprx = ( start, symbol, name, extra, stop, stream ) ->
+  ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
+  # stream.inspect = -> '(PIPEDREAMS/stream)'
+  stream.inspect = ->
+    x_count += +1
+    if x_count > 5400
+      throw new Error "### MEH ###"
+    return '(PIPEDREAMS/stream)'
+  return stream
+  ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
   throw new Error "expected 6 arguments, got #{arity}" unless ( arity = arguments.length ) is 6
   _symbols    = CND.yellow
   gl          = CND.gold
@@ -761,7 +776,7 @@ insp                      = ( require 'util' ).inspect
       unless ( type = CND.type_of data ) in [ 'null', 'text', ]
         return send.error new Error "expected a text or `null`, got a #{type}"
   return @$ ( data, send ) =>
-    return send 'null' if data is @NULL
+    return send 'null' if data is @σ_null
     if ( CND.type_of data ) is 'symbol'
       data = { '~isa': 'symbol', value: ( data.toString().replace /^Symbol\((.*)\)$/, '$1' ) }
     send JSON.stringify data
@@ -849,7 +864,7 @@ insp                      = ( require 'util' ).inspect
     throw new Error "expected at most single tag 'pretty', go #{rpr tags}"
   if pretty then  intersperse = @$intersperse '[\n  ', ',\n  ', '\n  ]\n'
   else            intersperse = @$intersperse '[', ',', ']'
-  translate_null  = @$ ( data, send ) => send if data is @NULL then 'null' else data
+  translate_null  = @$ ( data, send ) => send if data is @σ_null then 'null' else data
   R = @new_stream pipeline: [
     ( @$stringify()   )
     ( intersperse     )
@@ -1309,7 +1324,8 @@ insp                      = ( require 'util' ).inspect
   handler = ( error ) => R.emit 'error', error if error?
   bridge  = @_new_stream$pump [ receiver, stream, ], handler
   R       = @_duplex$duplexer2 receiver, sender
-  extra = ( rpr bridge ) + ' ↝ ' + ( rpr sender )
+  # extra = ( rpr bridge ) + ' ↝ ' + ( rpr sender )
+  extra = '(...omitted...)'
   return @_rpr "↷", "bridge", extra, R
 
 # #-----------------------------------------------------------------------------------------------------------
