@@ -2,10 +2,10 @@
 
 ############################################################################################################
 CND                       = require 'cnd'
-_rpr                       = CND.rpr
-### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
-rpr = ( P... ) -> debug '33321', ( require  'util' ).inspect P
-### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
+rpr                       = CND.rpr
+# ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
+# rpr = ( P... ) -> debug '33321', ( require  'util' ).inspect P
+# ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
 badge                     = 'PIPEDREAMS'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
@@ -65,13 +65,13 @@ insp                      = ( require 'util' ).inspect
   return @_rpr "*✀", "*split", ( rpr matcher ), R
 
 ### !!!!!!!!!!!!!!!!!!!! ####
-# #-----------------------------------------------------------------------------------------------------------
-# @_new_stream$through = ( P... ) ->
-#   R = ( require 'through2' ).obj P...
-#   return @_rpr "*⦵", "*through", null, R
-
 #-----------------------------------------------------------------------------------------------------------
-@_new_stream$through = ( P... ) -> ( require 'through2' ).obj P...
+@_new_stream$through = ( P... ) ->
+  R = ( require 'through2' ).obj P...
+  return @_rpr "*⦵", "*through", null, R
+
+# #-----------------------------------------------------------------------------------------------------------
+# @_new_stream$through = ( P... ) -> ( require 'through2' ).obj P...
 ### !!!!!!!!!!!!!!!!!!!! ####
 
 #-----------------------------------------------------------------------------------------------------------
@@ -745,6 +745,31 @@ x_count = 0
 #       return +1 if a[ key ] > b[ key ]
 #       return -1 if a[ key ] < b[ key ]
 #     return 0
+
+
+#-----------------------------------------------------------------------------------------------------------
+@$read_file = ( settings ) ->
+  ### TAINT introduce maximum size setting ###
+  encoding  = settings?[ 'encoding' ] ? null
+  bare      = settings?[ 'bare'     ] ? no
+  #.........................................................................................................
+  R = @$async ( path, send, end ) =>
+    if path?
+      input = @new_stream { path, }
+      input
+        .pipe @$collect()
+        .pipe @$ ( chunks ) =>
+          ### TAINT make PipeDreams method ###
+          length  = chunks.reduce ( ( x, chunk ) -> x + chunk.length ), 0
+          Z       = ( require 'buffer' ).Buffer.concat chunks, length
+          Z       = Z.toString encoding if encoding?
+          send.done if bare then Z else [ path, Z, ]
+          end() if end?
+    else if end?
+      end()
+    return null
+  #.........................................................................................................
+  return R
 
 #-----------------------------------------------------------------------------------------------------------
 @$as_list = ( names... ) ->

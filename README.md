@@ -1335,6 +1335,17 @@ newline, the `inner_joiner` to a comma and a space.
 ## @$parse_csv
 ## @$pass
 
+## @$read_file = ( settings ) ->
+
+Transform that to turn file paths into file contents. `$read_file` uses NodeJS'
+`Buffer.concat` method so it should be reasonably performant.
+
+By default, `$read_file` passes on a list `[ path, content, ]` because it is expected that most of the time,
+subsequent transforms will need to know the origins of the contents. If you only want `content` to be passed
+on, call `$read_file` with `{ bare: no, }`. In order to turn the content buffer into a string, add an
+`encoding` argument, e.g. `{ encoding: 'utf-8', }`
+
+
 ## @$sample = ( p = 0.5, options ) ->
 
 Given a `0 <= p <= 1`, interpret `p` as the *p*robability to *p*ick a given record and otherwise toss
