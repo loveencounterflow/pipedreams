@@ -99,15 +99,15 @@ insp                      = ( require 'util' ).inspect
   throw new Error "expected 4 arguments, got #{arity}" unless ( arity = arguments.length ) is 4
   return @_rprx '(', symbol, name, extra, ')', stream
 
-x_count = 0
+# x_count = 0
 #-----------------------------------------------------------------------------------------------------------
 @_rprx = ( start, symbol, name, extra, stop, stream ) ->
   ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
   # stream.inspect = -> '(PIPEDREAMS/stream)'
   stream.inspect = ->
-    x_count += +1
-    if x_count > 5400
-      throw new Error "### MEH ###"
+    # x_count += +1
+    # if x_count > 5400
+    #   throw new Error "### MEH ###"
     return '(PIPEDREAMS/stream)'
   return stream
   ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
