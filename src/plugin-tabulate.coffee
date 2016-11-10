@@ -17,7 +17,6 @@ urge                      = CND.get_logger 'urge',      badge
 # echo                      = CND.echo.bind CND
 #...........................................................................................................
 D                         = require './main'
-{ $, $async, }            = D
 { to_width, width_of, }   = require 'to-width'
 
 
@@ -107,7 +106,7 @@ values_alignment  = [ 'left',  'right', 'center', ]
 
 #-----------------------------------------------------------------------------------------------------------
 $set_widths_etc = ( S ) ->
-  return $ 'first', ( event, send ) ->
+  return D.$ 'first', ( event, send ) ->
     [ mark, data, ] = event
     return send event unless mark is 'data'
     #...................................................................................................
@@ -141,7 +140,7 @@ as_row = ( S, data, keys = null ) =>
 
 #-----------------------------------------------------------------------------------------------------------
 $as_row = ( S ) ->
-  return $ ( event, send ) ->
+  return D.$ ( event, send ) ->
     [ mark, data, ] = event
     row             = as_row S, data, S.keys
     return send [ 'table', row, ] if mark is 'data'
@@ -191,9 +190,10 @@ get_divider = ( S, position ) ->
 
 #-----------------------------------------------------------------------------------------------------------
 $dividers = ( S ) ->
+  ### TAINT no need to define these functions inline ###
   #.........................................................................................................
   $top = ->
-    return $ 'first', ( event, send ) ->
+    return D.$ 'first', ( event, send ) ->
       send [ 'table', get_divider S, 'top', ]
       #.....................................................................................................
       unless S.headings in [ null, false, ]
@@ -202,10 +202,10 @@ $dividers = ( S ) ->
       #.....................................................................................................
       send event
   #.........................................................................................................
-  $mid = -> $ ( event ) ->
+  $mid = -> D.$ ( event ) ->
   #.........................................................................................................
   $bottom = ->
-    return $ 'last', ( event, send ) ->
+    return D.$ 'last', ( event, send ) ->
       send event
       send [ 'table', get_divider S, 'bottom', ]
   #.........................................................................................................
@@ -213,7 +213,7 @@ $dividers = ( S ) ->
 
 #-----------------------------------------------------------------------------------------------------------
 $cleanup = ( S ) ->
-  return $ ( event, send ) ->
+  return D.$ ( event, send ) ->
     [ mark, data, ] = event
     send data if mark is 'table'
     return null
@@ -249,7 +249,7 @@ boxes =
 #===========================================================================================================
 # HELPERS
 #-----------------------------------------------------------------------------------------------------------
-$as_event = ( S ) -> $ ( data, send ) -> send [ 'data', data, ]
+$as_event = ( S ) -> D.$ ( data, send ) -> send [ 'data', data, ]
 as_text   = ( x ) -> if ( CND.isa_text x ) then x else rpr x
 copy      = ( x ) ->
   return Object.assign [], x if CND.isa_list x
@@ -263,4 +263,9 @@ do ( self = @ ) ->
   D = require './main'
   for name, value of self
     D[ name ] = value
+
+
+
+
+
 
