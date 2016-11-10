@@ -1910,6 +1910,17 @@ Given a stream and some data, send / write / push that data into the stream.
   or changing the original pipeline
 * [ ] ¿retire `$bridge`—functionality replaced by `$tap`?
 * [ ] replace `$as_json_line`, `$as_json_list` with `$as_json` with tags 'line', 'list'
+* [ ] implement PipeDreams `$grep` to filter lines by regular expression. This will be built on top
+  of the next:
+* [ ] PipeDreams `$shell`, a transform that accepts a command string or array, executes a shell
+  command, and writes outputs to a temp file that is then re-read for the next input. Optionally,
+  this includes an implicit `$split()` or `$split_tsv()` step.
+* [ ] See whether we can optimize `$split_tsv` a bit.
+* [ ] Always `require './pipedreams-plugin-tsv'`, `require './pipedreams-plugin-tabulate'`; it is
+  too cumbersome to always having to remember to doing it in application code.
+
+
+
 
 
 

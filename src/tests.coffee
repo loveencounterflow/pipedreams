@@ -2835,6 +2835,24 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $tmp(?), $shell, $grep: tempfile creation, deletion" ] = ( T, done ) ->
+  T.fail "not yet implemented"
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $tmp(?), $shell, $grep: $shell writes to, reads from tempfile" ] = ( T, done ) ->
+  T.fail "not yet implemented"
+  done()
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) $tmp(?), $shell, $grep: $grep filters lines" ] = ( T, done ) ->
+  T.fail "not yet implemented"
+  done()
+
+
+
+
 ############################################################################################################
 unless module.parent?
   ### ----------------===#O#===--------------------###
@@ -2939,7 +2957,10 @@ unless module.parent?
     # "(v4) tap"
     # "(v4) $tap, $as_json_line"
     # "(v4) file reading gauge"
-    "(v4) asnychronous error propagation with new_stream from path"
+    # "(v4) asnychronous error propagation with new_stream from path"
+    "(v4) $tmp(?), $shell, $grep: tempfile creation, deletion"
+    "(v4) $tmp(?), $shell, $grep: $shell writes to, reads from tempfile"
+    "(v4) $tmp(?), $shell, $grep: $grep filters lines"
     ]
   @_prune()
   @_main()
