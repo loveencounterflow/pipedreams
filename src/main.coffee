@@ -21,6 +21,9 @@ insp                      = ( require 'util' ).inspect
 @σ_null                   = Symbol.for 'null'
 @σ_pass                   = Symbol.for 'pass'
 @σ_drop                   = Symbol.for 'drop'
+#...........................................................................................................
+require './plugin-tsv'
+require './plugin-tabulate'
 
 
 
