@@ -1920,6 +1920,21 @@ Given a stream and some data, send / write / push that data into the stream.
   too cumbersome to always having to remember to doing it in application code.
 
 
+# $tmp, shell stream, grep stream
+
+```coffee
+$new_stream grep: /foo.*bar/, path: 'path/to/file.txt'
+$new_stream 'lines', shell: 'ls -Al'
+$new_stream 'lines', shell: 'ls', '-Al'
+$new_stream 'lines', shell: [ 'ls', '-Al', ]
+```
+
+
+
+
+
+
+
 
 
 
