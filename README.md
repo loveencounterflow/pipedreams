@@ -1908,6 +1908,7 @@ Given a stream and some data, send / write / push that data into the stream.
 * [X] `$gauge` / `$progress`—display progress bar
 * [X] `$tap`—deliver data events from mid-stream into another stream, without interrupting
   or changing the original pipeline
+* [X] Retire `$select`
 * [ ] ¿Retire `$bridge`—functionality replaced by `$tap`?
 * [ ] Replace `$as_json_line`, `$as_json_list` with `$as_json` with tags 'line', 'list'
 * [ ] Implement PipeDreams `$grep` to filter lines by regular expression. This will be built on top
