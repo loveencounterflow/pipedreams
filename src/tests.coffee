@@ -17,9 +17,6 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 D                         = require './main'
 { $, $async, }            = D
-#...........................................................................................................
-# D                         = Object.assign D, require './plugin-split-tsv'
-# D                         = Object.assign D, require './plugin-tabulate'
 
 #...........................................................................................................
 ### TAINT for the time being, we create one global folder and keep it beyond process termination; this
@@ -2489,227 +2486,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     done()
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $select (1)" ] = ( T, done ) ->
-  #.........................................................................................................
-  say_it_in_english = $ ( n, send ) ->
-    if n?
-      switch n
-        when 1 then send 'one'
-        when 2 then send 'two'
-        when 3 then send 'three'
-        else send 'many'
-    return null
-  #.........................................................................................................
-  say_it_in_french = $ ( n, send ) ->
-    switch n
-      when 1 then send 'un'
-      when 2 then send 'deux'
-      when 3 then send 'troix'
-      else send 'beaucoup'
-    return null
-  #.........................................................................................................
-  say_it_in_german = $ ( n, send ) ->
-    switch n
-      when 1 then send 'eins'
-      when 2 then send 'zwei'
-      when 3 then send 'drei'
-      else send 'viele'
-    return null
-  #.........................................................................................................
-  draw_a_separator = $ ( ignore, send ) ->
-    send '—————'
-    return null
-  #.........................................................................................................
-  dispatch = ( event ) ->
-    return key: Symbol.for 'drop'  if event is 'drop this one'
-    return key: Symbol.for 'pass'  if event is 'pass this one'
-    return key: 'SEP'              if event is '---'
-    [ languages, number, ] = event
-    if languages is '*'   then languages = [ 'EN', 'FR', 'DE', ]
-    else                       languages = ( language.toUpperCase() for language in languages.split ',' )
-    return key: languages, data: number
-  #.........................................................................................................
-  tracks =
-    EN:   say_it_in_english
-    FR:   say_it_in_french
-    DE:   say_it_in_german
-    SEP:  draw_a_separator
-  #.........................................................................................................
-  probes = [
-    [ 'fr', 1, ]
-    [ 'fr', 2, ]
-    [ 'fr', 3, ]
-    [ 'fr', 4, ]
-    'pass this one'
-    '---'
-    [ 'en,fr',  1, ]
-    '---'
-    'drop this one'
-    [ '*',  1, ]
-    '---'
-    [ 'en', 2, ]
-    '---'
-    [ 'de', 3, ]
-    [ 'de', 4, ]
-    ]
-  #.........................................................................................................
-  matchers = [
-    "un"
-    "deux"
-    "troix"
-    "beaucoup"
-    "pass this one"
-    "—————"
-    "one"
-    "un"
-    "—————"
-    "one"
-    "un"
-    "eins"
-    "—————"
-    "two"
-    "—————"
-    "drei"
-    "viele"
-    ]
-  #.........................................................................................................
-  my_input = D.new_stream()
-  my_input
-    .pipe D.$select dispatch, tracks
-    # .pipe $ ( data ) => urge JSON.stringify data
-    .pipe D.$collect()
-    .pipe $ ( results ) =>
-      T.eq results.length, matchers.length
-      T.eq results[ idx ], matcher for matcher, idx in matchers
-    .pipe $ 'finish', done
-  #.........................................................................................................
-  # D.send  my_input, events[ 0 ] for n in [ 1 ... 1e3 ]
-  D.send  my_input, probe for probe in probes
-  D.end   my_input
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $select (2)" ] = ( T, done ) ->
-  #.........................................................................................................
-  say_it_in_english = $ ( n, send, end ) ->
-    if n?
-      switch n
-        when 1 then send 'one'
-        when 2 then send 'two'
-        when 3 then send 'three'
-        else send 'many'
-    if end?
-      send "guess we're done here"
-      end()
-    return null
-  #.........................................................................................................
-  say_it_in_french = $ ( n, send ) ->
-    switch n
-      when 1 then send 'un'
-      when 2 then send 'deux'
-      when 3 then send 'troix'
-      else send 'beaucoup'
-    return null
-  #.........................................................................................................
-  say_it_in_german = $ ( n, send ) ->
-    switch n
-      when 1 then send 'eins'
-      when 2 then send 'zwei'
-      when 3 then send 'drei'
-      else send 'viele'
-    return null
-  #.........................................................................................................
-  draw_a_separator = $ ( ignore, send ) ->
-    send '—————'
-    return null
-  #.........................................................................................................
-  bridgehead  = D.$pass()
-  drop        = D.$drop()
-  #.........................................................................................................
-  dispatch_drop_and_pass_events = ( event ) ->
-    return key: drop       if event is 'drop this one'
-    return key: bridgehead if event is 'dont process this one'
-    return key: Symbol.for 'pass'
-  #.........................................................................................................
-  dispatch_draw_line_events = ( event ) ->
-    return key: Symbol.for 'pass' unless event is '---'
-    return key: 'SEP'
-  #.........................................................................................................
-  dispatch_language_events = ( event ) ->
-    return key: bridgehead unless CND.isa_list event
-    [ languages, number, ] = event
-    return key: [ 'EN', 'FR', 'DE', ], data: number if  languages is '*'
-    languages = ( language.toUpperCase() for language in languages.split ',' )
-    return key: languages, data: number
-  #.........................................................................................................
-  draw_line_track =
-    SEP:  draw_a_separator
-  #.........................................................................................................
-  language_track =
-    EN:   say_it_in_english
-    FR:   say_it_in_french
-    DE:   say_it_in_german
-  #.........................................................................................................
-  probes = [
-    [ 'fr', 1, ]
-    [ 'fr', 2, ]
-    [ 'fr', 3, ]
-    [ 'fr', 4, ]
-    'dont process this one'
-    '---'
-    [ 'en,fr',  1, ]
-    '---'
-    'drop this one'
-    [ '*',  1, ]
-    '---'
-    [ 'en', 2, ]
-    '---'
-    [ 'de', 3, ]
-    [ 'de', 4, ]
-    ]
-  #.........................................................................................................
-  matchers = [
-    "un"
-    "deux"
-    "troix"
-    "beaucoup"
-    "dont process this one"
-    "—————"
-    "one"
-    "un"
-    "—————"
-    "one"
-    "un"
-    "eins"
-    "—————"
-    "two"
-    "—————"
-    "drei"
-    "viele"
-    "guess we're done here"
-    ]
-  #.........................................................................................................
-  my_input = D.new_stream()
-  my_input
-    .pipe D.$select dispatch_drop_and_pass_events
-    .pipe D.$select dispatch_draw_line_events,    draw_line_track
-    .pipe D.$select dispatch_language_events,     language_track
-    .pipe bridgehead
-    # .pipe $ ( data ) => urge JSON.stringify data
-    .pipe D.$collect()
-    .pipe $ ( results ) =>
-      T.eq results.length, matchers.length
-      T.eq results[ idx ], matcher for matcher, idx in matchers
-    .pipe $ 'finish', done
-  #.........................................................................................................
-  # D.send  my_input, events[ 0 ] for n in [ 1 ... 1e3 ]
-  D.send  my_input, probe for probe in probes
-  D.end   my_input
-  #.........................................................................................................
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
 @[ "(v4) 'loose' transform accepts sent data (???)" ] = ( T, done ) ->
   #.........................................................................................................
   ### this works: ###
@@ -2741,7 +2517,7 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) file reading gauge" ] = ( T, done ) ->
   { step }  = require 'coffeenode-suspend'
-  path      = resolve_path __dirname, '../test-data/Unihan_RadicalStrokeCounts.txt'
+  path      = resolve_path __dirname, '../test-data/Unicode-index.txt'
   #.........................................................................................................
   collector = []
   matchers  = []
@@ -2762,7 +2538,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) tap" ] = ( T, done ) ->
   { step }  = require 'coffeenode-suspend'
-  # path      = resolve_path __dirname, '../test-data/Unihan_RadicalStrokeCounts.txt'
   path      = resolve_path __dirname, '../test-data/files.tsv'
   #.........................................................................................................
   step ( resume ) =>
@@ -2834,19 +2609,91 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $tmp(?), $shell, $grep: tempfile creation, deletion" ] = ( T, done ) ->
-  T.fail "not yet implemented"
-  done()
+@[ "(v4) grep: new stream from pattern and path (basic pattern)" ] = ( T, done ) ->
+  path      = resolve_path __dirname, '../test-data/Unicode-index.txt'
+  pattern   = /Italic/
+  input     = D._new_stream_from_pattern_and_path { pattern, path, }
+  output    = D.new_stream 'write', path: '/tmp/grep.txt'
+  # collector = []
+  # output    = D.new_stream { collector, }
+  input
+    .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe D.$as_line()
+    .pipe output
+    .pipe $ 'finish', =>
+      help 'ok'
+      done()
+  #.........................................................................................................
+  # D.send input, '.'
+  # D.end input
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $tmp(?), $shell, $grep: $shell writes to, reads from tempfile" ] = ( T, done ) ->
-  T.fail "not yet implemented"
-  done()
+@[ "(v4) grep: new stream from pattern and path (with ignore-case)" ] = ( T, done ) ->
+  path      = resolve_path __dirname, '../test-data/Unicode-index.txt'
+  pattern   = /italic/i
+  input     = D._new_stream_from_pattern_and_path { pattern, path, }
+  output    = D.new_stream 'write', path: '/tmp/grep.txt'
+  # collector = []
+  # output    = D.new_stream { collector, }
+  input
+    .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe D.$as_line()
+    .pipe output
+    .pipe $ 'finish', =>
+      help 'ok'
+      done()
+  #.........................................................................................................
+  # D.send input, '.'
+  # D.end input
+  #.........................................................................................................
+  return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "(v4) $tmp(?), $shell, $grep: $grep filters lines" ] = ( T, done ) ->
-  T.fail "not yet implemented"
-  done()
+@[ "(v4) grep: new stream from pattern and path (no results without ignore-case)" ] = ( T, done ) ->
+  path      = resolve_path __dirname, '../test-data/Unicode-index.txt'
+  pattern   = /italic/
+  input     = D._new_stream_from_pattern_and_path { pattern, path, }
+  output    = D.new_stream 'write', path: '/tmp/grep.txt'
+  # collector = []
+  # output    = D.new_stream { collector, }
+  input
+    .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe D.$as_line()
+    .pipe output
+    .pipe $ 'finish', =>
+      help 'ok'
+      done()
+  #.........................................................................................................
+  # D.send input, '.'
+  # D.end input
+  #.........................................................................................................
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "(v4) grep: new stream from pattern and path (error with non-existent file)" ] = ( T, done ) ->
+  path      = resolve_path __dirname, '../test-data/no-such-file.txt'
+  pattern   = /Italic/i
+  input     = D._new_stream_from_pattern_and_path { pattern, path, }
+  output    = D.new_stream 'write', path: '/tmp/grep.txt'
+  # collector = []
+  # output    = D.new_stream { collector, }
+  input
+    .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe D.$as_line()
+    .pipe output
+    .pipe $ 'finish', =>
+      warn "waiting for error"
+  input.on 'error', ( error ) ->
+    # warn error
+    T.ok ( /grep: .*no-such-file.txt: No such file or directory/ ).test error[ 'message' ]
+    done()
+  #.........................................................................................................
+  # D.send input, '.'
+  # D.end input
+  #.........................................................................................................
+  return null
 
 
 
@@ -2866,99 +2713,98 @@ unless module.parent?
   ### ----------------===#O#===--------------------###
 
   include = [
-    # "(v4) stream sigils"
-    # "(v4) $benchmark (1)"
-    # "(v4) $benchmark (2)"
-    "(v4) _new_stream_from_path (2)"
-    "(v4) _new_stream_from_pipeline (1a)"
-    "(v4) _new_stream_from_pipeline (3)"
-    "(v4) _new_stream_from_pipeline (4a)"
-    "(v4) _new_stream_from_pipeline (4b)"
-    "(v4) _new_stream_from_text"
-    "(v4) _new_stream_from_text (2)"
-    "(v4) observer transform called with data `null` on stream end"
-    "(v4) D.new_stream"
-    "(v4) stream / transform construction with through2 (1)"
-    "(v4) D._new_stream_from_pipeline"
-    "(v4) $async with method arity 3 (1)"
-    "(v4) $lockstep 1"
-    "(v4) $lockstep fails on streams of unequal lengths without fallback"
-    "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
-    "(v4) $batch and $spread"
-    "(v4) streams as transforms and v/v (1)"
-    "(v4) streams as transforms and v/v (2)"
-    "(v4) file stream events (1)"
-    "(v4) transforms below output receive data events (1)"
-    "(v4) transforms below output receive data events (2)"
-    "(v4) new_stream README example (1)"
-    "(v4) new_stream README example (2)"
-    "(v4) new_stream README example (3)"
-    "(v4) _new_stream_from_path with encodings"
-    "(v4) _new_stream_from_path (raw)"
-    "(v4) new new_stream signature (1)"
-    "(v4) new new_stream signature (2)"
-    "(v4) _new_stream_from_path (1)"
-    "(v4) $split_tsv (3)"
-    "(v4) $split_tsv (4)"
-    "(v4) read TSV file (1)"
-    "(v4) TSV whitespace trimming"
-    "(v4) $split_tsv (1)"
-    "(v4) $intersperse (1)"
-    "(v4) $intersperse (2)"
-    "(v4) $intersperse (3)"
-    "(v4) $intersperse (3a)"
-    "(v4) $intersperse (4)"
-    "(v4) $join (1)"
-    "(v4) $join (2)"
-    "(v4) $join (3)"
-    "(v4) $as_json_list (1)"
-    "(v4) $as_json_list (2)"
-    "(v4) $as_json_list (2a)"
-    "(v4) $as_json_list (2b)"
-    "(v4) $as_json_list (2c)"
-    "(v4) $as_json_list (3)"
-    "(v4) symbols as data events (1)"
-    "(v4) symbols as data events (2)"
-    "(v4) $as_tsv"
-    "(v4) $batch (1)"
-    "(v4) $batch (2)"
-    "(v4) all remit methods have opt-in end detection (1)"
-    "(v4) all remit methods have opt-in end detection (2)"
-    "(v4) all remit methods have opt-in end detection (3)"
-    "(v4) all remit methods have opt-in end detection (4)"
-    "(v4) README demo (1)"
-    "(v4) README demo (2)"
-    "(v4) README demo (3)"
-    "(v4) $async only allows 3 arguments in transformation (1)"
-    "(v4) $sort 1"
-    "(v4) $sort 2"
-    "(v4) $sort 3"
-    "(v4) $sort 4"
-    "(v4) $sort 5"
-    "(v4) $sort 6"
-    "(empty-string) can send empty strings ($split) (1)"
-    "(empty-string) can send empty strings ($split) (2)"
-    "(empty-string) can send empty strings (w/out pipeline)"
-    "(empty-string) can send empty strings (w/ pipeline)"
-    "(empty-string) duplexer2 works with empty strings"
-    "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
-    "(v4) $tabulate"
-    "(v4) $on_first, $on_last not called in empty stream (1)"
-    "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
-    "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
-    "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
-    "(v4) $split_tsv with configurable splitter"
-    "(v4) 'loose' transform accepts sent data (???)"
-    "(v4) $select (1)"
-    "(v4) $select (2)"
-    "(v4) duplex stream creation"
-    "(v4) tap"
-    "(v4) $tap, $as_json_line"
-    "(v4) file reading gauge"
-    "(v4) asnychronous error propagation with new_stream from path"
-    # "(v4) $tmp(?), $shell, $grep: tempfile creation, deletion"
-    # "(v4) $tmp(?), $shell, $grep: $shell writes to, reads from tempfile"
-    # "(v4) $tmp(?), $shell, $grep: $grep filters lines"
+    # # "(v4) stream sigils"
+    # # "(v4) $benchmark (1)"
+    # # "(v4) $benchmark (2)"
+    # "(v4) _new_stream_from_path (2)"
+    # "(v4) _new_stream_from_pipeline (1a)"
+    # "(v4) _new_stream_from_pipeline (3)"
+    # "(v4) _new_stream_from_pipeline (4a)"
+    # "(v4) _new_stream_from_pipeline (4b)"
+    # "(v4) _new_stream_from_text"
+    # "(v4) _new_stream_from_text (2)"
+    # "(v4) observer transform called with data `null` on stream end"
+    # "(v4) D.new_stream"
+    # "(v4) stream / transform construction with through2 (1)"
+    # "(v4) D._new_stream_from_pipeline"
+    # "(v4) $async with method arity 3 (1)"
+    # "(v4) $lockstep 1"
+    # "(v4) $lockstep fails on streams of unequal lengths without fallback"
+    # "(v4) $lockstep succeeds on streams of unequal lengths with fallback"
+    # "(v4) $batch and $spread"
+    # "(v4) streams as transforms and v/v (1)"
+    # "(v4) streams as transforms and v/v (2)"
+    # "(v4) file stream events (1)"
+    # "(v4) transforms below output receive data events (1)"
+    # "(v4) transforms below output receive data events (2)"
+    # "(v4) new_stream README example (1)"
+    # "(v4) new_stream README example (2)"
+    # "(v4) new_stream README example (3)"
+    # "(v4) _new_stream_from_path with encodings"
+    # "(v4) _new_stream_from_path (raw)"
+    # "(v4) new new_stream signature (1)"
+    # "(v4) new new_stream signature (2)"
+    # "(v4) _new_stream_from_path (1)"
+    # "(v4) $split_tsv (3)"
+    # "(v4) $split_tsv (4)"
+    # "(v4) read TSV file (1)"
+    # "(v4) TSV whitespace trimming"
+    # "(v4) $split_tsv (1)"
+    # "(v4) $intersperse (1)"
+    # "(v4) $intersperse (2)"
+    # "(v4) $intersperse (3)"
+    # "(v4) $intersperse (3a)"
+    # "(v4) $intersperse (4)"
+    # "(v4) $join (1)"
+    # "(v4) $join (2)"
+    # "(v4) $join (3)"
+    # "(v4) $as_json_list (1)"
+    # "(v4) $as_json_list (2)"
+    # "(v4) $as_json_list (2a)"
+    # "(v4) $as_json_list (2b)"
+    # "(v4) $as_json_list (2c)"
+    # "(v4) $as_json_list (3)"
+    # "(v4) symbols as data events (1)"
+    # "(v4) symbols as data events (2)"
+    # "(v4) $as_tsv"
+    # "(v4) $batch (1)"
+    # "(v4) $batch (2)"
+    # "(v4) all remit methods have opt-in end detection (1)"
+    # "(v4) all remit methods have opt-in end detection (2)"
+    # "(v4) all remit methods have opt-in end detection (3)"
+    # "(v4) all remit methods have opt-in end detection (4)"
+    # "(v4) README demo (1)"
+    # "(v4) README demo (2)"
+    # "(v4) README demo (3)"
+    # "(v4) $async only allows 3 arguments in transformation (1)"
+    # "(v4) $sort 1"
+    # "(v4) $sort 2"
+    # "(v4) $sort 3"
+    # "(v4) $sort 4"
+    # "(v4) $sort 5"
+    # "(v4) $sort 6"
+    # "(empty-string) can send empty strings ($split) (1)"
+    # "(empty-string) can send empty strings ($split) (2)"
+    # "(empty-string) can send empty strings (w/out pipeline)"
+    # "(empty-string) can send empty strings (w/ pipeline)"
+    # "(empty-string) duplexer2 works with empty strings"
+    # "(empty-string) new D.duplex, new_stream from pipeline work with empty strings"
+    # "(v4) $tabulate"
+    # "(v4) $on_first, $on_last not called in empty stream (1)"
+    # "(v4) $on_first, $on_last called in empty stream when tagged 'null' (1)"
+    # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (1)"
+    # "(v4) $on_first, $on_last, $on_start, $on_stop work as expected (2)"
+    # "(v4) $split_tsv with configurable splitter"
+    # "(v4) 'loose' transform accepts sent data (???)"
+    # "(v4) duplex stream creation"
+    # "(v4) tap"
+    # "(v4) $tap, $as_json_line"
+    # "(v4) file reading gauge"
+    # "(v4) asnychronous error propagation with new_stream from path"
+    "(v4) grep: new stream from pattern and path (basic pattern)"
+    "(v4) grep: new stream from pattern and path (with ignore-case)"
+    "(v4) grep: new stream from pattern and path (no results without ignore-case)"
+    "(v4) grep: new stream from pattern and path (error with non-existent file)"
     ]
   @_prune()
   @_main()

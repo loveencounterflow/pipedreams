@@ -21,9 +21,6 @@ insp                      = ( require 'util' ).inspect
 @σ_null                   = Symbol.for 'null'
 @σ_pass                   = Symbol.for 'pass'
 @σ_drop                   = Symbol.for 'drop'
-#...........................................................................................................
-require './plugin-tsv'
-require './plugin-tabulate'
 
 
 
@@ -1360,67 +1357,15 @@ require './plugin-tabulate'
 # @duplex = ( receiver, sender ) -> @_duplex$duplexer2 receiver, sender
 
 
-#===========================================================================================================
-# SELECT
-#-----------------------------------------------------------------------------------------------------------
-@$select = ( selector, tracks = null ) ->
-  receiver    = @new_stream()
-  sender      = @new_stream()
-  drop        = @$drop()
-  pass        = @$pass()
-  pass.pipe sender
-  my_streams  = {}
-  #.........................................................................................................
-  if tracks?
-    ( Object.keys tracks ).forEach ( key ) =>
-      stream            = tracks[ key ]
-      my_streams[ key ] = sub_input = @new_stream()
-      sub_input
-        .pipe stream
-        .pipe sender
-  #.........................................................................................................
-  receiver
-    .pipe @$ ( raw_data, send, end ) =>
-      #.....................................................................................................
-      if raw_data?
-        #...................................................................................................
-        keys        = null
-        data        = null
-        selection   = selector raw_data
-        throw new Error "expected value for selection, got #{rpr selection}" unless selection?
-        #...................................................................................................
-        { key
-          data }    = selection
-        throw new Error "expected value for key, got #{rpr key}" unless key?
-        data       ?= raw_data
-        keys        = if ( CND.isa_list key ) then key else [ key, ]
-        #...................................................................................................
-        for key in keys
-          if @isa_stream key
-            target_stream = key
-          else if ( CND.type_of key ) is 'symbol'
-            switch key
-              when @σ_pass then target_stream = pass
-              when @σ_drop then target_stream = drop
-              else throw new Error "expected symbol for 'pass' or 'drop', got #{rpr key}"
-          else
-            target_stream = my_streams[ key ]
-            throw new Error "not a valid key: #{rpr key}" unless target_stream?
-          @send target_stream, data
-      #.....................................................................................................
-      if end?
-        if tracks?
-          ( Object.keys tracks ).forEach ( key ) => @end my_streams[ key ]
-        @end drop
-        @end pass
-        end()
-  #.........................................................................................................
-  # return @new_stream duplex: [ receiver, sender, ]
-  return @_duplex$duplexer2 receiver, sender
 
 
 #===========================================================================================================
 # EXPORT
+#-----------------------------------------------------------------------------------------------------------
+require './plugin-tsv'
+require './plugin-tabulate'
+require './plugin-spawn'
+
 #-----------------------------------------------------------------------------------------------------------
 do ( PIPEDREAMS = @ ) ->
   for key in Object.keys PIPEDREAMS
@@ -1430,4 +1375,5 @@ do ( PIPEDREAMS = @ ) ->
         PIPEDREAMS[ key ][ sub_key ] = value[ sub_key ]
     else
       PIPEDREAMS[ key ] = value
+
 

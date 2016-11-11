@@ -1923,10 +1923,13 @@ Given a stream and some data, send / write / push that data into the stream.
   to minimalistic streams (no-op transforms) built solely with (e.g.) `through2` and with throughput
   attained by `grep`, `ag`
 
+
 # $tmp, shell stream, grep stream
 
 ```coffee
-$new_stream grep: /foo.*bar/, path: 'path/to/file.txt'
+# $new_stream /foo.*bar/, path: 'path/to/file.txt'
+$new_stream 'grep', pattern: /foo.*bar/, path: 'path/to/file.txt'
+# $new_stream grep: /foo.*bar/, path: 'path/to/file.txt'
 $new_stream 'lines', shell: 'ls -Al'
 $new_stream 'lines', shell: 'ls', '-Al'
 $new_stream 'lines', shell: [ 'ls', '-Al', ]
