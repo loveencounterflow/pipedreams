@@ -2608,24 +2608,110 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     done()
   return null
 
+
+#===========================================================================================================
+# GREP
+#-----------------------------------------------------------------------------------------------------------
+grep_italic_results_with_matching_case = [
+  "Bold Italic Greek Mathematical Symbols  1D71C"
+  "Bold Italic Greek Mathematical Symbols, Sans-serif  1D790"
+  "Bold Italic Mathematical Symbols  1D468"
+  "Bold Italic Mathematical Symbols, Sans-serif  1D63C"
+  "Double-struck Italic Mathematical Symbols 2145"
+  "Greek Mathematical Symbols, Bold Italic 1D71C"
+  "Greek Mathematical Symbols, Italic  1D6E2"
+  "Greek Mathematical Symbols, Sans-serif Bold Italic  1D790"
+  "Italic Greek Mathematical Symbols 1D6E2"
+  "Italic Greek Mathematical Symbols, Bold 1D71C"
+  "Italic Greek Mathematical Symbols, Sans-serif Bold  1D790"
+  "Italic Mathematical Symbols 1D434"
+  "Italic Mathematical Symbols, Bold 1D468"
+  "Italic Mathematical Symbols, Sans-serif 1D608"
+  "Italic Mathematical Symbols, Sans-serif Bold  1D63C"
+  "Italic, Old 10300"
+  "Mathematical Symbols, Bold Italic 1D468"
+  "Mathematical Symbols, Bold Italic Greek 1D71C"
+  "Mathematical Symbols, Italic  1D434"
+  "Mathematical Symbols, Italic Greek  1D6E2"
+  "Mathematical Symbols, Sans-serif Bold Italic  1D63C"
+  "Mathematical Symbols, Sans-serif Bold Italic Greek  1D790"
+  "Mathematical Symbols, Sans-serif Italic 1D608"
+  "Numerals, Old Italic  10320"
+  "Old Italic  10300"
+  "Sans-serif Bold Italic Greek Mathematical Symbols 1D790"
+  "Sans-serif Bold Italic Mathematical Symbols 1D63C"
+  "Sans-serif Italic Mathematical Symbols  1D608"
+  "Symbols, Bold Italic Greek Mathematical 1D71C"
+  "Symbols, Bold Italic Mathematical 1D468"
+  "Symbols, Double-struck Italic Mathematical  2145"
+  "Symbols, Italic Greek Mathematical  1D6E2"
+  "Symbols, Italic Mathematical  1D434"
+  "Symbols, Sans-serif Bold Italic Greek Mathematical  1D790"
+  "Symbols, Sans-serif Bold Italic Mathematical  1D63C"
+  "Symbols, Sans-serif Italic Mathematical 1D608"
+  ]
+
+#-----------------------------------------------------------------------------------------------------------
+grep_italic_results_with_ignore_case = [
+  "Bold Italic Greek Mathematical Symbols  1D71C"
+  "Bold Italic Greek Mathematical Symbols, Sans-serif  1D790"
+  "Bold Italic Mathematical Symbols  1D468"
+  "Bold Italic Mathematical Symbols, Sans-serif  1D63C"
+  "D, DOUBLE-STRUCK ITALIC CAPITAL 2145"
+  "D, DOUBLE-STRUCK ITALIC SMALL 2146"
+  "Double-struck Italic Mathematical Symbols 2145"
+  "E, DOUBLE-STRUCK ITALIC SMALL 2147"
+  "Greek Mathematical Symbols, Bold Italic 1D71C"
+  "Greek Mathematical Symbols, Italic  1D6E2"
+  "Greek Mathematical Symbols, Sans-serif Bold Italic  1D790"
+  "I, DOUBLE-STRUCK ITALIC SMALL 2148"
+  "Italic Greek Mathematical Symbols 1D6E2"
+  "Italic Greek Mathematical Symbols, Bold 1D71C"
+  "Italic Greek Mathematical Symbols, Sans-serif Bold  1D790"
+  "Italic Mathematical Symbols 1D434"
+  "Italic Mathematical Symbols, Bold 1D468"
+  "Italic Mathematical Symbols, Sans-serif 1D608"
+  "Italic Mathematical Symbols, Sans-serif Bold  1D63C"
+  "Italic, Old 10300"
+  "J, DOUBLE-STRUCK ITALIC SMALL 2149"
+  "Mathematical Symbols, Bold Italic 1D468"
+  "Mathematical Symbols, Bold Italic Greek 1D71C"
+  "Mathematical Symbols, Italic  1D434"
+  "Mathematical Symbols, Italic Greek  1D6E2"
+  "Mathematical Symbols, Sans-serif Bold Italic  1D63C"
+  "Mathematical Symbols, Sans-serif Bold Italic Greek  1D790"
+  "Mathematical Symbols, Sans-serif Italic 1D608"
+  "Numerals, Old Italic  10320"
+  "Old Italic  10300"
+  "Sans-serif Bold Italic Greek Mathematical Symbols 1D790"
+  "Sans-serif Bold Italic Mathematical Symbols 1D63C"
+  "Sans-serif Italic Mathematical Symbols  1D608"
+  "Symbols, Bold Italic Greek Mathematical 1D71C"
+  "Symbols, Bold Italic Mathematical 1D468"
+  "Symbols, Double-struck Italic Mathematical  2145"
+  "Symbols, Italic Greek Mathematical  1D6E2"
+  "Symbols, Italic Mathematical  1D434"
+  "Symbols, Sans-serif Bold Italic Greek Mathematical  1D790"
+  "Symbols, Sans-serif Bold Italic Mathematical  1D63C"
+  "Symbols, Sans-serif Italic Mathematical 1D608"
+  ]
+
 #-----------------------------------------------------------------------------------------------------------
 @[ "(v4) grep: new stream from pattern and path (basic pattern)" ] = ( T, done ) ->
   path      = resolve_path __dirname, '../test-data/Unicode-index.txt'
   pattern   = /Italic/
   input     = D._new_stream_from_pattern_and_path { pattern, path, }
-  output    = D.new_stream 'write', path: '/tmp/grep.txt'
-  # collector = []
-  # output    = D.new_stream { collector, }
+  output    = D.new_stream 'devnull'
+  collector = []
   input
     .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe $ ( data ) => collector.push data
     .pipe D.$as_line()
     .pipe output
     .pipe $ 'finish', =>
       help 'ok'
+      T.eq collector, grep_italic_results_with_matching_case
       done()
-  #.........................................................................................................
-  # D.send input, '.'
-  # D.end input
   #.........................................................................................................
   return null
 
@@ -2634,19 +2720,17 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   path      = resolve_path __dirname, '../test-data/Unicode-index.txt'
   pattern   = /italic/i
   input     = D._new_stream_from_pattern_and_path { pattern, path, }
-  output    = D.new_stream 'write', path: '/tmp/grep.txt'
-  # collector = []
-  # output    = D.new_stream { collector, }
+  output    = D.new_stream 'devnull'
+  collector = []
   input
     .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe $ ( data ) => collector.push data
     .pipe D.$as_line()
     .pipe output
     .pipe $ 'finish', =>
       help 'ok'
+      T.eq collector, grep_italic_results_with_ignore_case
       done()
-  #.........................................................................................................
-  # D.send input, '.'
-  # D.end input
   #.........................................................................................................
   return null
 
@@ -2655,19 +2739,17 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   path      = resolve_path __dirname, '../test-data/Unicode-index.txt'
   pattern   = /italic/
   input     = D._new_stream_from_pattern_and_path { pattern, path, }
-  output    = D.new_stream 'write', path: '/tmp/grep.txt'
-  # collector = []
-  # output    = D.new_stream { collector, }
+  output    = D.new_stream 'devnull'
+  collector = []
   input
     .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe $ ( data ) => collector.push data
     .pipe D.$as_line()
     .pipe output
     .pipe $ 'finish', =>
       help 'ok'
+      T.eq collector, []
       done()
-  #.........................................................................................................
-  # D.send input, '.'
-  # D.end input
   #.........................................................................................................
   return null
 
@@ -2676,11 +2758,11 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
   path      = resolve_path __dirname, '../test-data/no-such-file.txt'
   pattern   = /Italic/i
   input     = D._new_stream_from_pattern_and_path { pattern, path, }
-  output    = D.new_stream 'write', path: '/tmp/grep.txt'
-  # collector = []
-  # output    = D.new_stream { collector, }
+  output    = D.new_stream 'devnull'
+  collector = []
   input
     .pipe $ ( data ) => info CND.steel JSON.stringify data
+    .pipe $ ( data ) => collector.push data
     .pipe D.$as_line()
     .pipe output
     .pipe $ 'finish', =>
@@ -2689,9 +2771,6 @@ isa_stream = ( x ) -> x instanceof ( require 'stream' ).Stream
     # warn error
     T.ok ( /grep: .*no-such-file.txt: No such file or directory/ ).test error[ 'message' ]
     done()
-  #.........................................................................................................
-  # D.send input, '.'
-  # D.end input
   #.........................................................................................................
   return null
 
@@ -2804,10 +2883,10 @@ unless module.parent?
     "(v4) grep: new stream from pattern and path (basic pattern)"
     "(v4) grep: new stream from pattern and path (with ignore-case)"
     "(v4) grep: new stream from pattern and path (no results without ignore-case)"
-    "(v4) grep: new stream from pattern and path (error with non-existent file)"
+    # "(v4) grep: new stream from pattern and path (error with non-existent file)"
     ]
   @_prune()
-  @_main()
+  # @_main()
 
 
   # debug '5562', JSON.stringify key for key in Object.keys @
@@ -2815,3 +2894,18 @@ unless module.parent?
   # CND.run =>
   #   @[ "(v4) $tap, $as_json_line" ] null, -> warn "not tested"
 
+  #-----------------------------------------------------------------------------------------------------------
+  @f = ->
+    path      = '/home/flow/io/scratch/scrape-guoxuedashi-yitizi/results/guoxuedashi-excerpts-with-yitizi.txt'
+    pattern   = /gloss/
+    input     = D._new_stream_from_pattern_and_path { pattern, path, }
+    output    = D.new_stream 'write', { path: '/tmp/guoxuedashi-excerpts-with-yitizi-excerpts.txt', }
+    input
+      # .pipe $ ( data ) => info CND.steel JSON.stringify data
+      .pipe D.$as_line()
+      .pipe output
+      .pipe $ 'finish', =>
+        help 'ok'
+    #.........................................................................................................
+    return null
+  @f()

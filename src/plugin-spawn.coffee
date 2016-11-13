@@ -42,8 +42,8 @@ CP                        = require 'child_process'
   { pattern, path, }    = pattern_and_path
   pattern_txt           = pattern[ 'source' ]
   ignore_case           = pattern[ 'ignoreCase' ]
-  debug '77698', pattern_and_path
-  debug '77698', ignore_case
+  # debug '77698', pattern_and_path
+  # debug '77698', ignore_case
   cp_settings           = { cwd, }
   command               = 'grep'
   #.........................................................................................................
@@ -54,7 +54,7 @@ CP                        = require 'child_process'
   parameters.push         '--ignore-case' if ignore_case
   parameters.push         path
   #.........................................................................................................
-  debug '12034', "#{command} #{parameters.join ' '}"
+  # debug '12034', "#{command} #{parameters.join ' '}"
   cp                    = CP.spawn command, parameters, cp_settings
   #.........................................................................................................
   stdout_finished       = no
