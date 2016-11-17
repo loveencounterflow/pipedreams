@@ -3,9 +3,6 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-# ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
-# rpr = ( P... ) -> debug '33321', ( require  'util' ).inspect P
-# ### !!!!!!!!!!!!!!!!!!!!!!!!!! ###
 badge                     = 'PIPEDREAMS'
 log                       = CND.get_logger 'plain',     badge
 info                      = CND.get_logger 'info',      badge
@@ -812,6 +809,7 @@ insp                      = ( require 'util' ).inspect
 #-----------------------------------------------------------------------------------------------------------
 @$as_line = ( stringify ) ->
   ### Like `$as_text`, but appends a newline to each chunk. ###
+  ### TAINT rewrite without using pipeline to avoid piping overhead ###
   pipeline = [
     ( @$as_text stringify )
     ( @$ ( text, send ) => send text + '\n' ) ]
