@@ -10,7 +10,7 @@ key       := sigil name
 
 prefix    := non-empty text
 
-sigil     := '!' # proper singleton
+sigil     := '^' # proper singleton
           := '~' # system singleton
           := '<' # start-of-region (SOR)
           := '>' # end-of-region   (EOR)
