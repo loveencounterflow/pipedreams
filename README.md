@@ -37,7 +37,7 @@ of the selectors.
 
 Selectors can be of three kinds:
 
-* **key patterns**: e.g. `'^prfx:myname'` will match all singular events (`%`)
+* **key patterns**: e.g. `'^prfx:myname'` will match all singular events (`^`)
   that have a namespace prefix `prfx` and a name `myname`.
 
 * **boolean functions**: e.g. `( ( d ) -> d.value > 42 )` will match all events
@@ -51,8 +51,15 @@ A given event will be 'selected' (i.e. `select d, ...` will return `true`) only
 if all conditions are met; as a consequence, `select d, '^', 'text'` ('select
 singleton events whose name is `'text'`) is equivalent to `( select d, '^' ) and
 ( select d, 'text' )`. Incidentally, this is also equivalent to `select '^text'`
-since sigils and names may be contracted into a single selector. Observe that
-tags must appear on their own, so `select '^text#stamped'` is not OK.
+since sigils and names may be contracted into a single selector.
+
+Observe that
+
+* tags must appear on their own, (so `select '^text#stamped'` is not OK), and
+  that
+
+* `'#stamped'` means 'event *may* have property `{ stamped: true, }`, *not* that
+  it *must* be `stamped`.
 
 **NOTE** One could argue that a call `select d` without any selectors should be
 legal and always return `true`; while that is a perfectly logical extension, in
