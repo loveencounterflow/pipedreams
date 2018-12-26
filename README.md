@@ -59,7 +59,9 @@ Observe that
   that
 
 * `'#stamped'` means 'event *may* have property `{ stamped: true, }`, *not* that
-  it *must* be `stamped`.
+  it *must* be `stamped`. In order to only select singleton `text` events that
+  are also `stamped`, use a boolean function like `select d, '^text', ( ( d ) ->
+  d.stamped ? false )`.
 
 **NOTE** One could argue that a call `select d` without any selectors should be
 legal and always return `true`; while that is a perfectly logical extension, in
