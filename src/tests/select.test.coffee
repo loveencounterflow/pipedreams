@@ -51,11 +51,14 @@ _classify_selector = ( selector ) ->
   throw new Error "µ99843 illegal selector #{rpr selector}"
 
 #-----------------------------------------------------------------------------------------------------------
-_match_keypattern = ( d, keypattern ) ->
-  sigils_ok = d[ 0 ] in keypattern.sigils
+_match_keypattern = ( d_key, keypattern ) ->
+  throw new Error "µ77784 illegal event key #{rpr d_key}" unless ( CND.isa_text d_key ) and ( d_key.length > 1 )
+  sigil = d_key[ 0 ]
+  throw new Error "µ77784 event key #{rpr d_key} has illegal sigil #{rpr sigil}" unless ( sigil in '<^>~' )
+  sigils_ok = sigil in keypattern.sigils
   return false unless sigils_ok
   #.........................................................................................................
-  throw new Error "illegal event key #{rpr d.key}" unless ( match = d.match _keypattern )?
+  throw new Error "µ77784 illegal event key #{rpr d_key}" unless ( match = d_key.match _keypattern )?
   if keypattern.prefix? and ( keypattern.prefix isnt '*' )
     prefix_ok = ( match.groups.prefix is keypattern.prefix )
     return false unless prefix_ok
@@ -82,7 +85,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   try
     result = await method()
   catch error
-    throw error
+    # throw error
     if errmsg_pattern? and ( errmsg_pattern.test error.message )
       echo CND.green jr [ probe, null, errmsg_pattern.source, ]
       T.ok true
@@ -145,6 +148,16 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   probes_and_matchers = [
     [[ '^frob', '^frob'],true]
     [[ '^frob', '<frob'],false]
+    [[ '^frob', '<>frob'],false]
+    [[ '^frob', '<^>frob'],true]
+    [[ '^frob', '<>^frob'],true]
+    [[ '<frob', '<>^frob'],true]
+    [[ '>frob', '<>^frob'],true]
+    [[ 'frob', '<>^frob'],null,"event key 'frob' has illegal sigil 'f'"]
+    [[ '~copy', '~frob'],false]
+    [[ '~copy', '~copy'],true]
+    [[ '~copy', '^~copy'],true]
+    [[ '~copy', '<>^~copy'],true]
     ]
   #.........................................................................................................
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
