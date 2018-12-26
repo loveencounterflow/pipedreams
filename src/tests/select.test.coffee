@@ -1,4 +1,8 @@
 
+
+'use strict'
+
+
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
@@ -14,6 +18,7 @@ echo                      = CND.echo.bind CND
 test                      = require 'guy-test'
 jr                        = JSON.stringify
 #...........................................................................................................
+L                         = require '../select'
 # PS                        = require '../..'
 # { $, $async, }            = PS
 
@@ -25,58 +30,6 @@ jr                        = JSON.stringify
     continue if name.startsWith '_'
     delete @[ name ] unless name in include
   return null
-
-#-----------------------------------------------------------------------------------------------------------
-select = ( d, selectors... ) ->
-  throw new Error "µ29929 expected selectors, got none" if selectors.length is 0
-  for selector in selectors
-    return false unless _select_one selector
-  return true
-
-#-----------------------------------------------------------------------------------------------------------
-_keypattern = ///^(?<sigils>[<^>~]*) \s* (?:(?<prefix>[^:<^>~\s]+?):)? \s* (?<name>[^:<^>~\s]*)$///
-
-#-----------------------------------------------------------------------------------------------------------
-_tag_from_selector = ( selector ) ->
-  ### Return tag if `selector` is marked as tag selector, `null` otherwise. ###
-  return null unless ( CND.isa_text selector ) and ( selector.startsWith '#' ) and ( selector.length > 1 )
-  return selector[ 1 .. ]
-
-#-----------------------------------------------------------------------------------------------------------
-_classify_selector = ( selector ) ->
-  return [ 'function',    selector,     ] if CND.isa_function selector
-  throw new Error "µ99843 expected a text, got a #{type}" unless ( type = CND.type_of selector ) is 'text'
-  return [ 'tag',         tag,          ] if ( tag = _tag_from_selector selector )?
-  return [ 'keypattern',  match.groups, ] if ( match = selector.match _keypattern )?
-  throw new Error "µ99843 illegal selector #{rpr selector}"
-
-#-----------------------------------------------------------------------------------------------------------
-_match_keypattern = ( d_key, keypattern ) ->
-  throw new Error "µ77784 illegal event key #{rpr d_key}" unless ( CND.isa_text d_key ) and ( d_key.length > 1 )
-  sigil = d_key[ 0 ]
-  throw new Error "µ77784 event key #{rpr d_key} has illegal sigil #{rpr sigil}" unless ( sigil in '<^>~' )
-  sigils_ok = sigil in keypattern.sigils
-  return false unless sigils_ok
-  #.........................................................................................................
-  throw new Error "µ77784 illegal event key #{rpr d_key}" unless ( match = d_key.match _keypattern )?
-  if keypattern.prefix? and ( keypattern.prefix isnt '*' )
-    prefix_ok = ( match.groups.prefix is keypattern.prefix )
-    return false unless prefix_ok
-  #.........................................................................................................
-  if keypattern.name? and ( keypattern.name.length > 0 )
-    name_ok = ( keypattern.name is match.groups.name )
-    return false unless name_ok
-  #.........................................................................................................
-  return true
-
-#-----------------------------------------------------------------------------------------------------------
-_select_one = ( d, selector ) ->
-  [ clasz, selector, ] = _classify_selector selector
-  return switch clasz
-    when 'function'   then  selector          d
-    when 'tag'        then  _match_tag        d, selector
-    when 'keypattern' then  _match_keypattern d, selector
-  throw new Error "µ37373 illegal selector class #{rpr clasz}"
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -134,7 +87,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   #.........................................................................................................
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
     method = ->
-      R = ( probe.match _keypattern )?.groups ? null
+      R = ( probe.match L._keypattern )?.groups ? null
       return null unless R?
       for key, value of R
         delete R[ key ] if value is undefined
@@ -163,7 +116,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
     method = ->
       [ d, selector, ] = probe
-      return _select_one d, selector
+      return L._select_one d, selector
     await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
