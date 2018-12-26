@@ -43,7 +43,8 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
       echo CND.green jr [ probe, null, errmsg_pattern.source, ]
       T.ok true
     else
-      echo CND.orange jr [ probe, null, error.message, ]
+      echo CND.crimson "unexpected exception", ( jr [ probe, null, error.message, ] )
+      T.fail "unexpected exception for probe #{jr probe}:\n#{error.message}"
       # return reject "failed with #{error.message}"
     return null
   if CND.equals result, matcher
@@ -56,7 +57,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   return result
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "keypattern" ] = ( T, done ) ->
+@[ "selector keypatterns" ] = ( T, done ) ->
   probes_and_matchers = [
     ["",{"sigils":"","name":""},null]
     ["^foo",{"sigils":"^","name":"foo"},null]
@@ -87,7 +88,33 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   #.........................................................................................................
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
     method = ->
-      R = ( probe.match L._keypattern )?.groups ? null
+      R = ( probe.match L._selector_keypattern )?.groups ? null
+      return null unless R?
+      for key, value of R
+        delete R[ key ] if value is undefined
+      return R
+    await f T, method, probe, matcher, errmsg_pattern
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "event keypatterns" ] = ( T, done ) ->
+  probes_and_matchers = [
+    ["text",null,null]
+    ["^text",{"sigil":"^","name":"text"},null]
+    ["<bold",{"sigil":"<","name":"bold"},null]
+    [">bold",{"sigil":">","name":"bold"},null]
+    ["~collect",{"sigil":"~","name":"collect"},null]
+    ["~kwic:collect",{"sigil":"~","prefix":"kwic","name":"collect"},null]
+    ["<kwic:bar",{"sigil":"<","prefix":"kwic","name":"bar"},null]
+    [">kwic:bar",{"sigil":">","prefix":"kwic","name":"bar"},null]
+    [">!kwic:bar",null,null]
+    ["<>kwic:bar",null,null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
+    method = ->
+      R = ( probe.match L._event_keypattern )?.groups ? null
       return null unless R?
       for key, value of R
         delete R[ key ] if value is undefined
@@ -106,7 +133,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     [[ '^frob', '<>^frob'],true]
     [[ '<frob', '<>^frob'],true]
     [[ '>frob', '<>^frob'],true]
-    [[ 'frob', '<>^frob'],null,"event key 'frob' has illegal sigil 'f'"]
+    [[ 'frob', '<>^frob'],null,"illegal event key 'frob'"]
     [[ '~copy', '~frob'],false]
     [[ '~copy', '~copy'],true]
     [[ '~copy', '^~copy'],true]
@@ -115,11 +142,49 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   #.........................................................................................................
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
     method = ->
-      [ d, selector, ] = probe
-      return L._select_one d, selector
+      [ key, selector, ]  = probe
+      d                   = { key, }
+      return L._select_one d, 'keypattern', selector
     await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
+
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "classify_selector" ] = ( T, done ) ->
+#   probes_and_matchers = [
+#     ["#justatag",["tag","justatag"],null]
+#     ["^bar",["keypattern",{"sigils":"^","name":"bar"}],null]
+#     ["!!!(->)",["function",null],null]
+#     ]
+#   #.........................................................................................................
+#   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
+#     method = ->
+#       probe = ( -> ) if probe.startsWith '!!!'
+#       R     = L._classify_selector probe
+#       if R[ 0 ] is 'keypattern'
+#         for key, value of R[ 1 ]
+#           delete R[ 1 ][ key ] if value is undefined
+#       else if R[ 0 ] is 'function'
+#         R[ 1 ] = null
+#       return R
+#     await f T, method, probe, matcher, errmsg_pattern
+#   done()
+#   return null
+
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "select 2" ] = ( T, done ) ->
+#   probes_and_matchers = [
+#     [[ {key:'^number',value:42}, '^number'],true]
+#     [[ {key:'^number',value:42,stamped:true}, '^number'],false]
+#     ]
+#   #.........................................................................................................
+#   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
+#     method = ->
+#       [ d, selectors..., ] = probe
+#       return L.select d, selectors...
+#     await f T, method, probe, matcher, errmsg_pattern
+#   done()
+#   return null
 
 
 
