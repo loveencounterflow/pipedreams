@@ -1,15 +1,12 @@
 {
   "name": "pipedreams",
-  "version": "6.3.2",
-  "description": "Piping NodeJS streams made rad easy, no subclassing man",
+  "version": "7.0.0",
+  "description": "data event streams made easy, built on top of PipeStreams, which is built on top of pull-stream",
   "main": "lib/main.js",
   "scripts": {
     "build": "coffee --map -o lib -c src",
-    "push": "git add . && git commit -m'update' && git push",
     "doctoc": "doctoc README.md README-plugin-tabulate.md README-plugin-tsv.md",
-    "pub": "npm run build && npm run doctoc && npm run push && npm version patch && npm publish",
-    "test-travis": "node lib/tests.js",
-    "test": "npm run build && node lib/tests.js"
+    "test": "npm run build && node lib/tests/main.js"
   },
   "repository": {
     "type": "git",
@@ -18,10 +15,8 @@
   "keywords": [
     "pipes",
     "streams",
-    "through",
-    "through2",
-    "text",
-    "csv"
+    "pipestreams",
+    "pull-stream"
   ],
   "author": "",
   "license": "MIT",
@@ -30,18 +25,6 @@
   },
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
-    "async": "^2.0.1",
-    "binary-split": "^1.0.2",
-    "cnd": "^4.2.0",
-    "coffeenode-suspend": "^0.1.11",
-    "duplexer2": "^0.1.4",
-    "guy-test": "^1.3.0",
-    "progress": "^1.1.8",
-    "pump": "^1.0.1",
-    "throttle": "^1.0.3",
-    "timsort": "^0.3.0",
-    "tmp": "0.0.28",
-    "to-width": "^1.0.3"
   },
   "devDependencies": {
     "guy-test": "^1.2.3"
