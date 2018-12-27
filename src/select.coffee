@@ -12,34 +12,39 @@ urge                      = CND.get_logger 'urge',      badge
 help                      = CND.get_logger 'help',      badge
 whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
+{ assign
+  jr }                    = CND
 
 #-----------------------------------------------------------------------------------------------------------
-@_event_keypattern    = ///^ (?<sigil>[<^>~])       (?:(?<prefix>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+?):)?     (?<name>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+) $///
-@_selector_keypattern = ///^ (?<sigils>[<^>~]*) \s* (?:(?<prefix>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+?):)? \s* (?<name>[^:<^>~!$%&\/()=?+*'",.;|\#\s]*) $///
+### TAINT use named subpatterns ###
+@_event_keypattern    = ///^
+  (?<sigil>[<^>~])
+  (?:(?<prefix>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+?):)?
+  (?<name>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+)
+  $///
+
+#-----------------------------------------------------------------------------------------------------------
+@_selector_keypattern = ///^
+  (?<sigils>[<^>~]*)
+  (?:(?<prefix>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+?):)?
+  (?<name>[^:<^>~!$%&\/()=?+*'",.;|\#\s]*)
+  $///
+
+#-----------------------------------------------------------------------------------------------------------
+@_tag_pattern = ///^
+  \#
+  (?<tag>[^:<^>~!$%&\/()=?+*'",.;|\#\s]*)
+  $///
 
 #-----------------------------------------------------------------------------------------------------------
 @_tag_from_selector = ( selector ) ->
   ### Return tag if `selector` is marked as tag selector, `null` otherwise. ###
-  return null unless ( CND.isa_text selector ) and ( selector.startsWith '#' ) and ( selector.length > 1 )
-  return selector[ 1 .. ]
+  return null unless CND.isa_text selector
+  return null unless ( match = selector.match @_tag_pattern )?
+  return match.groups.tag
 
 #-----------------------------------------------------------------------------------------------------------
-@_match_keypattern = ( key, selector ) ->
-  #.........................................................................................................
-  ### TAINT code duplication ###
-  unless ( CND.isa_text key ) and ( key_match = key.match @_event_keypattern )?
-    throw new Error "µ83744 illegal event key #{rpr key}"
-  key_facets = key_match.groups
-  for k, v of key_facets
-    delete key_facets[ k ] if v in [ '', null, undefined, ]
-  #.........................................................................................................
-  ### TAINT code duplication ###
-  unless ( CND.isa_text selector ) and ( selector_match = selector.match @_selector_keypattern )?
-    throw new Error "µ83744 illegal selector #{rpr selector}"
-  selector_facets = selector_match.groups
-  for k, v of selector_facets
-    delete selector_facets[ k ] if v in [ '', null, undefined, ]
-  #.........................................................................................................
+@_match_keypattern = ( key_facets, selector_facets, settings ) ->
   return false if selector_facets.sigils? and not ( key_facets.sigil in selector_facets.sigils )
   return false if ( not selector_facets.prefix? ) and ( key_facets.prefix? )
   return false if selector_facets.prefix? and not ( key_facets.prefix is selector_facets.prefix )
@@ -54,16 +59,32 @@ echo                      = CND.echo.bind CND
   return [ 'function',    selector,     ] if CND.isa_function selector
   throw new Error "µ85175 expected a text, got a #{type}" unless ( type = CND.type_of selector ) is 'text'
   return [ 'tag',         tag,          ] if ( tag = @_tag_from_selector selector )?
-  return [ 'keypattern',  match.groups, ] if ( match = selector.match @_keypattern )?
-  throw new Error "µ85652 illegal selector #{rpr selector}"
+  return [ 'keypattern',  ( @_selector_as_facets selector ), ]
 
 #-----------------------------------------------------------------------------------------------------------
-@_select_one = ( d, clasz, selector, settings ) ->
-  return switch clasz
-    when 'function'   then  selector            d
-    # when 'tag'        then  @_match_tag         d,      selector
-    when 'keypattern' then  @_match_keypattern  d.key,  selector
-  throw new Error "µ86129 illegal selector class #{rpr clasz}"
+@_key_as_facets       = ( key       ) -> @_key_or_pattern_as_facets key,      @_event_keypattern
+@_selector_as_facets  = ( selector  ) -> @_key_or_pattern_as_facets selector, @_selector_keypattern
+
+#-----------------------------------------------------------------------------------------------------------
+@_key_or_pattern_as_facets = ( x, re ) ->
+  unless ( CND.isa_text x ) and ( match = x.match re )?
+    throw new Error "µ83744 illegal key or selector #{rpr x}"
+  R = match.groups
+  for k, v of R
+    delete R[ k ] if v in [ '', null, undefined, ]
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
+@_settings_defaults = { stamped: false, }
+
+#-----------------------------------------------------------------------------------------------------------
+@_settings_from_tags = ( tags ) ->
+  R = assign {}, @_settings_defaults
+  for tag from tags
+    switch tag
+      when 'stamped' then R.stamped = true
+      else throw new Error "µ20201 illegal tag #{rpr tag}"
+  return R
 
 
 #===========================================================================================================
@@ -71,15 +92,28 @@ echo                      = CND.echo.bind CND
 #-----------------------------------------------------------------------------------------------------------
 @select = ( d, selectors... ) ->
   throw new Error "µ86606 expected one or more selectors, got none" if selectors.length is 0
-  tags                  = []
+  throw new Error "µ00922 expected object with property key, got #{rpr d}" unless d?.key?
+  #.........................................................................................................
+  key_facets            = @_key_as_facets d.key
+  tags                  = new Set()
   other_selectors       = []
   classes_and_selectors = ( @_classify_selector selector for selector in selectors )
+  #.........................................................................................................
   for [ clasz, selector, ] in classes_and_selectors
-    if clasz is 'tag' then  tags.push             selector
-    else                    other_selectors.push  selector
-  debug '37773', [ tags, other_selectors, ]
-  settings = null ### !!!!!!!!!!!!!!! ###
-  for selector in other_selectors
-    return false unless @_select_one d, clasz, selector, settings
+    if clasz is 'tag' then  tags.add selector
+    else                    other_selectors.push [ clasz, selector, ]
+  #.........................................................................................................
+  settings = @_settings_from_tags tags
+  return false if d.stamped and not settings.stamped
+  #.........................................................................................................
+  for [ clasz, selector, ] in other_selectors
+    is_matching = switch clasz
+      when 'function'   then  selector d
+      when 'keypattern' then  @_match_keypattern key_facets, selector, settings
+      else throw new Error "µ86129 illegal selector class #{rpr clasz}"
+    return false unless is_matching
   return true
+
+
+
 

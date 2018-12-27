@@ -43,7 +43,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
       echo CND.green jr [ probe, null, errmsg_pattern.source, ]
       T.ok true
     else
-      echo CND.crimson "unexpected exception", ( jr [ probe, null, error.message, ] )
+      echo CND.indigo "unexpected exception", ( jr [ probe, null, error.message, ] )
       T.fail "unexpected exception for probe #{jr probe}:\n#{error.message}"
       # return reject "failed with #{error.message}"
     return null
@@ -62,27 +62,16 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     ["",{"sigils":"","name":""},null]
     ["^foo",{"sigils":"^","name":"foo"},null]
     ["<foo",{"sigils":"<","name":"foo"},null]
-    ["  ",{"sigils":"","name":""},null]
+    ["  ",null,null]
     [">foo",{"sigils":">","name":"foo"},null]
     ["<>foo",{"sigils":"<>","name":"foo"},null]
     ["<>^foo",{"sigils":"<>^","name":"foo"},null]
-    ["^ foo",{"sigils":"^","name":"foo"},null]
-    ["<  foo",{"sigils":"<","name":"foo"},null]
-    ["> foo",{"sigils":">","name":"foo"},null]
-    ["<> foo",{"sigils":"<>","name":"foo"},null]
-    ["^<> foo",{"sigils":"^<>","name":"foo"},null]
-    ['< > ^ foo',null,"Cannot read property 'groups' of null"]
+    ["^ foo",null,null]
     ["^prfx:foo",{"sigils":"^","prefix":"prfx","name":"foo"},null]
     ["<prfx:foo",{"sigils":"<","prefix":"prfx","name":"foo"},null]
     [">prfx:foo",{"sigils":">","prefix":"prfx","name":"foo"},null]
     ["<>prfx:foo",{"sigils":"<>","prefix":"prfx","name":"foo"},null]
     ["<>^prfx:foo",{"sigils":"<>^","prefix":"prfx","name":"foo"},null]
-    ["^ prfx: foo",{"sigils":"^","prefix":"prfx","name":"foo"},null]
-    ["<  prfx: foo",{"sigils":"<","prefix":"prfx","name":"foo"},null]
-    ["> prfx: foo",{"sigils":">","prefix":"prfx","name":"foo"},null]
-    ["<> prfx: foo",{"sigils":"<>","prefix":"prfx","name":"foo"},null]
-    ["^<> prfx: foo",{"sigils":"^<>","prefix":"prfx","name":"foo"},null]
-    ["< > ^ prfx: foo",null,"Cannot read property 'groups' of null"]
     ["^<>",{"sigils":"^<>","name":""},null]
     ]
   #.........................................................................................................
@@ -123,70 +112,100 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   done()
   return null
 
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "select 1" ] = ( T, done ) ->
+#   probes_and_matchers = [
+#     [[ '^frob', '^frob'],true]
+#     [[ '^frob', '<frob'],false]
+#     [[ '^frob', '<>frob'],false]
+#     [[ '^frob', '<^>frob'],true]
+#     [[ '^frob', '<>^frob'],true]
+#     [[ '<frob', '<>^frob'],true]
+#     [[ '>frob', '<>^frob'],true]
+#     [[ 'frob', '<>^frob'],null,"illegal event key 'frob'"]
+#     [[ '~copy', '~frob'],false]
+#     [[ '~copy', '~copy'],true]
+#     [[ '~copy', '^~copy'],true]
+#     [[ '~copy', '<>^~copy'],true]
+#     ]
+#   #.........................................................................................................
+#   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
+#     method = ->
+#       [ key, selector, ]  = probe
+#       d                   = { key, }
+#       return L._select_one d, 'keypattern', selector
+#     await f T, method, probe, matcher, errmsg_pattern
+#   done()
+#   return null
+
 #-----------------------------------------------------------------------------------------------------------
-@[ "select 1" ] = ( T, done ) ->
+@[ "classify_selector" ] = ( T, done ) ->
   probes_and_matchers = [
-    [[ '^frob', '^frob'],true]
-    [[ '^frob', '<frob'],false]
-    [[ '^frob', '<>frob'],false]
-    [[ '^frob', '<^>frob'],true]
-    [[ '^frob', '<>^frob'],true]
-    [[ '<frob', '<>^frob'],true]
-    [[ '>frob', '<>^frob'],true]
-    [[ 'frob', '<>^frob'],null,"illegal event key 'frob'"]
-    [[ '~copy', '~frob'],false]
-    [[ '~copy', '~copy'],true]
-    [[ '~copy', '^~copy'],true]
-    [[ '~copy', '<>^~copy'],true]
+    ["#justatag",["tag","justatag"],null]
+    ["^bar",["keypattern",{"sigils":"^","name":"bar"}],null]
+    ["!!!(->)",["function",null],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
     method = ->
-      [ key, selector, ]  = probe
-      d                   = { key, }
-      return L._select_one d, 'keypattern', selector
+      probe = ( -> ) if probe.startsWith '!!!'
+      R     = L._classify_selector probe
+      if R[ 0 ] is 'keypattern'
+        for key, value of R[ 1 ]
+          delete R[ 1 ][ key ] if value is undefined
+      else if R[ 0 ] is 'function'
+        R[ 1 ] = null
+      return R
     await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
 
-# #-----------------------------------------------------------------------------------------------------------
-# @[ "classify_selector" ] = ( T, done ) ->
-#   probes_and_matchers = [
-#     ["#justatag",["tag","justatag"],null]
-#     ["^bar",["keypattern",{"sigils":"^","name":"bar"}],null]
-#     ["!!!(->)",["function",null],null]
-#     ]
-#   #.........................................................................................................
-#   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-#     method = ->
-#       probe = ( -> ) if probe.startsWith '!!!'
-#       R     = L._classify_selector probe
-#       if R[ 0 ] is 'keypattern'
-#         for key, value of R[ 1 ]
-#           delete R[ 1 ][ key ] if value is undefined
-#       else if R[ 0 ] is 'function'
-#         R[ 1 ] = null
-#       return R
-#     await f T, method, probe, matcher, errmsg_pattern
-#   done()
-#   return null
+#-----------------------------------------------------------------------------------------------------------
+@[ "select 2" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[ {key:'^number',value:42}, '^number'],true]
+    [[ {key:'^number',value:42,stamped:true}, '^number'],false]
+    [[ {key:'^number',value:42,stamped:true}, '#stamped', '^number'],true]
+    [[ {key:'<italic',stamped:true}, '#stamped', '<italic'],true]
+    [[ {key:'<italic',stamped:true}, '#stamped', '>italic'],false]
+    [[ {key:'<italic',stamped:true}, '#stamped', '<>italic'],true]
+    [[ {key:'<italic'}, '#stamped', '<italic'],true]
+    [[ {key:'<italic'}, '#stamped', '>italic'],false]
+    [[ {key:'<italic'}, '#stamped', '<>italic'],true]
+    [[ {key:'<italic',stamped:true}, '<italic'],false]
+    [[ {key:'<italic',stamped:true}, '>italic'],false]
+    [[ {key:'<italic',stamped:true}, '<>italic'],false]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
+    method = ->
+      [ d, selectors..., ] = probe
+      return L.select d, selectors...
+    await f T, method, probe, matcher, errmsg_pattern
+  done()
+  return null
 
-# #-----------------------------------------------------------------------------------------------------------
-# @[ "select 2" ] = ( T, done ) ->
-#   probes_and_matchers = [
-#     [[ {key:'^number',value:42}, '^number'],true]
-#     [[ {key:'^number',value:42,stamped:true}, '^number'],false]
-#     ]
-#   #.........................................................................................................
-#   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-#     method = ->
-#       [ d, selectors..., ] = probe
-#       return L.select d, selectors...
-#     await f T, method, probe, matcher, errmsg_pattern
-#   done()
-#   return null
+#-----------------------------------------------------------------------------------------------------------
+@[ "select 3" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[ {key:'^number',value:42}, '^number', "( d ) => d.value > 42"],false]
+    [[ {key:'^number',value:44}, '^number', "( d ) => d.value > 42"],true]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
+    method = ->
+      [ d, selectors..., ] = probe
+      selectors[ selectors.length - 1 ] = eval selectors[ selectors.length - 1 ]
+      return L.select d, selectors...
+    await f T, method, probe, matcher, errmsg_pattern
+  done()
+  return null
 
 
+# first-only
+# last-only
+# before-start
+# after-stop
 
 
 
