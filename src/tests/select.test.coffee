@@ -19,9 +19,8 @@ test                      = require 'guy-test'
 jr                        = JSON.stringify
 #...........................................................................................................
 L                         = require '../select'
-# PS                        = require '../..'
-# { $, $async, }            = PS
-
+PD                        = require '../..'
+# { $, $async, }            = PD
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -180,7 +179,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
     method = ->
       [ d, selectors..., ] = probe
-      return L.select d, selectors...
+      return PD.select d, selectors...
     await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
@@ -196,7 +195,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     method = ->
       [ d, selectors..., ] = probe
       selectors[ selectors.length - 1 ] = eval selectors[ selectors.length - 1 ]
-      return L.select d, selectors...
+      return PD.select d, selectors...
     await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
