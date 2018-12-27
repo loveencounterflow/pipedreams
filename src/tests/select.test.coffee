@@ -110,32 +110,6 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
   done()
   return null
 
-# #-----------------------------------------------------------------------------------------------------------
-# @[ "select 1" ] = ( T, done ) ->
-#   probes_and_matchers = [
-#     [[ '^frob', '^frob'],true]
-#     [[ '^frob', '<frob'],false]
-#     [[ '^frob', '<>frob'],false]
-#     [[ '^frob', '<^>frob'],true]
-#     [[ '^frob', '<>^frob'],true]
-#     [[ '<frob', '<>^frob'],true]
-#     [[ '>frob', '<>^frob'],true]
-#     [[ 'frob', '<>^frob'],null,"illegal event key 'frob'"]
-#     [[ '~copy', '~frob'],false]
-#     [[ '~copy', '~copy'],true]
-#     [[ '~copy', '^~copy'],true]
-#     [[ '~copy', '<>^~copy'],true]
-#     ]
-#   #.........................................................................................................
-#   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-#     method = ->
-#       [ key, selector, ]  = probe
-#       d                   = { key, }
-#       return L._select_one d, 'keypattern', selector
-#     await f T, method, probe, matcher, errmsg_pattern
-#   done()
-#   return null
-
 #-----------------------------------------------------------------------------------------------------------
 @[ "classify_selector" ] = ( T, done ) ->
   probes_and_matchers = [
@@ -173,6 +147,31 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     [[ {key:'<italic',stamped:true}, '<italic'],false]
     [[ {key:'<italic',stamped:true}, '>italic'],false]
     [[ {key:'<italic',stamped:true}, '<>italic'],false]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
+    method = ->
+      [ d, selectors..., ] = probe
+      return PD.select d, selectors...
+    await f T, method, probe, matcher, errmsg_pattern
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "select 2 using lists" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[ {key:'^number',value:42},              ['^number',             ]  ],true]
+    [[ {key:'^number',value:42,stamped:true}, ['^number',             ]  ],false]
+    [[ {key:'^number',value:42,stamped:true}, ['#stamped', '^number', ]  ],true]
+    [[ {key:'<italic',stamped:true},          ['#stamped', '<italic', ]  ],true]
+    [[ {key:'<italic',stamped:true},          ['#stamped', '>italic', ]  ],false]
+    [[ {key:'<italic',stamped:true},          ['#stamped', '<>italic',]  ],true]
+    [[ {key:'<italic'},                       ['#stamped', '<italic', ]  ],true]
+    [[ {key:'<italic'},                       ['#stamped', '>italic', ]  ],false]
+    [[ {key:'<italic'},                       ['#stamped', '<>italic',]  ],true]
+    [[ {key:'<italic',stamped:true},          ['<italic',             ]  ],false]
+    [[ {key:'<italic',stamped:true},          ['>italic',             ]  ],false]
+    [[ {key:'<italic',stamped:true},          ['<>italic',            ]  ],false]
     ]
   #.........................................................................................................
   for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers

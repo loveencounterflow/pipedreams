@@ -97,6 +97,7 @@ echo                      = CND.echo.bind CND
   key_facets            = @_key_as_facets d.key
   tags                  = new Set()
   other_selectors       = []
+  selectors             = CND.flatten selectors
   classes_and_selectors = ( @_classify_selector selector for selector in selectors )
   #.........................................................................................................
   for [ clasz, selector, ] in classes_and_selectors
