@@ -20,25 +20,34 @@ glob                      = require 'globby'
 L                         = @
 
 #-----------------------------------------------------------------------------------------------------------
-acquire = ( target, patterns ) ->
+is_bound = ( f ) -> ( ( rpr f ).match /^\[Function: (?:bound )+\]$/ )?
+
+#-----------------------------------------------------------------------------------------------------------
+acquire_patterns = ( target, patterns ) ->
   settings  = { cwd: ( PATH.join __dirname ), deep: false, absolute: true, }
   paths     = glob.sync patterns, settings
   #.........................................................................................................
   for path in paths
-    module = require path
-    for key, value of module
-      # urge '23233', "#{path}##{key}"
-      throw new Error "duplicate key #{rpr key}" if L[ key ]?
-      module[ key ] = method = value.bind module if CND.isa_function value
-      L[      key ] = method unless key.startsWith '_'
+    acquire_path target, path
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+acquire_path = ( target, path ) ->
+  module = require path
+  for key, value of module
+    throw new Error "duplicate key #{rpr key}" if L[ key ]?
+    module[ key ] = ( value.bind module ) if ( CND.isa_function value ) and not is_bound value
+    target[ key ] = module[ key ]         unless key.startsWith '_'
   return null
 
 
 ############################################################################################################
 ### Gather methods from submodules, bind all methods to respective submodule, reflect public names into
 main module. ###
-acquire L,            [ '*.js', '!main.js', '!_*', '!recycle.js' ]
-acquire ( L.R = {} ), 'recycle.js'
+L.R = {}
+acquire_path      L,    'pipestreams'
+acquire_patterns  L,    [ '*.js', '!main.js', '!_*', '!recycle.js' ]
+acquire_patterns  L.R,  'recycle.js'
 
 
 
