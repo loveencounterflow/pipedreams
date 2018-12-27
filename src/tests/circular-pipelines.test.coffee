@@ -108,7 +108,7 @@ provide_collatz = ->
 COLLATZ = provide_collatz.apply {}
 
 #-----------------------------------------------------------------------------------------------------------
-$collect_numbers = ( S, handler ) ->
+$collect_numbers = ( S ) ->
   collector = null
   return $ ( d, send ) ->
     collector ?= []
