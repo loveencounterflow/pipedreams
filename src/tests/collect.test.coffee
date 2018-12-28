@@ -26,14 +26,6 @@ PD                        = require '../..'
   stamp }                 = PD
 
 #-----------------------------------------------------------------------------------------------------------
-@_prune = ->
-  for name, value of @
-    continue if name.startsWith '_'
-    delete @[ name ] unless name in include
-  return null
-
-
-#-----------------------------------------------------------------------------------------------------------
 f = ( T, method, probe, matcher, errmsg_pattern ) ->
   errmsg_pattern = if errmsg_pattern? then ( new RegExp errmsg_pattern ) else null
   try
