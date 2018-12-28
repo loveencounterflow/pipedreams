@@ -17,6 +17,7 @@ PATH                      = require 'path'
 glob                      = require 'globby'
 { assign
   jr }                    = CND
+override_sym              = Symbol.for 'override'
 L                         = @
 
 #-----------------------------------------------------------------------------------------------------------
@@ -35,7 +36,7 @@ acquire_patterns = ( target, patterns ) ->
 acquire_path = ( target, path ) ->
   module = require path
   for key, value of module
-    throw new Error "duplicate key #{rpr key}" if L[ key ]?
+    throw new Error "duplicate key #{rpr key}" if L[ key ]? and not value[ override_sym ]
     module[ key ] = ( value.bind module ) if ( CND.isa_function value ) and not is_bound value
     target[ key ] = module[ key ]         unless key.startsWith '_'
   return null
@@ -46,8 +47,8 @@ acquire_path = ( target, path ) ->
 main module. ###
 L.R = {}
 acquire_path      L,    'pipestreams'
-acquire_patterns  L,    [ '*.js', '!main.js', '!_*', '!recycle.js' ]
+acquire_patterns  L,    [ '*.js', '!main.js', '!_*', '!recycle.js', '!overrides.js', ]
 acquire_patterns  L.R,  'recycle.js'
-
+acquire_patterns  L,    'overrides.js'
 
 
