@@ -23,14 +23,6 @@ PD                        = require '../..'
 # { $, $async, }            = PD
 
 #-----------------------------------------------------------------------------------------------------------
-@_prune = ->
-  for name, value of @
-    continue if name.startsWith '_'
-    delete @[ name ] unless name in include
-  return null
-
-
-#-----------------------------------------------------------------------------------------------------------
 f = ( T, method, probe, matcher, errmsg_pattern ) ->
   errmsg_pattern = if errmsg_pattern? then ( new RegExp errmsg_pattern ) else null
   try
@@ -209,12 +201,6 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
 
 ############################################################################################################
 unless module.parent?
-  # include = [
-  #   "async 1"
-  #   "async 1 paramap"
-  #   "async 2"
-  #   ]
-  # @_prune()
   test @
 
 
