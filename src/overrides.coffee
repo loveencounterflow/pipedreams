@@ -31,7 +31,7 @@ override_sym              = Symbol.for 'override'
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
   collector = null
-  defaults  = { select: null, key: 'collection', callback: null, }
+  defaults  = { select: null, key: 'collection', callback: null, value: null, }
   settings  = assign {}, defaults, settings
   send      = null
   #.........................................................................................................
@@ -76,5 +76,6 @@ override_sym              = Symbol.for 'override'
 ############################################################################################################
 L = @
 do ->
+  ### Mark all methods defined here as overrides: ###
   for key, value of L
     value[ override_sym ] = true
