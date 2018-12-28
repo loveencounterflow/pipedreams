@@ -15,6 +15,40 @@ transforms (to finally end up in a data sink).*
 > 'pipelines', I also implicitly mean 'pipelines to stream data' and 'streams'
 > in general.
 
+When NodeJS streams started out, the thinking about those streams was pretty
+much confined to saying that ['a stream is a series of
+bytes'](http://dominictarr.com/post/145135293917/history-of-streams). Already back then,
+an alternative view took hold (I'm slightly paraphrasing here):
+
+> The core interpretation was that stream could be buffers or strings - but the
+> userland interpretation was that a stream could be anything that is
+> serializeable [...] it was a sequence of buffers, bytes, strings or objects.
+> Why not use the same api?
+
+I will no repeat here [what I've written about perceived shortcomings of NodeJS
+streams](https://github.com/loveencounterflow/pipestreams/blob/master/pipestreams-manual/chapter-00-comparison.md);
+instead, let me iterate a few observations:
+
+* When streaming, data is just data. There's no need for having [a separate
+  'Object Mode'](https://nodejs.org/api/stream.html#stream_object_mode) or
+  somesuch.
+
+* There's a single exception to the above rule, and that is when the data item
+  being sent down the line is `null`. This has historically—by both NodeJS
+  streams and pull-streams—been regarded as a hint interpreted as a termination
+  signal, and I'm not going to change that (although at some point I might as
+  well).
+
+* When starting out with streams and building fairly simple-minded piplines,
+  having wither a piece of business data or else `null` to indicate termination
+  is enough to satisfy most needs. However, when one goes on to build more
+  complex processing scenarios, raw data is not expressive enough. For example,
+  in a [more complex
+  environment](https://github.com/loveencounterflow/mingkwai-typesetter/blob/master/src/tex-writer.coffee#L2527)*
+
+> (\*) This software is just presented as a code example. It is currently not
+> considered consumable for the general audience.
+
 ```
 d         := { key, value, ..., $, }
 
