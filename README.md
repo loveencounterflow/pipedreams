@@ -6,9 +6,9 @@ Data streams—of which [pull-streams](https://pull-stream.github.io/),
 [PipeStreams](https://github.com/loveencounterflow/pipestreams), and [NodeJS
 Streams](https://nodejs.org/api/stream.html) are examples—do their work by
 sending pieces of data (that originate from a data source) through a number of
-transforms (to finally end up in a data sink).*
+transforms (to finally end up in a data sink).<sup>*note*</sup>
 
-> (\*) I will ignore here alternative ways of dealing with streams, especially
+> (*note*) I will ignore here alternative ways of dealing with streams, especially
 > the [`EventEmitter` way of dealing with streamed
 > data](https://nodejs.org/api/stream.html#stream_api_for_stream_consumers).
 > When I say 'streams', I also implicitly mean 'pipelines'; when I say
@@ -35,19 +35,34 @@ instead, let me iterate a few observations:
 
 * There's a single exception to the above rule, and that is when the data item
   being sent down the line is `null`. This has historically—by both NodeJS
-  streams and pull-streams—been regarded as a hint interpreted as a termination
-  signal, and I'm not going to change that (although at some point I might as
-  well).
+  streams and pull-streams—been interpreted as a termination signal, and I'm not
+  going to change that (although at some point I might as well).
 
 * When starting out with streams and building fairly simple-minded piplines,
-  having wither a piece of business data or else `null` to indicate termination
-  is enough to satisfy most needs. However, when one goes on to build more
-  complex processing scenarios, raw data is not expressive enough. For example,
-  in a [more complex
-  environment](https://github.com/loveencounterflow/mingkwai-typesetter/blob/master/src/tex-writer.coffee#L2527)*
+  sending down either raw pieces of business data or else `null` to indicate
+  termination is enough to satisfy most needs. However, when one transitions to
+  more complex environments, raw data is not sufficient any more: When
+  processing text from one format to another, how could a downstream transform
+  tell whether a given piece of text is raw data or the output of an upstream
+  transform?
 
-> (\*) This software is just presented as a code example. It is currently not
-> considered consumable for the general audience.
+  An example where raw data becomes insufficient are circular pipelines,
+  piplines that re-compute (some or all) output values in a recursive manner. An
+  example which outputs the integer sequences of the [Collatz
+  Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) is [in the tests
+  folder](https://github.com/loveencounterflow/pipedreams/blob/master/src/tests/circular-pipelines.test.coffee#L36).
+  There, whenever we see an even number `n`, we send down that even number `n`
+  alongside with half its value, `n/2`; whenever we see an odd number `n`, we
+  send it on alongside with its value tripled, plus one, `3*n+1`. No matter
+  whether you put the transform for even numbers in front of that for odd
+  numbers or the other way round, there will be numbers that come out at the bottom
+  that need to be re-input to the top.
+
+  This is where *data events* come in:
+
+* The idea of *datoms*—short for *data atoms*, a term borrowed from [Rich
+  Hickey's Datomic](https://www.infoq.com/articles/Datomic-Information-Model)—is
+  to simply to wrap each piece of raw data in a
 
 ```
 d         := { key, value, ..., $, }
