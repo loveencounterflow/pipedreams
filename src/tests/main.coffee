@@ -29,6 +29,7 @@ do ->
   for path in paths
     module = require path
     for key, value of module
+      debug '20922', "#{path}##{key}"
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
       L[ key ] = value.bind L
   test L
