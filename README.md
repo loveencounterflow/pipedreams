@@ -142,10 +142,10 @@ Observe that
   d.stamped ? false )` (in practice, you will probably want to use a named
   function, e.g. `( select '^text', is_stamped )`).
 
-**NOTE** One could argue that a call `select d` without any selectors should be
-legal and always return `true`; while that is a perfectly logical extension, in
-practice it is probably a programmer's error, which is why `select d` will throw
-an error.
+**NOTE** One could argue that a call `( select d )` without any selectors should
+be legal and always return `true`; while that is a perfectly logical extension,
+in practice it is probably a programmer's error, which is why `( select d )`
+throws an error.
 
 
 ## Aggregate Transforms
