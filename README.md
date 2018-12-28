@@ -70,7 +70,13 @@ practice it is probably a programmer's error, which is why `select d` will throw
 an error.
 
 
+## Aggregate Transforms
 
+### `$collect = ( settings ) ->`
+
+This is an improved version of `PS.$collect()`. While `PS.$collect()` will merely
+buffer all events in a list and send on that list when the stream is terminated,
+`PD.$collect()` is PipeDreams
 
 
 
