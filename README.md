@@ -59,9 +59,8 @@ instead, let me iterate a few observations:
   to be re-input into the top of the pipeline, and since there's no telling in
   advance how long a Collatz sequence will be for a given integer, it is, in the
   general case, insufficient to build a pipeline made from a (necessarily
-  finite) repetitive sequence of copies of those individual transforms.
-
-  This is where *data events* come in:
+  finite) repetitive sequence of copies of those individual transforms. Thus,
+  classical streams cannot easily model this kind of processing.
 
 * The idea of **datoms**—short for *data atoms*, a term borrowed from [Rich
   Hickey's Datomic](https://www.infoq.com/articles/Datomic-Information-Model)—is
@@ -71,13 +70,19 @@ instead, let me iterate a few observations:
   stream transforms get to process each piece of data, and that all pieces of
   data are of equal status (with the exception of `null`).
 
-  In contradistinction to this, in PipeDreams **each piece of data—each datom—is
-  explicitly labelled**; **each datom may have a different status**: there are
-  **system-level datoms that serve to orchestrate the flow of data within the
-  pipeline**; there are **user-level datoms which originate from the
-  application**; there are **datoms to indicate the opening and closing of
-  regions (phases) in the data stream**; there are **stream transforms that
-  listen to and act on specific system-level events**.
+  The PipeDreams sample implementation of Collatz Sequences uses datoms to (1)
+  wrap the numerical pieces of data, which allows to mark data as processed
+  (a.k.a. 'stamped'), to (2) mark data as 'to be recycled', and to (3) inject
+  system-level `sync`hronization signals into the data stream to make sure that
+  recycled data gets processed before new data is allowed into the stream.
+
+  In PipeDreams datoms, **each piece of data is explicitly labelled for its
+  type**; **each datom may have a different status**: there are **system-level
+  datoms that serve to orchestrate the flow of data within the pipeline**; there
+  are **user-level datoms which originate from the application**; there are
+  **datoms to indicate the opening and closing of regions (phases) in the data
+  stream**; there are **stream transforms that listen to and act on specific
+  system-level events**.
 
 ```
 d         := { key, value, ..., $, }
