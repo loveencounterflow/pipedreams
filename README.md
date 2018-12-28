@@ -1,6 +1,19 @@
 
 
-## PipeDreams Data Events
+## PipeDreams Datoms (Data Events)
+
+Data streams—of which [pull-streams](https://pull-stream.github.io/),
+[PipeStreams](https://github.com/loveencounterflow/pipestreams), and [NodeJS
+Streams](https://nodejs.org/api/stream.html) are examples—do their work by
+sending pieces of data (that originate from a data source) through a number of
+transforms (to finally end up in a data sink).*
+
+> (\*) I will ignore here alternative ways of dealing with streams, especially
+> the [`EventEmitter` way of dealing with streamed
+> data](https://nodejs.org/api/stream.html#stream_api_for_stream_consumers).
+> When I say 'streams', I also implicitly mean 'pipelines'; when I say
+> 'pipelines', I also implicitly mean 'pipelines to stream data' and 'streams'
+> in general.
 
 ```
 d         := { key, value, ..., $, }
