@@ -38,7 +38,7 @@ instead, let me iterate a few observations:
   streams and pull-streams—been interpreted as a termination signal, and I'm not
   going to change that (although at some point I might as well).
 
-* When starting out with streams and building fairly simple-minded piplines,
+* When starting out with streams and building fairly simple-minded pipelines,
   sending down either raw pieces of business data or else `null` to indicate
   termination is enough to satisfy most needs. However, when one transitions to
   more complex environments, raw data is not sufficient any more: When
@@ -46,23 +46,38 @@ instead, let me iterate a few observations:
   tell whether a given piece of text is raw data or the output of an upstream
   transform?
 
-  An example where raw data becomes insufficient are circular pipelines,
-  piplines that re-compute (some or all) output values in a recursive manner. An
-  example which outputs the integer sequences of the [Collatz
+  Another case where raw data becomes insufficient are circular pipelines,
+  pipelines that re-compute (some or all) output values in a recursive manner.
+  An example which outputs the integer sequences of the [Collatz
   Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) is [in the tests
   folder](https://github.com/loveencounterflow/pipedreams/blob/master/src/tests/circular-pipelines.test.coffee#L36).
   There, whenever we see an even number `n`, we send down that even number `n`
   alongside with half its value, `n/2`; whenever we see an odd number `n`, we
-  send it on alongside with its value tripled, plus one, `3*n+1`. No matter
-  whether you put the transform for even numbers in front of that for odd
-  numbers or the other way round, there will be numbers that come out at the bottom
-  that need to be re-input to the top.
+  send it on, followed by its value tripled plus one, `3*n+1`. No matter whether
+  you put the transform for even numbers in front of that for odd numbers or the
+  other way round, there will be numbers that come out at the bottom that need
+  to be re-input into the top of the pipeline, and since there's no telling in
+  advance how long a Collatz sequence will be for a given integer, it is, in the
+  general case, insufficient to build a pipeline made from a (necessarily
+  finite) sequence of those individual transforms.
 
   This is where *data events* come in:
 
 * The idea of *datoms*—short for *data atoms*, a term borrowed from [Rich
   Hickey's Datomic](https://www.infoq.com/articles/Datomic-Information-Model)—is
-  to simply to wrap each piece of raw data in a
+  to simply to wrap each piece of raw data in a higher-level structure. This is
+  of course an old idea, but not one that would appear to be very prevalent in
+  NodeJS streams, the fundamental assumption (of classical stream processing)
+  being that all stream transforms get to process each piece of data, and that
+  all pieces of data are of equal status (with the exception of `null`).
+
+  In contradistinction to this, in PipeDreams **each piece of data—each datom—is
+  explicitly labelled**; **each datom may have a different status**: there are
+  **system-level datoms that serve to orchestrate the flow of data within the
+  pipeline**; there are **user-level datoms which originate from the
+  application**; there are **datoms to indicate the opening and closing of
+  regions (phases) in the data stream**; there are **stream transforms that
+  listen to and act on specific system-level events**.
 
 ```
 d         := { key, value, ..., $, }
