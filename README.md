@@ -139,8 +139,8 @@ Observe that
 * `'#stamped'` means 'event *may* have property `{ stamped: true, }`, *not* that
   it *must* be `stamped`. In order to only select singleton `text` events that
   are also `stamped`, use a boolean function like `select d, '^text', ( ( d ) ->
-  d.stamped ? false )` (which in practice you will probably want to name so you
-  can write the much clearer expression `select '^text', is_stamped`).
+  d.stamped ? false )` (in practice, you will probably want to use a named
+  function, e.g. `( select '^text', is_stamped )`).
 
 **NOTE** One could argue that a call `select d` without any selectors should be
 legal and always return `true`; while that is a perfectly logical extension, in
@@ -163,7 +163,7 @@ one can tune `PD.$collect()` with the optional `settings` object, whose defaults
 * `settings.value` determines which property of each datom to extract:
   * `false`, `undefined`, `null`:  collect `d`;
   * `true`:   collect `d.value`;
-  * a string `p`: collect `d[ p ]`
+  * a string `p`: collect `d[ p ]`;
   * a function `f`: collect the result of `f d`.
 
 * `settings.select` determines which datoms are eligible for collection:
