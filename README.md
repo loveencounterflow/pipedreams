@@ -98,7 +98,7 @@ the 'category' of each datom; there are two levels and three elementary
 categories, giving six types of datoms:
 
 * Application level:
-  * `^` for **data datoms**,
+  * `^` for **data datoms** (a.k.a. 'singletons'),
   * `<` for **start-of-region datoms**,
   * `>` for **end-of-region datoms**.
 
@@ -136,9 +136,9 @@ of datoms similar to these, in the order of sending:<sup>*note*</sup>
 > *note* by 'in the order of sending' I mean you'd have to send `d1` first, then `d2` and so on. Trivial until you
 > imagine you write a pipeline
 >
-> `pipeline.push $ ( d, send ) -> ...`  (step 1)
-> `pipeline.push $ ( d, send ) -> ...`  (step 2)
-> `pipeline.push $ ( d, send ) -> ...`  (step 3)
+> `pipeline.push $ ( d, send ) -> ...  # s1:  d3`<br>
+> `pipeline.push $ ( d, send ) -> ...  # s2:  d2`<br>
+> `pipeline.push $ ( d, send ) -> ...  # s3:  d1`<br>
 >
 > and then picture how the events will travel down that pipeline:
 
