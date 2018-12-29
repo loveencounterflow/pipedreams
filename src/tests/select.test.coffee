@@ -22,29 +22,6 @@ L                         = require '../select'
 PD                        = require '../..'
 # { $, $async, }            = PD
 
-#-----------------------------------------------------------------------------------------------------------
-f = ( T, method, probe, matcher, errmsg_pattern ) ->
-  errmsg_pattern = if errmsg_pattern? then ( new RegExp errmsg_pattern ) else null
-  try
-    result = await method()
-  catch error
-    # throw error
-    if errmsg_pattern? and ( errmsg_pattern.test error.message )
-      echo CND.green jr [ probe, null, errmsg_pattern.source, ]
-      T.ok true
-    else
-      echo CND.indigo "unexpected exception", ( jr [ probe, null, error.message, ] )
-      T.fail "unexpected exception for probe #{jr probe}:\n#{error.message}"
-      # return reject "failed with #{error.message}"
-    return null
-  if CND.equals result, matcher
-    T.ok true
-    echo CND.lime jr [ probe, result, null, ]
-  else
-    T.fail "neq: result #{jr result}, matcher #{jr matcher}"
-    echo CND.red jr [ probe, result, null, ]
-  # return resolve result
-  return result
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "selector keypatterns" ] = ( T, done ) ->
@@ -65,14 +42,13 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     ["^<>",{"sigils":"^<>","name":""},null]
     ]
   #.........................................................................................................
-  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-    method = ->
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
       R = ( probe.match L._selector_keypattern )?.groups ? null
       return null unless R?
       for key, value of R
         delete R[ key ] if value is undefined
       return R
-    await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
 
@@ -91,14 +67,13 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     ["<>kwic:bar",null,null]
     ]
   #.........................................................................................................
-  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-    method = ->
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
       R = ( probe.match L._event_keypattern )?.groups ? null
       return null unless R?
       for key, value of R
         delete R[ key ] if value is undefined
       return R
-    await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
 
@@ -110,8 +85,8 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     ["!!!(->)",["function",null],null]
     ]
   #.........................................................................................................
-  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-    method = ->
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
       probe = ( -> ) if probe.startsWith '!!!'
       R     = L._classify_selector probe
       if R[ 0 ] is 'keypattern'
@@ -120,7 +95,6 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
       else if R[ 0 ] is 'function'
         R[ 1 ] = null
       return R
-    await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
 
@@ -171,11 +145,10 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     [[ {key:'<italic',stamped:true},          ['<>italic',            ]  ],false]
     ]
   #.........................................................................................................
-  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-    method = ->
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
       [ d, selectors..., ] = probe
       return PD.select d, selectors...
-    await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
 
@@ -186,12 +159,11 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     [[ {key:'^number',value:44}, '^number', "( d ) => d.value > 42"],true]
     ]
   #.........................................................................................................
-  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-    method = ->
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
       [ d, selectors..., ] = probe
       selectors[ selectors.length - 1 ] = eval selectors[ selectors.length - 1 ]
       return PD.select d, selectors...
-    await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
 
@@ -207,6 +179,7 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
 ############################################################################################################
 unless module.parent?
   test @
-
+  # test @[ "selector keypatterns" ]
+  # test @[ "select 2" ]
 
 
