@@ -173,11 +173,13 @@ new_collatz_pipeline = ( S, handler ) ->
       done()
     #.......................................................................................................
     send = new_collatz_pipeline S, handler
+    send PD.new_event '[data'
     for n in probe
       do ( n ) ->
         debug '84756', send n
         send PD.new_system_event 'collect'
     send PD.new_system_event 'call_back'
+    send PD.new_event 'data]'
   #.........................................................................................................
   return null
 
