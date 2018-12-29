@@ -62,40 +62,54 @@ instead, let me iterate a few observations:
   finite) repetitive sequence of copies of those individual transforms. Thus,
   classical streams cannot easily model this kind of processing.
 
-* The idea of **datoms**—short for *data atoms*, a term borrowed from [Rich
-  Hickey's Datomic](https://www.infoq.com/articles/Datomic-Information-Model)—is
-  to simply to wrap each piece of raw data in a higher-level structure. This is
-  of course an old idea, but not one that is very prevalent in NodeJS streams,
-  the fundamental assumption (of classical stream processing) being that all
-  stream transforms get to process each piece of data, and that all pieces of
-  data are of equal status (with the exception of `null`).
+The idea of **datoms**—short for *data atoms*, a term borrowed from [Rich
+Hickey's Datomic](https://www.infoq.com/articles/Datomic-Information-Model)—is
+to simply to wrap each piece of raw data in a higher-level structure. This is of
+course an old idea, but not one that is very prevalent in NodeJS streams, the
+fundamental assumption (of classical stream processing) being that all stream
+transforms get to process each piece of data, and that all pieces of data are of
+equal status (with the exception of `null`).
 
-  The PipeDreams sample implementation of Collatz Sequences uses datoms to (1)
-  wrap the numerical pieces of data, which allows to mark data as processed
-  (a.k.a. 'stamped'), to (2) mark data as 'to be recycled', and to (3) inject
-  system-level `sync`hronization signals into the data stream to make sure that
-  recycled data gets processed before new data is allowed into the stream.
+The PipeDreams sample implementation of Collatz Sequences uses datoms to (1)
+wrap the numerical pieces of data, which allows to mark data as processed
+(a.k.a. 'stamped'), to (2) mark data as 'to be recycled', and to (3) inject
+system-level `sync`hronization signals into the data stream to make sure that
+recycled data gets processed before new data is allowed into the stream.
 
-  In PipeDreams datoms, **each piece of data is explicitly labelled for its
-  type**; **each datom may have a different status**: there are **system-level
-  datoms that serve to orchestrate the flow of data within the pipeline**; there
-  are **user-level datoms which originate from the application**; there are
-  **datoms to indicate the opening and closing of regions (phases) in the data
-  stream**; there are **stream transforms that listen to and act on specific
-  system-level events**.
+In PipeDreams datoms, **each piece of data is explicitly labelled for its
+type**; **each datom may have a different status**: there are **system-level
+datoms that serve to orchestrate the flow of data within the pipeline**; there
+are **user-level datoms which originate from the application**; there are
+**datoms to indicate the opening and closing of regions (phases) in the data
+stream**; there are **stream transforms that listen to and act on specific
+system-level events**.
+
+Datoms are JS objects that must minimally have a `key` property, a string that
+specifies the datom's category, namespace and name; in addition, they may have a
+`value` property with the payload (where desired), and any number of other
+attributes. The property `$` is used to carry metadata (e.g. from which line in
+a source file a given datom was generated from). Thus, we may give the outline
+of a datom as (in a rather informal notation) `d := { key, ?value, ?stamped,...,
+?$, }`.
+
+The `key` of a datom must be a string that consists of at least two parts, the
+`sigil` and the `name`. The `sigil`, a single punctuation character, indicates
+the 'category' of the datom; `~` is reserved for system-level events, `^` for
+application-level 'singleton' events (commonly, one piece of business data); `<`
+and `>` may be used by an application to indicate start and end of a region.
 
 ```
-d         := { key, value, ..., $, }
+
 
 key       := sigil name
           := sigil prefix ':' name
 
 prefix    := non-empty text
 
-sigil     := '^' # proper singleton
+sigil     := '^' # (user) singleton
+          := '<' # (user) start-of-region (SOR)
+          := '>' # (user) end-of-region   (EOR)
           := '~' # system singleton
-          := '<' # start-of-region (SOR)
-          := '>' # end-of-region   (EOR)
 
 value     := any                    # payload
 
