@@ -94,14 +94,53 @@ of a datom as (in a rather informal notation) `d := { key, ?value, ?stamped,...,
 
 The `key` of a datom must be a string that consists of at least two parts, the
 `sigil` and the `name`. The `sigil`, a single punctuation character, indicates
-the 'category' of each datom:
+the 'category' of each datom; there are two levels and three elementary
+categories, giving six types of datoms:
 
-* `^` indicates an **application-level singleton event**,
-* `<` indicates an **application-level start-of-region (SOR) event**,
-* `>` indicates an **application-level end-of-region (EOR) event**.
-* `~` indicates a **system-level singleton event**,
-* `[` indicates a **system-level start-of-region (SOR) event**,
-* `]` indicates a **system-level end-of-region (EOR) event**.
+* Application level:
+  * `^` for **data datoms**,
+  * `<` for **start-of-region datoms**,
+  * `>` for **end-of-region datoms**.
+
+* System level:
+  * `~` for **data datoms**,
+  * `[` for **start-of-region datoms**,
+  * `]` for **end-of-region datoms**.
+
+Ordinarily, you will probably send around all your business data inside (the
+value property of) application-level data datoms (hence their name, also
+shortened to D-datoms); however, if you wish to do so, you can also set other
+properties of a datom object, or send data around inside of properties of start-
+or end-of-region datoms. The `<region` and `>region` events are intended to be
+used e.g. when parsing text with markup; say you want to turn a snippet of HTML
+like this:
+
+```
+<document><div>Helo <em>world!</em></div></document>
+```
+
+into another textual representation, you may want to turn that into a sequence
+of datoms similar to these, in the order of sending:<sup>*note*</sup>
+
+```
+{ key: '<document',               }   # d1
+{ key: '<div',                    }   # d2
+{ key: '^text', value: "Helo ",   }   # d3
+{ key: '<em',                     }   # d4
+{ key: '^text' value: "world!",   }   # d5
+{ key: key: '>em',                }   # d6
+{ key: key: '>div',               }   # d7
+{ key: key: '>document',          }   # d8
+```
+
+> *note* by 'in the order of sending' I mean you'd have to send `d1` first, then `d2` and so on. Trivial until you
+> imagine you write a pipeline
+>
+> `pipeline.push $ ( d, send ) -> ...`  (step 1)
+> `pipeline.push $ ( d, send ) -> ...`  (step 2)
+> `pipeline.push $ ( d, send ) -> ...`  (step 3)
+>
+> and then picture how the events will travel down that pipeline:
 
 ```
 
