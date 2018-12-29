@@ -120,27 +120,40 @@ like this:
 ```
 
 into another textual representation, you may want to turn that into a sequence
-of datoms similar to these, in the order of sending:<sup>*note*</sup>
+of datoms similar to these, in the order of sending and regions symbolized by
+boxes:<sup>*note*</sup>
 
 ```
-{ key: '<document',               }   # d1
-{ key: '<div',                    }   # d2
-{ key: '^text', value: "Helo ",   }   # d3
-{ key: '<em',                     }   # d4
-{ key: '^text' value: "world!",   }   # d5
-{ key: key: '>em',                }   # d6
-{ key: key: '>div',               }   # d7
-{ key: key: '>document',          }   # d8
+--------------------------------------------------------+
+  { key: '<document',                   }   # d1        |
+------------------------------------------------------+ |
+  { key: '<div',                        }   # d2      | |
+  { key: '^text',     value: "Helo ",   }   # d3      | |
+----------------------------------------------------+ | |
+  { key: '<em',                         }   # d4    | | |
+  { key: '^text'      value: "world!",  }   # d5    | | |
+  { key: '>em',                         }   # d6    | | |
+----------------------------------------------------+ | |
+  { key: '>div',                        }   # d7      | |
+------------------------------------------------------+ |
+  { key: '>document',                   }   # d8        |
+--------------------------------------------------------+
 ```
 
-> *note* by 'in the order of sending' I mean you'd have to send `d1` first, then `d2` and so on. Trivial until you
-> imagine you write a pipeline
+> *note* by 'in the order of sending' I mean you'd have to send datom `d1`
+> first, then `d2` and so on. Trivial until you imagine you write a pipeline and
+> then picture how the events will travel down that pipeline:
 >
 > `pipeline.push $ ( d, send ) -> ...  # s1:  d3`<br>
 > `pipeline.push $ ( d, send ) -> ...  # s2:  d2`<br>
 > `pipeline.push $ ( d, send ) -> ...  # s3:  d1`<br>
 >
-> and then picture how the events will travel down that pipeline:
+> Although there's really no telling whether step `s3` will really process datom
+> `d1` at the 'same point in time' that step `s2` processes datom `d2` and so on
+> (in the strict sense, this is hardly possible in a single-threaded language
+> anyway), the visualization still holds a grain of truth: stream transforms
+> that come 'later' (further down) in the pipeline will see events near the top
+> of your to-do list first, and vice versa.
 
 ```
 
