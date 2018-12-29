@@ -139,13 +139,18 @@ f = ( T, method, probe, matcher, errmsg_pattern ) ->
     [[ {key:'<italic',stamped:true}, '<italic'],false]
     [[ {key:'<italic',stamped:true}, '>italic'],false]
     [[ {key:'<italic',stamped:true}, '<>italic'],false]
+    [[ {key:"*data"},'*data'],null,'illegal key or selector']
+    [[ {key:"data>"},'data>'],null,'illegal key or selector']
+    [[ {key:"%data"},'%data'],null,'illegal key or selector']
+    [[ {key:"[data"},'[data'],true,null]
+    [[ {key:"data]"},'data]'],null,'illegal key or selector']
+    [[ {key:"]data"},']data'],true,null]
     ]
   #.........................................................................................................
-  for [ probe, matcher, errmsg_pattern, ] in probes_and_matchers
-    method = ->
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
       [ d, selectors..., ] = probe
       return PD.select d, selectors...
-    await f T, method, probe, matcher, errmsg_pattern
   done()
   return null
 
