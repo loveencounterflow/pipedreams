@@ -94,9 +94,14 @@ of a datom as (in a rather informal notation) `d := { key, ?value, ?stamped,...,
 
 The `key` of a datom must be a string that consists of at least two parts, the
 `sigil` and the `name`. The `sigil`, a single punctuation character, indicates
-the 'category' of the datom; `~` is reserved for system-level events, `^` for
-application-level 'singleton' events (commonly, one piece of business data); `<`
-and `>` may be used by an application to indicate start and end of a region.
+the 'category' of each datom:
+
+* `^` indicates an **application-level singleton event**,
+* `<` indicates an **application-level start-of-region (SOR) event**,
+* `>` indicates an **application-level end-of-region (EOR) event**.
+* `~` indicates a **system-level singleton event**,
+* `[` indicates a **system-level start-of-region (SOR) event**,
+* `]` indicates a **system-level end-of-region (EOR) event**.
 
 ```
 
