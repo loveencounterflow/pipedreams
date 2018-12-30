@@ -123,19 +123,27 @@ $collect_numbers = ( S ) ->
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-$call_back = ( S, handler ) ->
-  collector = null
-  return PD.$watch ( d ) ->
-    if select d, '^numbers'
-      collector ?= []
-      collector.push d.value
-    else if select d, '~call_back'
-      handler null, collector
-      collector = null
+$call_back = ( S, callback ) ->
+  collector       = null
+  handler_called  = false
+  return $ 'null', ( d, send ) ->
+    if d?
+      if select d, '^numbers'
+        collector ?= []
+        collector.push d.value
+      else if select d, '~call_back'
+        handler_called  = true
+        callback collector ? []
+        collector       = null
+    else
+      if collector? or not handler_called
+        handler_called  = true
+        callback collector ? []
+        collector       = null
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-new_collatz_pipeline = ( S, handler ) ->
+new_collatz_pipeline = ( S, callback ) ->
   S.source    = PD.new_push_source()
   pipeline    = []
   #.........................................................................................................
@@ -146,8 +154,9 @@ new_collatz_pipeline = ( S, handler ) ->
   pipeline.push PD.$defer()
   pipeline.push COLLATZ.$main     S
   pipeline.push PD.R.$recycle     S.source.push
+  pipeline.push PD.$show()
   pipeline.push $collect_numbers  S
-  pipeline.push $call_back        S, handler
+  pipeline.push $call_back        S, callback
   pipeline.push PD.$drain -> help 'ok'
   PD.pull pipeline...
   #.........................................................................................................
@@ -166,20 +175,19 @@ new_collatz_pipeline = ( S, handler ) ->
     ]
   #.........................................................................................................
   for [ probe, matcher, ] in probes_and_matchers
-    handler = ( error, result ) ->
-      throw error if error?
+    callback = ( result ) ->
       help jr [ probe, result, ]
       T.eq result, matcher
       done()
     #.......................................................................................................
-    send = new_collatz_pipeline S, handler
+    send = new_collatz_pipeline S, callback
     send PD.new_event '[data'
     for n in probe
       do ( n ) ->
-        debug '84756', send n
-        send PD.new_system_event 'collect'
+        send n
+        send PD.new_system_event 'collect', null, $: { n, }
+    send PD.new_event ']data'
     send PD.new_system_event 'call_back'
-    send PD.new_event 'data]'
   #.........................................................................................................
   return null
 
