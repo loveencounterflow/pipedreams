@@ -107,13 +107,21 @@ categories, giving six types of datoms:
   * `[` for **start-of-region datoms**,
   * `]` for **end-of-region datoms**.
 
-Ordinarily, you will probably send around all your business data inside (the
-value property of) application-level data datoms (hence their name, also
-shortened to D-datoms); however, if you wish to do so, you can also set other
-properties of a datom object, or send data around inside of properties of start-
-or end-of-region datoms. The `<region` and `>region` events are intended to be
-used e.g. when parsing text with markup; say you want to turn a snippet of HTML
-like this:
+System-level events, in particular those without further payload data, are also
+called 'signals'; thus, `~collect` is a 'collect signal', and `[data` is a
+'start-of-data signal'. Aggregate transforms such as `$collect()`, `$sort()` and
+so on listen to the signals of the same name, `~collect` and `~sort`: In the
+case of `$collect()`, a collect signal will trigger the sending of the
+collection as it looks at that point in time; likewise, `$sort()` will react to
+a sort signal by sending all buffered events in the configured ordering.
+
+Normally, one will probably want to send around business data inside (the
+`value` property of) application-level data datoms (hence their name, also
+shortened to D-datoms); however, one can also set other properties of datom
+objects, or send data around using properties of start- or end-of-region datoms.
+
+Region events are intended to be used e.g. when parsing text with markup; say
+you want to turn a snippet of HTML like this:
 
 ```
 <document><div>Helo <em>world!</em></div></document>
@@ -144,38 +152,16 @@ boxes:<sup>*note*</sup>
 > first, then `d2` and so on. Trivial until you imagine you write a pipeline and
 > then picture how the events will travel down that pipeline:
 >
-> `pipeline.push $ ( d, send ) -> ...  # s1:  d3`<br>
-> `pipeline.push $ ( d, send ) -> ...  # s2:  d2`<br>
-> `pipeline.push $ ( d, send ) -> ...  # s3:  d1`<br>
+> `pipeline.push $do_this()             # s1, might be processing d3 right now`<br>
+> `pipeline.push $do_that()             # s2, might be processing d2 right now`<br>
+> `pipeline.push $do_something_else()   # s3, might be processing d1 right now`<br>
 >
 > Although there's really no telling whether step `s3` will really process datom
 > `d1` at the 'same point in time' that step `s2` processes datom `d2` and so on
 > (in the strict sense, this is hardly possible in a single-threaded language
 > anyway), the visualization still holds a grain of truth: stream transforms
 > that come 'later' (further down) in the pipeline will see events near the top
-> of your to-do list first, and vice versa.
-
-```
-
-
-key       := sigil name
-          := sigil prefix ':' name
-
-prefix    := non-empty text
-
-sigil     := '^' # (user) singleton
-          := '<' # (user) start-of-region (SOR)
-          := '>' # (user) end-of-region   (EOR)
-          := '~' # system singleton
-
-value     := any                    # payload
-
-$         := pod                    # system-level attributes, to be copied from old to new events
-```
-
-Each `key` *must* be preceded by a `sigil` which indicates the event category.
-
-`prefix` indicates the namespace; where missing, the default namespace is assumed.
+> of your to-do list first, and vice versa. This can be mildly confusing.
 
 
 ### `select = ( d, selectors... ) ->`
@@ -256,8 +242,19 @@ one can tune `PD.$collect()` with the optional `settings` object, whose defaults
   where applicable. *When a callback is used, elected datoms are not sent down
   the pipeline*, which makes `$collect()` act a bit like `$filter()`.
 
+`$collect()` will send on collected data when any of these conditions is met:
 
+* When the stream has ended and any data has been collected;
+* when a collect signal (a `~collect` datom) has been received;
+* when it has collected one or more pieces of data and encounters a datom that
+  it is not configured to collect.
 
+The last rule ensures that the 'integrity' of the data stream—the sequence of
+events—remains undisturbed by `$collect()`; if you send, say, datoms with
+numbers and texts `2 — 3 — 4 — 'a text' — 5 — 6` down a pipeline with a
+`$collect()` transform that is configured to collect numbers, you will receive
+`[ 2, 3, 4, ] — 'a text' — [ 5, 6, ]` on the other hand, with the general
+arrangement of the data left intact.
 
 
 
