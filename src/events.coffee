@@ -25,7 +25,7 @@ echo                      = CND.echo.bind CND
 #-----------------------------------------------------------------------------------------------------------
 @is_system = ( d ) ->
   ### Return whether event is a system event (i.e. whether its `sigil` equals `'~'`). ###
-  return d.key.startsWith '~'
+  return d.key.match /^[~\[\]]/
 
 #-----------------------------------------------------------------------------------------------------------
 @is_stamped = ( d ) ->
