@@ -242,12 +242,12 @@ one can tune `PD.$collect()` with the optional `settings` object, whose defaults
   where applicable. *When a callback is used, elected datoms are not sent down
   the pipeline*, which makes `$collect()` act a bit like `$filter()`.
 
-`$collect()` will send on collected data when any of these conditions is met:
+`$collect()` will send on collected data (or call the callback) when any data
+has been collected at all, and any of these conditions is met:
 
-* When the stream has ended and any data has been collected;
+* When the stream has ended;
 * when a collect signal (a `~collect` datom) has been received;
-* when it has collected one or more pieces of data and encounters a datom that
-  it is not configured to collect.
+* when it encounters a datom that it is not configured to collect.
 
 The last rule ensures that the 'integrity' of the data stream—the sequence of
 events—remains undisturbed by `$collect()`; if you send, say, datoms with
