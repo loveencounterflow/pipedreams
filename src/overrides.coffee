@@ -52,7 +52,7 @@ override_sym              = Symbol.for 'override'
   #.........................................................................................................
   collect = ( d ) ->
     collector ?= []
-    collector.push get_value d
+    collector.push ( get_value d ) ? null
     return null
   #.........................................................................................................
   return $ 'null', ( d, _send ) ->
@@ -65,6 +65,7 @@ override_sym              = Symbol.for 'override'
       #.....................................................................................................
       return collect d if ( not settings.select? ) and ( not PD.is_system d )
       return collect d if (     settings.select? ) and ( select d, settings.select )
+      expedite()
       return send d
     #.......................................................................................................
     else
