@@ -16,7 +16,7 @@ whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
 test                      = require 'guy-test'
-jr                        = JSON.stringify
+{ jr }                    = CND
 #...........................................................................................................
 L                         = require '../select'
 PD                        = require '../..'
@@ -24,6 +24,7 @@ PD                        = require '../..'
   $async
   select
   stamp }                 = PD
+defer                     = setImmediate
 
 #-----------------------------------------------------------------------------------------------------------
 $add_data_region = ->
@@ -47,26 +48,57 @@ $as_event = -> $ ( x, send ) ->
 #-----------------------------------------------------------------------------------------------------------
 @[ "$collect 1" ] = ( T, done ) ->
   probes_and_matchers = [
-    [[[],[1,2,3,4,5,6]],[{"key":"[data"},{"key":"^collection","value":[{"key":"^number","value":1},{"key":"^number","value":2},{"key":"^number","value":3},{"key":"^number","value":4},{"key":"^number","value":5},{"key":"^number","value":6}]},{"key":"]data"}],null]
-    [[[{"value":true}],[1,2,3,4,5,6]],[{"key":"[data"},{"key":"^collection","value":[1,2,3,4,5,6]},{"key":"]data"}],null]
-    [[[{"value":true}],[1,2,3,"~collect",4,5,6]],[{"key":"[data"},{"key":"^collection","value":[1,2,3]},{"key":"~collect"},{"key":"^collection","value":[4,5,6]},{"key":"]data"}],null]
+    [[null,[1,2,3,4,5,6]],[{"key":"[data"},{"key":"^collection","value":[{"key":"^number","value":1},{"key":"^number","value":2},{"key":"^number","value":3},{"key":"^number","value":4},{"key":"^number","value":5},{"key":"^number","value":6}]},{"key":"]data"}],null]
+    [[{"value":true},[1,2,3,4,5,6]],[{"key":"[data"},{"key":"^collection","value":[1,2,3,4,5,6]},{"key":"]data"}],null]
+    [[{"value":true},[1,2,3,"~collect",4,5,6]],[{"key":"[data"},{"key":"^collection","value":[1,2,3]},{"key":"~collect"},{"key":"^collection","value":[4,5,6]},{"key":"]data"}],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, ->
       new Promise ( resolve, reject ) ->
-        R             = []
-        pipeline      = []
         [ parameters
           inputs ]    = probe
+        R             = []
+        pipeline      = []
         pipeline.push PD.new_value_source inputs
         pipeline.push $add_data_region()
         pipeline.push $as_event()
         pipeline.push PD.$watch ( d ) -> whisper jr d
-        pipeline.push PD.$collect parameters...
+        pipeline.push PD.$collect parameters
         pipeline.push PD.$watch ( d ) -> urge jr d
         pipeline.push PD.$watch ( d ) -> R.push d
         pipeline.push PD.$drain -> resolve R
+        PD.pull pipeline...
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "$collect with callback" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[{"value":true},[1,2,3,4,5,6]],[[[1,2,3,4,5,6]],[{"key":"[data"},{"key":"]data"}]],null]
+    [[{"value":true,"select":"number"},[1,2,3,"between",4,5,6]],[[[1,2,3],[4,5,6]],[{"key":"[data"},{"key":"^text","value":"between"},{"key":"]data"}]],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, ->
+      new Promise ( resolve, reject ) ->
+        [ parameters
+          inputs ]          = probe
+        collections         = []
+        remaining           = []
+        R                   = [ collections, remaining, ]
+        #...................................................................................................
+        parameters.callback = ( collection ) -> collections.push collection
+        drainer             = -> resolve R
+        #...................................................................................................
+        pipeline            = []
+        pipeline.push PD.new_value_source inputs
+        pipeline.push $add_data_region()
+        pipeline.push $as_event()
+        # pipeline.push PD.$show()
+        pipeline.push PD.$collect parameters
+        pipeline.push PD.$watch ( d ) -> remaining.push d
+        pipeline.push PD.$drain drainer
         PD.pull pipeline...
   done()
   return null
@@ -75,13 +107,7 @@ $as_event = -> $ ( x, send ) ->
 
 ############################################################################################################
 unless module.parent?
-  # include = [
-  #   "async 1"
-  #   "async 1 paramap"
-  #   "async 2"
-  #   ]
-  # @_prune()
   test @
-
+  # test @[ "$collect with callback" ]
 
 
