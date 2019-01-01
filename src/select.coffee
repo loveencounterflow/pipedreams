@@ -98,7 +98,14 @@ echo                      = CND.echo.bind CND
   tags                  = new Set()
   other_selectors       = []
   selectors             = CND.flatten selectors
-  classes_and_selectors = ( @_classify_selector selector for selector in selectors )
+  classes_and_selectors = []
+  #.........................................................................................................
+  for selector in selectors
+    try
+      classes_and_selectors.push @_classify_selector selector
+    catch error
+      error.message += "\nµ22092 datom #{jr d},\nselector #{jr selector}"
+      throw error
   #.........................................................................................................
   for [ clasz, selector, ] in classes_and_selectors
     if clasz is 'tag' then  tags.add selector
