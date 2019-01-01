@@ -46,7 +46,7 @@ override_sym              = Symbol.for 'override'
   #.........................................................................................................
   expedite  = ->
     return unless collector?
-    if settings.callback? then  callback collector
+    if settings.callback? then  settings.callback collector
     else                        send PD.new_single_event settings.key, collector
     collector = null
   #.........................................................................................................
