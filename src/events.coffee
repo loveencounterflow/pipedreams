@@ -13,6 +13,7 @@ help                      = CND.get_logger 'help',      badge
 whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 { assign
+  copy
   jr }                    = CND
 
 #-----------------------------------------------------------------------------------------------------------
