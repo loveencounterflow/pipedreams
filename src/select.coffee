@@ -92,7 +92,7 @@ echo                      = CND.echo.bind CND
 #-----------------------------------------------------------------------------------------------------------
 @select = ( d, selectors... ) ->
   throw new Error "µ86606 expected one or more selectors, got none" if selectors.length is 0
-  throw new Error "µ00922 expected object with property key, got #{rpr d}" unless d?.key?
+  throw new Error "µ00922 expected object with at least a `key` property, got #{rpr d}" unless d?.key?
   #.........................................................................................................
   key_facets            = @_key_as_facets d.key
   tags                  = new Set()
