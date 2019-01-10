@@ -126,7 +126,7 @@ $collect_numbers = ( S ) ->
 $call_back = ( S, callback ) ->
   collector       = null
   handler_called  = false
-  return $ 'null', ( d, send ) ->
+  return $ { last: null, }, ( d, send ) ->
     if d?
       if select d, '^numbers'
         collector ?= []
@@ -153,7 +153,7 @@ new_collatz_pipeline = ( S, callback ) ->
   # pipeline.push PD.$delay 0.25
   pipeline.push PD.$defer()
   pipeline.push COLLATZ.$main     S
-  pipeline.push PD.R.$recycle     S.source.push
+  pipeline.push PD.R.$recycle     S.source.send
   pipeline.push PD.$show()
   pipeline.push $collect_numbers  S
   pipeline.push $call_back        S, callback
@@ -161,8 +161,8 @@ new_collatz_pipeline = ( S, callback ) ->
   PD.pull pipeline...
   #.........................................................................................................
   R       = ( value ) ->
-    if CND.isa_number value then  S.source.push PD.new_single_event 'number', value
-    else                          S.source.push value
+    if CND.isa_number value then  S.source.send PD.new_single_event 'number', value
+    else                          S.source.send value
   R.end   = -> S.source.end()
   return R
 
@@ -174,25 +174,27 @@ new_collatz_pipeline = ( S, callback ) ->
     [[2,3,4,5,6,7,8,9,10],[[2,1],[3,10,5,16,8,4],[],[],[6],[7,22,11,34,17,52,26,13,40,20],[],[9,28,14],[]]]
     ]
   #.........................................................................................................
-  for [ probe, matcher, ] in probes_and_matchers
-    callback = ( result ) ->
-      help jr [ probe, result, ]
-      T.eq result, matcher
-      done()
-    #.......................................................................................................
-    send = new_collatz_pipeline S, callback
-    send PD.new_event '[data'
-    for n in probe
-      do ( n ) ->
-        send n
-        send PD.new_system_event 'collect', null, $: { n, }
-    send PD.new_event ']data'
-    send PD.new_system_event 'call_back'
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> new Promise ( resolve, reject ) ->
+      callback = ( result ) ->
+        help jr [ probe, result, ]
+        # T.eq result, matcher
+        resolve result
+      #.......................................................................................................
+      send = new_collatz_pipeline S, callback
+      send PD.new_event '[data'
+      for n in probe
+        do ( n ) ->
+          send n
+          send PD.new_system_event 'collect', null, $: { n, }
+      send PD.new_event ']data'
+      send PD.new_system_event 'call_back'
   #.........................................................................................................
+  done()
   return null
 
 ############################################################################################################
 unless module.parent?
-  test @, { timeout: 30000, }
-  # @[ "collatz-conjecture" ]()
+  # test @, { timeout: 30000, }
+  test @[ "collatz-conjecture" ]
 

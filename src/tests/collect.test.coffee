@@ -29,7 +29,7 @@ defer                     = setImmediate
 #-----------------------------------------------------------------------------------------------------------
 $add_data_region = ->
   is_first = true
-  return $ 'null', ( d, send ) ->
+  return $ { last: null, }, ( d, send ) ->
     if is_first
       send PD.new_event '[data'
       is_first = false
@@ -54,21 +54,20 @@ $as_event = -> $ ( x, send ) ->
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, ->
-      new Promise ( resolve, reject ) ->
-        [ parameters
-          inputs ]    = probe
-        R             = []
-        pipeline      = []
-        pipeline.push PD.new_value_source inputs
-        pipeline.push $add_data_region()
-        pipeline.push $as_event()
-        pipeline.push PD.$watch ( d ) -> whisper jr d
-        pipeline.push PD.$collect parameters
-        pipeline.push PD.$watch ( d ) -> urge jr d
-        pipeline.push PD.$watch ( d ) -> R.push d
-        pipeline.push PD.$drain -> resolve R
-        PD.pull pipeline...
+    await T.perform probe, matcher, error, -> new Promise ( resolve, reject ) ->
+      [ parameters
+        inputs ]    = probe
+      R             = []
+      pipeline      = []
+      pipeline.push PD.new_value_source inputs
+      pipeline.push $add_data_region()
+      pipeline.push $as_event()
+      pipeline.push PD.$watch ( d ) -> whisper jr d
+      pipeline.push PD.$collect parameters
+      pipeline.push PD.$watch ( d ) -> urge jr d
+      pipeline.push PD.$watch ( d ) -> R.push d
+      pipeline.push PD.$drain -> help 'ok'; resolve R
+      PD.pull pipeline...
   done()
   return null
 
@@ -109,5 +108,5 @@ $as_event = -> $ ( x, send ) ->
 unless module.parent?
   test @
   # test @[ "$collect with callback" ]
-
+  # test @[ "$collect 1" ]
 
