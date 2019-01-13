@@ -77,14 +77,15 @@ PD                        = require '..'
     return null
 
 #-----------------------------------------------------------------------------------------------------------
-@$recycle = ( push ) ->
+@$recycle = ( resend ) ->
   ### Stream transform to send events either down the pipeline (using `send`) or
-  to an alternate destination, using the `push` method ( the only argument to
-  this function). Normally, this will be the `push` method of a push source, but
+  to an alternate destination, using the `resend` method ( the only argument to
+  this function). Normally, this will be the `send` method of a push source, but
   it could be any function that accepts a single event as argument. ###
-  return $ ( d, send ) =>
-    if      ( @is_sync      d ) then push d
-    else if ( @is_recycling d ) then push d
+  return $ { last: null, }, ( d, send ) =>
+    return resend null unless d?
+    if      ( @is_sync      d ) then resend d
+    else if ( @is_recycling d ) then resend d
     else send d
     return null
 
