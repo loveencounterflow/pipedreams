@@ -26,8 +26,8 @@
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
     "cnd": "^4.5.0",
-    "globby": "^8.0.2",
-    "pipestreams": "^7.1.0"
+    "globby": "^9.0.0",
+    "pipestreams": "^7.2.0"
   },
   "devDependencies": {
     "guy-test": "^1.4.0"
