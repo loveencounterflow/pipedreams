@@ -1,4 +1,5 @@
 
+'use strict'
 
 ############################################################################################################
 CND                       = require 'cnd'
@@ -24,6 +25,8 @@ every                     = ( dts, f ) -> setInterval f, dts * 1000
 defer                     = setImmediate
 { jr
   is_empty }              = CND
+{ inspect, }              = require 'util'
+xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infinity, maxArrayLength: Infinity, depth: Infinity, }
 
 # https://pull-stream.github.io/#pull-through
 # nope https://github.com/dominictarr/pull-flow (https://github.com/pull-stream/pull-stream/issues/4)
@@ -39,15 +42,34 @@ $as_type_datoms = ->
   for the keys, so `'xy'` turns into `{ key: 'text', value: 'xy', }`, and `42` turns into `{ key: 'number',
   value: 42, }`. ###
   return $ ( d, send ) =>
+    debug '29209', d, CND.type_of d
     return send d if CND.isa_pod d
     type = CND.type_of d
-    send PD.new_event "^#{type}", d
+    if type is 'text' and d.startsWith '~'
+      send PD.new_event d, null
+    else
+      send PD.new_event "^#{type}", d
     return null
 
 #-----------------------------------------------------------------------------------------------------------
 wye_3 = ->
   #.........................................................................................................
-  get_transform = ->
+  provide_$end = ->
+    @$end = ->
+      # a sink function: accept a source...
+      return ( read ) ->
+        # ...but return another source!
+        return ( abort, handler ) ->
+          read abort, ( error, data ) ->
+            # if the stream has ended, pass that on.
+            return handler error if error
+            debug @symbols.end
+            return handler true if data is @symbols.end
+            handler null, data
+            return null
+          return null
+        return null
+  provide_$end.apply PD
   #.........................................................................................................
   demo = -> new Promise ( resolve ) ->
     bysource  = PD.new_push_source()
@@ -62,18 +84,16 @@ wye_3 = ->
     bystream = PD.pull byline...
     #.......................................................................................................
     mainline = []
-    # mainline.push PD.new_value_source "just a few words".split /\s/
-    mainline.push PD.new_random_async_value_source "just a few words".split /\s/
-    # mainline.push PD.$wye PD.new_value_source "JUST A FEW WORDS".split /\s/
-    mainline.push PD.$wye bystream
+    mainline.push PD.new_random_async_value_source "just a few words ~stop".split /\s+/
     mainline.push $as_type_datoms()
+    mainline.push $ ( d, send ) -> send if ( select d, '~stop' ) then PD.symbols.end else d
+    mainline.push PD.$wye bystream
     # mainline.push $ { last: null, }, ( d, send ) ->
     #   debug CND.plum '10109', d
     #   send PD.new_event '~end' unless d?
     #   send d
-    mainline.push PD.$show title: 'confluence'
     mainline.push $async { last: null, }, ( d, send, done ) ->
-      debug CND.lime '33450', d
+      echo '33450', xrpr d
       if d?
         if ( select d, '^text' )
           defer -> bysource.send d.value.length
@@ -130,10 +150,45 @@ wye_4 = ->
   return null
 
 
+#-----------------------------------------------------------------------------------------------------------
+@wye_with_duplex_pair = ->
+  new_duplex_pair     = require 'pull-pair/duplex'
+  [ client, server, ] = new_duplex_pair()
+  clientline          = []
+  serverline          = []
+  refillable          = []
+  extra_stream        = PS.new_refillable_source refillable, { repeat: 10, show: true, }
+  # extra_stream        = PS.new_push_source()
+  #.........................................................................................................
+  # pipe the second duplex stream back to itself.
+  serverline.push PS.new_merged_source server, extra_stream
+  # serverline.push client
+  serverline.push PS.$defer()
+  serverline.push PS.$watch ( d ) -> urge d
+  serverline.push $ ( d, send ) -> send d * 10
+  serverline.push server
+  PS.pull serverline...
+  #.........................................................................................................
+  clientline.push PS.new_value_source [ 1, 2, 3, ]
+  # clientline.push PS.$defer()
+  clientline.push client
+  # clientline.push PS.$watch ( d ) -> extra_stream.send d if d < 30
+  clientline.push PS.$watch ( d ) -> refillable.push d if d < 30
+  clientline.push PS.$collect()
+  clientline.push PS.$show()
+  # clientline.push client
+  clientline.push PS.$drain()
+  PS.pull clientline...
+  #.........................................................................................................
+  return null
+
+
 
 ############################################################################################################
 unless module.parent?
-  do -> await wye_3()
+  do ->
+    await wye_3()
+    # await wye_4()
   # wye_4()
 
 
