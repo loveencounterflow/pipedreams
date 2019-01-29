@@ -1,7 +1,7 @@
 {
-  "name": "pipedreams",
+  "name": "pipedreams-3b7b",
   "version": "6.3.2",
-  "description": "Piping NodeJS streams made rad easy, no subclassing man",
+  "description": "This is a transitional package used to provide backward compatibility; use pipedreams instead",
   "main": "lib/main.js",
   "scripts": {
     "build": "coffee --map -o lib -c src",
