@@ -46,6 +46,7 @@ override_sym              = Symbol.for 'override'
     else throw new Error "µ20922 expected a boolean, a text or a function, got a #{type}"
   #.........................................................................................................
   expedite  = ->
+    debug '37763-1', collector
     return unless collector?
     if settings.callback? then  settings.callback collector
     else                        send PD.new_single_event settings.key, collector
@@ -56,21 +57,24 @@ override_sym              = Symbol.for 'override'
     collector.push ( get_value d ) ? null
     return null
   #.........................................................................................................
-  return $ { last: null, }, ( d, _send ) ->
+  return $ { last: PD.symbols.last, }, ( d, _send ) ->
     send = _send
-    if d?
-      #.....................................................................................................
-      if select d, '~collect'
-        expedite()
-        return send d
-      #.....................................................................................................
+    debug '37763-2', d
+    #.......................................................................................................
+    if d is PD.symbols.last
+      debug '37763-3', d
+      expedite()
+      send PD.symbols.end
+    #.......................................................................................................
+    else if select d, '~collect'
+      expedite()
+      send d
+    #.......................................................................................................
+    else
       return collect d if ( not settings.select? ) and ( not PD.is_system d )
       return collect d if (     settings.select? ) and ( select d, settings.select )
       expedite()
-      return send d
-    #.......................................................................................................
-    else
-      expedite()
+      send d
     #.......................................................................................................
     return null
 
@@ -79,8 +83,7 @@ override_sym              = Symbol.for 'override'
   pipeline = []
   pipeline.push $ ( d, send ) ->
     if ( select d, '~end' )
-      send d
-      send null
+      send PD.symbols.end
     else
       send d
   pipeline.push PS.$drain P...
