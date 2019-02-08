@@ -107,13 +107,14 @@ categories, giving six types of datoms:
   * `[` for **start-of-region datoms**,
   * `]` for **end-of-region datoms**.
 
-System-level events, in particular those without further payload data, are also
+<!-- System-level events, in particular those without further payload data, are also
 called 'signals'; thus, `~collect` is a 'collect signal', and `[data` is a
 'start-of-data signal'. Aggregate transforms such as `$collect()`, `$sort()` and
 so on listen to the signals of the same name, `~collect` and `~sort`: In the
 case of `$collect()`, a collect signal will trigger the sending of the
 collection as it looks at that point in time; likewise, `$sort()` will react to
 a sort signal by sending all buffered events in the configured ordering.
+ -->
 
 Normally, one will probably want to send around business data inside (the
 `value` property of) application-level data datoms (hence their name, also
@@ -212,7 +213,7 @@ throws an error.
 
 ## Aggregate Transforms
 
-### `$collect = ( settings ) ->`
+<!-- ### `$collect = ( settings ) ->`
 
 This is an improved version of `PS.$collect()`. While `PS.$collect()` will merely
 buffer all events in a list and send on that list when the stream is terminated,
@@ -255,7 +256,7 @@ numbers and texts `2 — 3 — 4 — 'a text' — 5 — 6` down a pipeline with 
 `$collect()` transform that is configured to collect numbers, you will receive
 `[ 2, 3, 4, ] — 'a text' — [ 5, 6, ]` on the other hand, with the general
 arrangement of the data left intact.
-
+ -->
 
 
 
