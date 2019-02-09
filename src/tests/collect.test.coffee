@@ -6,7 +6,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPEDREAMS/TESTS/SELECT'
+badge                     = 'PIPEDREAMS/TESTS/COLLECT'
 debug                     = CND.get_logger 'debug',     badge
 warn                      = CND.get_logger 'warn',      badge
 info                      = CND.get_logger 'info',      badge
@@ -25,6 +25,8 @@ PD                        = require '../..'
   select
   stamp }                 = PD
 defer                     = setImmediate
+{ inspect, }              = require 'util'
+xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infinity, maxArrayLength: Infinity, depth: Infinity, }
 
 #-----------------------------------------------------------------------------------------------------------
 $add_data_region = ->
@@ -50,7 +52,7 @@ $as_event = -> $ ( x, send ) ->
   probes_and_matchers = [
     [[null,[1,2,3,4,5,6]],[{"key":"[data"},{"key":"^collection","value":[{"key":"^number","value":1},{"key":"^number","value":2},{"key":"^number","value":3},{"key":"^number","value":4},{"key":"^number","value":5},{"key":"^number","value":6}]},{"key":"]data"}],null]
     [[{"value":true},[1,2,3,4,5,6]],[{"key":"[data"},{"key":"^collection","value":[1,2,3,4,5,6]},{"key":"]data"}],null]
-    [[{"value":true},[1,2,3,"~collect",4,5,6]],[{"key":"[data"},{"key":"^collection","value":[1,2,3]},{"key":"~collect"},{"key":"^collection","value":[4,5,6]},{"key":"]data"}],null]
+    [[{"value":true},[1,2,3,"~collect",4,5,6]],[{"key":"[data"},{"key":"^collection","value":[1,2,3]},{"key":"^collection","value":[4,5,6]},{"key":"]data"}],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
@@ -62,9 +64,34 @@ $as_event = -> $ ( x, send ) ->
       pipeline.push PD.new_value_source inputs
       pipeline.push $add_data_region()
       pipeline.push $as_event()
-      pipeline.push PD.$watch ( d ) -> whisper jr d
+      pipeline.push PD.$watch ( d ) -> whisper xrpr d
       pipeline.push PD.$collect parameters
-      pipeline.push PD.$watch ( d ) -> urge jr d
+      pipeline.push PD.$watch ( d ) -> urge xrpr d
+      pipeline.push PD.$watch ( d ) -> R.push d
+      pipeline.push PD.$drain -> help 'ok'; resolve R
+      PD.pull pipeline...
+  done()
+  return null
+
+#-----------------------------------------------------------------------------------------------------------
+@[ "$collect with custom collector" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[1,2,3,4],["(",{"key":"^collection","value":[1,2,3,4]},")"],null]
+    [[1,2,'~collect',3,4],["(",{"key":"^collection","value":[1,2,]},")"],null]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> new Promise ( resolve, reject ) ->
+      values        = probe
+      R             = []
+      pipeline      = []
+      pipeline.push PD.new_value_source values
+      pipeline.push $ ( d, send ) -> send if d is '~collect' then PD.new_system_event 'collect' else d
+      pipeline.push $as_event()
+      # pipeline.push PD.$watch ( d ) -> whisper xrpr d
+      pipeline.push PD.$collect { collector: R, value: true, }
+      pipeline.push PD.$surround { first: '(', between: ',', last: ')', }
+      pipeline.push PD.$watch ( d ) -> urge xrpr d
       pipeline.push PD.$watch ( d ) -> R.push d
       pipeline.push PD.$drain -> help 'ok'; resolve R
       PD.pull pipeline...
@@ -107,6 +134,6 @@ $as_event = -> $ ( x, send ) ->
 ############################################################################################################
 unless module.parent?
   test @
-  # test @[ "$collect with callback" ]
   # test @[ "$collect 1" ]
-
+  # test @[ "$collect with callback" ]
+  # test @[ "$collect with custom collector" ]

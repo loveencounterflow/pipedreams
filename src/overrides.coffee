@@ -31,10 +31,11 @@ override_sym              = Symbol.for 'override'
 
 #-----------------------------------------------------------------------------------------------------------
 @$collect = ( settings ) ->
-  collector = null
-  defaults  = { select: null, key: 'collection', callback: null, value: null, }
-  settings  = assign {}, defaults, settings
-  send      = null
+  defaults              = { select: null, key: 'collection', callback: null, value: null, collector: null, }
+  settings              = assign {}, defaults, settings
+  use_custom_collector  = settings.collector?
+  send                  = null
+  last_sym              = Symbol 'last'
   #.........................................................................................................
   switch ( type = CND.type_of settings.value ? null )
     when 'null'         then  get_value = ( d ) -> d
@@ -46,33 +47,33 @@ override_sym              = Symbol.for 'override'
     else throw new Error "µ20922 expected a boolean, a text or a function, got a #{type}"
   #.........................................................................................................
   expedite  = ->
-    debug '37763-1', collector
-    return unless collector?
-    if settings.callback? then  settings.callback collector
-    else                        send PD.new_single_event settings.key, collector
-    collector = null
+    # debug '37763-1->', collector, settings.callback, settings.key
+    return unless settings.collector?
+    if settings.callback? then  settings.callback                       settings.collector
+    else                        send PD.new_single_event settings.key,  settings.collector
+    settings.collector = null
   #.........................................................................................................
   collect = ( d ) ->
-    collector ?= []
-    collector.push ( get_value d ) ? null
+    settings.collector ?= []
+    settings.collector.push ( get_value d ) ? null
     return null
   #.........................................................................................................
-  return $ { last: PD.symbols.last, }, ( d, _send ) ->
+  return $ { last: last_sym, }, ( d, _send ) ->
     send = _send
-    debug '37763-2', d
     #.......................................................................................................
-    if d is PD.symbols.last
-      debug '37763-3', d
+    if d is last_sym
       expedite()
-      send PD.symbols.end
     #.......................................................................................................
     else if select d, '~collect'
+      if use_custom_collector
+        throw new Error "µ110299 unable to use `~collect` symbol with custom collector"
       expedite()
-      send d
     #.......................................................................................................
     else
       return collect d if ( not settings.select? ) and ( not PD.is_system d )
       return collect d if (     settings.select? ) and ( select d, settings.select )
+      ### At this point we know the current datom will not be collected, so we first send whatever we have
+      collected, if anything, in order not to mess up the relative ordering of events. ###
       expedite()
       send d
     #.......................................................................................................

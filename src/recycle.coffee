@@ -82,8 +82,8 @@ PD                        = require '..'
   to an alternate destination, using the `resend` method ( the only argument to
   this function). Normally, this will be the `send` method of a push source, but
   it could be any function that accepts a single event as argument. ###
-  return $ { last: null, }, ( d, send ) =>
-    return resend null unless d?
+  return $ { last: PD.symbols.end, }, ( d, send ) =>
+    return resend PD.symbols.end unless d?
     if      ( @is_sync      d ) then resend d
     else if ( @is_recycling d ) then resend d
     else send d

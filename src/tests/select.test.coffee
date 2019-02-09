@@ -167,6 +167,24 @@ PD                        = require '../..'
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "select ignores values other than PODs" ] = ( T, done ) ->
+  probes_and_matchers = [
+    [[ null, '^number',],false]
+    [[ 123, '^number',],false]
+    ]
+  #.........................................................................................................
+  for [ probe, matcher, error, ] in probes_and_matchers
+    await T.perform probe, matcher, error, -> return new Promise ( resolve, reject ) ->
+      [ d, selector, ] = probe
+      try
+        resolve PD.select d, selector
+      catch error
+        return resolve error.message
+      return null
+  done()
+  return null
+
 
 # first-only
 # last-only
