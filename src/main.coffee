@@ -38,7 +38,7 @@ acquire_path = ( target, path ) ->
   for key, value of module
     throw new Error "duplicate key #{rpr key}" if L[ key ]? and not value[ override_sym ]
     module[ key ] = ( value.bind module ) if ( CND.isa_function value ) and not is_bound value
-    target[ key ] = module[ key ]         unless key.startsWith '_'
+    target[ key ] = module[ key ]
   return null
 
 
