@@ -27,7 +27,7 @@
   "dependencies": {
     "cnd": "^4.5.0",
     "globby": "^9.0.0",
-    "pipestreams": "^7.5.1"
+    "pipestreams": "^7.5.2"
   },
   "devDependencies": {
     "guy-test": "^1.4.0"
