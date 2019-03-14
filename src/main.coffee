@@ -45,10 +45,12 @@ acquire_path = ( target, path ) ->
 ############################################################################################################
 ### Gather methods from submodules, bind all methods to respective submodule, reflect public names into
 main module. ###
-L.R = {}
+L.R   = {}
+L.XE  = {}
 acquire_path      L,    'pipestreams'
-acquire_patterns  L,    [ '*.js', '!main.js', '!_*', '!recycle.js', '!overrides.js', ]
+acquire_patterns  L,    [ '*.js', '!main.js', '!_*', '!recycle.js', '!overrides.js', '!xemitter.js', ]
 acquire_patterns  L.R,  'recycle.js'
+acquire_patterns  L.XE, 'xemitter.js'
 acquire_patterns  L,    'overrides.js'
 
 

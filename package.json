@@ -26,6 +26,7 @@
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
     "cnd": "^4.5.0",
+    "emittery": "^0.4.1",
     "globby": "^9.0.0",
     "pipestreams": "^7.5.2"
   },
