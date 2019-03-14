@@ -260,6 +260,25 @@ arrangement of the data left intact.
 
 
 
+## The XEmitter (XE) Sub-Module
+
+### XE Sending API
+
+* **`XE.emit          = ( key, d ) ->`**—emit (a.k.a. 'publish', 'send to whom it may concern') an event. To
+  be called either as `XE.emit '^mykey', 'myvalue'` or as `XE.emit PD.new_event '^mykey', 'myvalue'` (in
+  which latter case the datom's key will become the channel key).
+
+* **`XE.delegate      = ( key, d ) ->`**—
+
+### XE Receiving API
+
+* **`XE.contract      = ( key, self, listener ) ->`**—
+
+* **`XE.listen_to     = ( key, self, listener ) ->`**—
+
+* **`XE.listen_to_all = ( self, listener ) ->`**—
+
+
 
 
 
