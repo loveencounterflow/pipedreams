@@ -296,6 +296,8 @@ arrangement of the data left intact.
 * **`XE.contract      = ( key, self, listener ) ->`** Register a contractor (a.k.a. 'result producer') for
   events that match `key`.
 
+### Sample
+
 ```coffee
 PD                        = require 'pipedreams'
 defer                     = setImmediate
@@ -311,6 +313,8 @@ XE.contract '^plus-async', ( d ) =>
 ############################################################################################################
 do =>
   info 'µ28823-5', await XE.emit PD.new_event '^plus-async', { a: 42, b: 108, }
+  # in case other listeners were registered that returned values like `'listener #1'` and so on, the
+  # returned list of values might look like:
   # -> [ 'listener #4', { key: '~xemitter-preferred', value: 150 }, 'listener #1', 'listener #2' ]
 
   ### When using `delegate()` instead of `emit()`, the preferred value (a.k.a. '*the* event result')
