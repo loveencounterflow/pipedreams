@@ -27,43 +27,43 @@ Emittery                  = require 'emittery'
 @_get_primary     = ( values ) -> ( values.filter @_filter_primary )[ 0 ]?.value ? null
 
 #-----------------------------------------------------------------------------------------------------------
-@_get_ccl = ( channel, ctx, listener ) ->
+@_get_ccl = ( channel, self, listener ) ->
   switch arity = arguments.length
-    when 2 then [ channel, ctx, listener, ] = [ channel, null, ctx,       ]
-    when 3 then [ channel, ctx, listener, ] = [ channel, ctx,  listener,  ]
+    when 2 then [ channel, self, listener, ] = [ channel, null, self,       ]
+    when 3 then [ channel, self, listener, ] = [ channel, self,  listener,  ]
     else throw new Error "expected 2 or 3 arguments, got #{arity}"
   unless ( CND.isa_text channel ) and ( channel.length > 0 )
     throw new Error "expected a non-empty text for channel, got #{rpr channel}"
-  return [ channel, ctx, listener, ]
+  return [ channel, self, listener, ]
 
 #-----------------------------------------------------------------------------------------------------------
-@_get_cl = ( ctx, listener ) ->
+@_get_cl = ( self, listener ) ->
   switch arity = arguments.length
-    when 1 then [ ctx, listener, ] = [ null, ctx,       ]
-    when 2 then [ ctx, listener, ] = [ ctx,  listener,  ]
+    when 1 then [ self, listener, ] = [ null, self,       ]
+    when 2 then [ self, listener, ] = [ self,  listener,  ]
     else throw new Error "expected 1 or 2 arguments, got #{arity}"
-  return [ ctx, listener, ]
+  return [ self, listener, ]
 
 #-----------------------------------------------------------------------------------------------------------
-@contract = ( channel, ctx, listener ) ->
-  [ channel, ctx, listener, ] = @_get_ccl arguments...
+@contract = ( channel, self, listener ) ->
+  [ channel, self, listener, ] = @_get_ccl arguments...
   if @_has_contractors[ channel ]
     throw new Error "channel #{rpr channel} already has a primary listener"
   @_has_contractors[ channel ] = yes
   @_emitter.on channel, ( data ) =>
-    return @_mark_as_primary await listener.call ctx, data
+    return @_mark_as_primary await listener.call self, data
   return listener
 
 #-----------------------------------------------------------------------------------------------------------
-@listen_to = ( channel, ctx, listener ) ->
-  [ channel, ctx, listener, ] = @_get_ccl arguments...
-  @_emitter.on channel, ( data ) -> await listener.call ctx, data
+@listen_to = ( channel, self, listener ) ->
+  [ channel, self, listener, ] = @_get_ccl arguments...
+  @_emitter.on channel, ( data ) -> await listener.call self, data
   return listener
 
 #-----------------------------------------------------------------------------------------------------------
-@listen_to_all = ( ctx, listener ) ->
-  [ ctx, listener, ] = @_get_cl arguments...
-  @_emitter.onAny ( channel, data ) -> await listener.call ctx, channel, data
+@listen_to_all = ( self, listener ) ->
+  [ self, listener, ] = @_get_cl arguments...
+  @_emitter.onAny ( channel, data ) -> await listener.call self, channel, data
   return listener
 
 #-----------------------------------------------------------------------------------------------------------
