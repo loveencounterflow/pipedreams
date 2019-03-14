@@ -296,8 +296,26 @@ arrangement of the data left intact.
 * **`XE.contract      = ( key, self, listener ) ->`**—Register a contractor (a.k.a. 'result producer') for
   events that match `key`.
 
-For a demo with more coverage, have a look at
-[experiments/demo-xemitter.coffee](./blob/master/src/experiments/demo-xemitter.coffee)
-                                   <!-- https://github.com/loveencounterflow/pipedreams/blob/master/blob/master/src/experiments/demo-xemitter.coffee -->
+```coffee
+#-----------------------------------------------------------------------------------------------------------
+### Register a 'contractor' (a.k.a. 'result producer') for `^plus-async` events; observe that asynchronous
+contractors should return a promise: ###
+XE.contract '^plus-async', ( d ) =>
+  return new Promise ( resolve, reject ) =>
+    defer => resolve d.value.a + d.value.b
 
+############################################################################################################
+do =>
+  info 'µ28823-5', await XE.emit PD.new_event '^plus-async', { a: 42, b: 108, }
+  # -> [ 'listener #4', { key: '~xemitter-preferred', value: 150 }, 'listener #1', 'listener #2' ]
+
+  ### When using `delegate()` instead of `emit()`, the preferred value (a.k.a. '*the* event result')
+  will be picked out of the list and unwrapped for you: ###
+  info 'µ28823-6', await XE.delegate PD.new_event '^plus-async', { a: 42, b: 108, }
+  # -> 150
+
+```
+
+For a demo with more coverage, have a look at
+[experiments/demo-xemitter.coffee](https://github.com/loveencounterflow/pipedreams/blob/master/blob/master/src/experiments/demo-xemitter.coffee).
 
