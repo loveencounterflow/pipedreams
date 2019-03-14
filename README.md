@@ -277,26 +277,30 @@ arrangement of the data left intact.
 
 ### XE Sending API
 
-* **`XE.emit          = ( key, d ) ->`**—emit (a.k.a. 'publish', 'send to whom it may concern') an event. To
+* **`XE.emit          = ( key, d ) ->`** emit (a.k.a. 'publish', 'send to whom it may concern') an event. To
   be called either as `XE.emit '^mykey', 'myvalue'` or as `XE.emit PD.new_event '^mykey', 'myvalue'` (in
   which latter case the datom's key will become the channel key). When called with await as in
   `return_values = await XE.emit '^foo', ...`, `return_values` will be a list with all values returned by
   all listeners that got called for this event.
 
-* **`XE.delegate      = ( key, d ) ->`**—like `XE.emit()` but will pick out and unwrap the event value
+* **`XE.delegate      = ( key, d ) ->`** like `XE.emit()` but will pick out and unwrap the event value
   from the event contractor (see below). If no event contractor was listening, an error will be raised.
 
 ### XE Receiving API
 
-* **`XE.listen_to_all = ( self, listener ) ->`**—Register a listener for all events.
+* **`XE.listen_to_all = ( self, listener ) ->`** Register a listener for all events.
 
-* **`XE.listen_to     = ( key, self, listener ) ->`**—Register a listener for events that match `key`. No
+* **`XE.listen_to     = ( key, self, listener ) ->`** Register a listener for events that match `key`. No
   pattern matching is implemented atm, so you can only listen to all keys or a single key.
 
-* **`XE.contract      = ( key, self, listener ) ->`**—Register a contractor (a.k.a. 'result producer') for
+* **`XE.contract      = ( key, self, listener ) ->`** Register a contractor (a.k.a. 'result producer') for
   events that match `key`.
 
 ```coffee
+PD                        = require 'pipedreams'
+defer                     = setImmediate
+{ XE }                    = PD
+
 #-----------------------------------------------------------------------------------------------------------
 ### Register a 'contractor' (a.k.a. 'result producer') for `^plus-async` events; observe that asynchronous
 contractors should return a promise: ###
