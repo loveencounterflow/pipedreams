@@ -297,7 +297,7 @@ arrangement of the data left intact.
   events that match `key`.
 
 For a demo with more coverage, have a look at
-[experiments/demo-xemitter.coffee](blob/master/src/experiments/demo-xemitter.coffee)
-
+[experiments/demo-xemitter.coffee](./blob/master/src/experiments/demo-xemitter.coffee)
+                                   <!-- https://github.com/loveencounterflow/pipedreams/blob/master/blob/master/src/experiments/demo-xemitter.coffee -->
 
 
