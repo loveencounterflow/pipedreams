@@ -301,7 +301,7 @@ arrangement of the data left intact.
 ```coffee
 PD                        = require 'pipedreams'
 defer                     = setImmediate
-{ XE }                    = PD
+XE                        = PD.XE.new_scope()
 
 #-----------------------------------------------------------------------------------------------------------
 ### Register a 'contractor' (a.k.a. 'result producer') for `^plus-async` events; observe that asynchronous
@@ -326,4 +326,16 @@ do =>
 
 For a demo with more coverage, have a look at
 [experiments/demo-xemitter.coffee](https://github.com/loveencounterflow/pipedreams/blob/master/blob/master/src/experiments/demo-xemitter.coffee).
+
+### Managing Scope
+
+Typically, you'll start using XEmitter with `XE = PD.XE.new_scope()`; this creates a new 'scope' for events.
+Only methods that emit and listen to the same scope can exchange messages. When used within an application,
+you will want to publish that scope to all participating modules; one way to do so is to write a dedicated
+module with a single line in it, `module.exports = ( require 'pipedreams' ).XE.new_scope()`.
+
+
+
+
+
 
