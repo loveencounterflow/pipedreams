@@ -75,6 +75,10 @@ XE.contract '^plus-async', ( d ) =>
   return new Promise ( resolve, reject ) =>
     defer => resolve d.value.a + d.value.b
 
+#-----------------------------------------------------------------------------------------------------------
+### Make sure it's ok to yield `null`: ###
+XE.contract '^always-null', ( d ) => null
+
 # #-----------------------------------------------------------------------------------------------------------
 # XE.contract_once '^multiply', ( d ) => debug '26672', d; d.value.a * d.value.b
 
@@ -102,7 +106,9 @@ do =>
 
   ### When using `delegate()` instead of `emit()`, the preferred value (a.k.a. '*the* event result')
   will be picked out of the list and unwrapped for you: ###
+  info 'µ28823-6', await XE.delegate PD.new_event '^plus-sync',  { a: 42, b: 108, }
   info 'µ28823-6', await XE.delegate PD.new_event '^plus-async', { a: 42, b: 108, }
+  info 'µ28823-6', await XE.delegate PD.new_event '^always-null'
   # -> 150
 
   ### When delegating an event without a listener, an error will be thrown: ###

@@ -30,7 +30,12 @@ provide_library = ->
   #---------------------------------------------------------------------------------------------------------
   @_mark_as_primary = ( x ) -> PD.new_system_event 'XEMITTER-preferred', x
   @_filter_primary  = ( x ) -> PD.select x, '~XEMITTER-preferred'
-  @_get_primary     = ( values ) -> ( values.filter @_filter_primary )[ 0 ]?.value ? misfit
+
+  #---------------------------------------------------------------------------------------------------------
+  @_get_primary = ( values ) ->
+    primary_responses = values.filter @_filter_primary
+    return misfit unless primary_responses.length > 0
+    return primary_responses[ 0 ]?.value
 
   #---------------------------------------------------------------------------------------------------------
   @_get_ksl = ( key, self, listener ) ->
