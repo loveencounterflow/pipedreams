@@ -28,7 +28,7 @@
     "cnd": "^4.5.0",
     "emittery": "^0.4.1",
     "globby": "^9.1.0",
-    "pipestreams": "^7.6.1"
+    "pipestreams": "^7.6.2"
   },
   "devDependencies": {
     "guy-test": "^1.4.0"
