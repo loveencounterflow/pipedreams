@@ -70,8 +70,8 @@ provide_library = ->
   #=========================================================================================================
   # API / RECEIVING
   #---------------------------------------------------------------------------------------------------------
-  @contract       = ( key, self, listener ) -> @_contract 'on',     ( @_get_ksl arguments... )...
-  @listen_to      = ( key, self, listener ) -> @_listen_to 'on',    ( @_get_ksl arguments... )...
+  @contract       = ( key, self, listener ) -> @_contract   'on', ( @_get_ksl arguments... )...
+  @listen_to      = ( key, self, listener ) -> @_listen_to  'on', ( @_get_ksl arguments... )...
   ### These do not currently work for unknown reasons: ###
   # @contract_once  = ( key, self, listener ) -> @_contract 'once',   ( @_get_ksl arguments... )...
   # @listen_to_once = ( key, self, listener ) -> @_listen_to 'once',  ( @_get_ksl arguments... )...
@@ -87,14 +87,12 @@ provide_library = ->
 
   #---------------------------------------------------------------------------------------------------------
   @_listen_to = ( method_name, key, self, listener ) ->
-    @_emitter[ method_name ] key, ( d ) -> await listener.call self, d
-    return listener
+    return @_emitter[ method_name ] key, ( d ) -> await listener.call self, d
 
   #---------------------------------------------------------------------------------------------------------
   @listen_to_all = ( self, listener ) ->
     [ self, listener, ] = @_get_sl arguments...
-    @_emitter.onAny ( key, d ) -> await listener.call self, key, d
-    return listener
+    return @_emitter.onAny ( key, d ) -> await listener.call self, key, d
 
 
   #=========================================================================================================
