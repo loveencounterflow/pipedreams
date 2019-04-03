@@ -70,30 +70,21 @@ provide_library = ->
   #=========================================================================================================
   # API / RECEIVING
   #---------------------------------------------------------------------------------------------------------
-  @contract       = ( key, self, listener ) -> @_contract   'on', ( @_get_ksl arguments... )...
-  @listen_to      = ( key, self, listener ) -> @_listen_to  'on', ( @_get_ksl arguments... )...
-  ### These do not currently work for unknown reasons: ###
-  # @contract_once  = ( key, self, listener ) -> @_contract 'once',   ( @_get_ksl arguments... )...
-  # @listen_to_once = ( key, self, listener ) -> @_listen_to 'once',  ( @_get_ksl arguments... )...
+  @contract = ( key, self, listener ) ->
+    [ key, self, listener, ]  = @_get_ksl arguments...
+    throw new Error "µ68704 key #{rpr key} already has a primary listener" if @_has_contractors[ key ]
+    @_has_contractors[ key ]  = yes
+    return @_emitter.on key, ( d ) => @_mark_as_primary await listener.call self, d
 
   #---------------------------------------------------------------------------------------------------------
-  @_contract = ( method_name, key, self, listener ) ->
-    if @_has_contractors[ key ]
-      throw new Error "µ68704 key #{rpr key} already has a primary listener"
-    @_has_contractors[ key ] = yes
-    @_emitter[ method_name ] key, ( d ) =>
-      return @_mark_as_primary await listener.call self, d
-    return listener
-
-  #---------------------------------------------------------------------------------------------------------
-  @_listen_to = ( method_name, key, self, listener ) ->
-    return @_emitter[ method_name ] key, ( d ) -> await listener.call self, d
+  @listen_to = ( key, self, listener ) ->
+    [ key, self, listener, ]  = @_get_ksl arguments...
+    return @_emitter.on key, ( d ) -> await listener.call self, d
 
   #---------------------------------------------------------------------------------------------------------
   @listen_to_all = ( self, listener ) ->
-    [ self, listener, ] = @_get_sl arguments...
+    [ self, listener, ]       = @_get_sl arguments...
     return @_emitter.onAny ( key, d ) -> await listener.call self, key, d
-
 
   #=========================================================================================================
   # API / SENDING
@@ -105,6 +96,7 @@ provide_library = ->
     if ( R = @_get_primary await @emit arguments... ) is misfit
       throw new Error "µ83733 no results for #{rpr key.key ? key}"
     return R
+
 
   #=========================================================================================================
   #

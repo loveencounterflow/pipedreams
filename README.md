@@ -296,6 +296,9 @@ arrangement of the data left intact.
 * **`XE.contract      = ( key, self, listener ) ->`** Register a contractor (a.k.a. 'result producer') for
   events that match `key`.
 
+The above methods—`XE.listen_to_all()`, `XE.listen_to()` and `XE.contract()`—will return an `unsubscribe()`
+function that, when called once, will unsubscribe the event listener from the event.
+
 ### Sample
 
 ```coffee
