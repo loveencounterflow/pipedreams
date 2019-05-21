@@ -20,12 +20,36 @@ types                     = require './_types'
 { isa
   validate
   type_of }               = types
+ICE                       = require 'icepick'
 
 #-----------------------------------------------------------------------------------------------------------
-### Set the `$stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
-by the `select` method unless tag '#stamped' is used. ###
-@stamp    = ( d ) -> @set   d, '$stamped', true
-@unstamp  = ( d ) -> @unset d, '$stamped'
+@freeze = ( d ) -> ICE.freeze d
+@thaw   = ( d ) -> ICE.thaw   d
+
+#-----------------------------------------------------------------------------------------------------------
+@set = ( d, k, v ) ->
+  d = ICE.set d, k, v
+  d = ICE.set d, '$dirty', true
+  return d
+
+#-----------------------------------------------------------------------------------------------------------
+@unset = ( d, k ) ->
+  return d unless Object.hasOwnProperty d, k
+  d = ICE.unset d, k
+  d = ICE.set d, '$dirty', true
+  return d
+
+#-----------------------------------------------------------------------------------------------------------
+@stamp = ( d ) ->
+  ### Set the `$stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
+  by the `select` method unless tag '#stamped' is used. ###
+  return d if d.$stamped
+  return @set d, '$stamped', true
+
+#-----------------------------------------------------------------------------------------------------------
+@unstamp = ( d ) ->
+  return d unless d.$stamped
+  return @unset  d, '$stamped', true
 
 #-----------------------------------------------------------------------------------------------------------
 @is_system = ( d ) ->
