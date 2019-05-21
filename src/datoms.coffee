@@ -24,11 +24,10 @@ types                     = require './_types'
   type_of }               = types
 
 #-----------------------------------------------------------------------------------------------------------
-@stamp = ( d ) ->
-  ### Set the `stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
-  by the `select` method unless tag '#stamped' is used. ###
-  d.stamped = true
-  return d
+### Set the `$stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
+by the `select` method unless tag '#stamped' is used. ###
+@stamp    = ( d ) -> @set   d, '$stamped', true
+@unstamp  = ( d ) -> @unset d, '$stamped'
 
 #-----------------------------------------------------------------------------------------------------------
 @is_system = ( d ) ->
@@ -55,7 +54,7 @@ types                     = require './_types'
   else
     R     = assign { key, }, other...
   while ( isa.object R.$ ) and ( isa.object R.$.$ ) then R.$ = copy R.$.$
-  return R
+  return @freeze R
 
 #-----------------------------------------------------------------------------------------------------------
 @new_single_datom = ( key, value, other...  ) -> @new_datom         "^#{key}",  value, other...
