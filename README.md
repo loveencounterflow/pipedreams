@@ -338,7 +338,23 @@ you will want to publish that scope to all participating modules; one way to do 
 module with a single line in it, `module.exports = ( require 'pipedreams' ).XE.new_scope()`.
 
 
+## To Do
 
+* [ ] Datoms are going to be made immutable (frozen) (with opt-out).
+* [ ] The compulsory `value` attribute will be scrubbed; instead, set payload properties directly on the
+  datom (it's still possible to use a `value` attribute explicitly, of course).
+* [ ] System-level properties (SLPs) except for `key` and `$` will be prefixed with `~` (tilde); in
+  particular, there are / will be
 
+  * `~dirty`—whether any property of a datom has beem modified;
+  * `~fresh`—whether a datom originated from within the stream, not from the source;
+  * `~stamped`—whether a datom has been processed.
+  * `~vnr`—'vectorial datom number', an array of positive integers that imposes a total ordering on datoms
+    by which I mean to say that given any two datoms `a`, `b` that are piped through the same stream either
+    `a[ '~vnr' ] < b[ '~vnr' ]` or `a[ '~vnr' ] > b[ '~vnr' ]` will always hold, and `a[ '~vnr' ] == b[
+    '~vnr' ] <=> a is b`.
 
+  The convention with boolean SLPs is that they will only be set when `true`, and not be present when
+  false (i.e. `d_is_stamped = d[ '~stamped' ] ? false`) to reduce clutter. The use of API calls like
+  `stamp()`, `is_stamped()` is preferred over direct manipulation of such properties.
 
