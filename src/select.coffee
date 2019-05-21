@@ -17,7 +17,7 @@ echo                      = CND.echo.bind CND
 
 #-----------------------------------------------------------------------------------------------------------
 ### TAINT use named subpatterns ###
-@_event_keypattern    = ///^
+@_datom_keypattern    = ///^
   (?<sigil>[<^>~\[\]])
   (?:(?<prefix>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+?):)?
   (?<name>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+)
@@ -62,7 +62,7 @@ echo                      = CND.echo.bind CND
   return [ 'keypattern',  ( @_selector_as_facets selector ), ]
 
 #-----------------------------------------------------------------------------------------------------------
-@_key_as_facets       = ( key       ) -> @_key_or_pattern_as_facets key,      @_event_keypattern
+@_key_as_facets       = ( key       ) -> @_key_or_pattern_as_facets key,      @_datom_keypattern
 @_selector_as_facets  = ( selector  ) -> @_key_or_pattern_as_facets selector, @_selector_keypattern
 
 #-----------------------------------------------------------------------------------------------------------

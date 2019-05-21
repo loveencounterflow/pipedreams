@@ -53,7 +53,7 @@ PD                        = require '../..'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "event keypatterns" ] = ( T, done ) ->
+@[ "datom keypatterns" ] = ( T, done ) ->
   probes_and_matchers = [
     ["text",null,null]
     ["^text",{"sigil":"^","name":"text"},null]
@@ -69,7 +69,7 @@ PD                        = require '../..'
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, ->
-      R = ( probe.match L._event_keypattern )?.groups ? null
+      R = ( probe.match L._datom_keypattern )?.groups ? null
       return null unless R?
       for key, value of R
         delete R[ key ] if value is undefined

@@ -28,7 +28,7 @@ provide_library = ->
   @_has_contractors = {}
 
   #---------------------------------------------------------------------------------------------------------
-  @_mark_as_primary = ( x ) -> PD.new_system_event 'XEMITTER-preferred', x
+  @_mark_as_primary = ( x ) -> PD.new_system_datom 'XEMITTER-preferred', x
   @_filter_primary  = ( x ) -> PD.select x, '~XEMITTER-preferred'
 
   #---------------------------------------------------------------------------------------------------------
