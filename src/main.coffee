@@ -24,8 +24,6 @@ L                         = @
 types                     = require './_types'
 { isa
   validate
-  declare
-  size_of
   type_of }               = types
 
 #-----------------------------------------------------------------------------------------------------------
@@ -46,9 +44,9 @@ acquire_patterns = ( target, patterns, include = null ) ->
 acquire_path = ( target, path ) ->
   module = require path
   for key, value of module
-    throw new Error "duplicate key #{rpr key}" if L[ key ]? and not value[ override_sym ]
-    module[ key ] = ( value.bind module ) if ( CND.isa_function value ) and not is_bound value
-    target[ key ] = module[ key ]
+    throw new Error "duplicate key #{rpr key}" if target[ key ]? and not value[ override_sym ]
+    value         = value.bind target if isa.function value
+    target[ key ] = value
   return null
 
 
