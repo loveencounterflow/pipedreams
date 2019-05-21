@@ -1,6 +1,6 @@
 {
   "name": "pipedreams",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "description": "data event streams made easy, built on top of PipeStreams, which is built on top of pull-stream",
   "main": "lib/main.js",
   "scripts": {
