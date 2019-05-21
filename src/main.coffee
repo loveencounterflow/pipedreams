@@ -14,7 +14,6 @@ whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
 PATH                      = require 'path'
-# glob                      = require 'globby'
 glob                      = require 'glob'
 minimatch                 = require 'minimatch'
 { assign
@@ -56,19 +55,18 @@ acquire_path = ( target, path ) ->
 ############################################################################################################
 ### Gather methods from submodules, bind all methods to respective submodule, reflect public names into
 main module. ###
-L.R   = {}
+# L.R   = {}
 L.XE  = {}
 acquire_path      L,    'pipestreams'
-# acquire_patterns  L,    [ '*.js', '!main.js', '!_*', '!recycle.js', '!overrides.js', '!xemitter.js', ]
 acquire_patterns  L,    '*.js', ( path ) ->
   name = PATH.basename path
   return false if name.startsWith '_'
   return false if name is 'main.js'
-  return false if name is 'recycle.js'
+  # return false if name is 'recycle.js'
   return false if name is 'overrides.js'
   return false if name is 'xemitter.js'
   return true
-acquire_patterns  L.R,  'recycle.js'
+# acquire_patterns  L.R,  'recycle.js'
 acquire_patterns  L.XE, 'xemitter.js'
 acquire_patterns  L,    'overrides.js'
 
