@@ -19,8 +19,6 @@ echo                      = CND.echo.bind CND
 types                     = require './_types'
 { isa
   validate
-  declare
-  size_of
   type_of }               = types
 
 #-----------------------------------------------------------------------------------------------------------
