@@ -14,6 +14,11 @@ whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 { assign
   jr }                    = CND
+#...........................................................................................................
+types                     = require './_types'
+{ isa
+  validate
+  type_of }               = types
 
 #-----------------------------------------------------------------------------------------------------------
 ### TAINT use named subpatterns ###
@@ -57,7 +62,7 @@ echo                      = CND.echo.bind CND
 #-----------------------------------------------------------------------------------------------------------
 @_classify_selector = ( selector ) ->
   return [ 'function',    selector,     ] if CND.isa_function selector
-  throw new Error "µ85175 expected a text, got a #{type}" unless ( type = CND.type_of selector ) is 'text'
+  throw new Error "µ85175 expected a text, got a #{type}" unless ( type = type_of selector ) is 'text'
   return [ 'tag',         tag,          ] if ( tag = @_tag_from_selector selector )?
   return [ 'keypattern',  ( @_selector_as_facets selector ), ]
 
@@ -67,7 +72,7 @@ echo                      = CND.echo.bind CND
 
 #-----------------------------------------------------------------------------------------------------------
 @_key_or_pattern_as_facets = ( x, re ) ->
-  unless ( CND.isa_text x ) and ( match = x.match re )?
+  unless ( isa.text x ) and ( match = x.match re )?
     throw new Error "µ83744 illegal key or selector #{rpr x}"
   R = match.groups
   for k, v of R
@@ -92,7 +97,7 @@ echo                      = CND.echo.bind CND
 #-----------------------------------------------------------------------------------------------------------
 @select = ( d, selectors... ) ->
   throw new Error "µ86606 expected one or more selectors, got none" if selectors.length is 0
-  return false unless CND.isa_pod d
+  return false unless isa.object d
   return false unless d.key?
   #.........................................................................................................
   key_facets            = @_key_as_facets d.key
