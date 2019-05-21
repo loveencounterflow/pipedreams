@@ -38,7 +38,7 @@ xrpr                      = ( x ) -> inspect x, { colors: yes, breakLength: Infi
 
 #-----------------------------------------------------------------------------------------------------------
 $as_type_datoms = ->
-  ### Given raw data events (RDEs), turn them into signleton datoms, using the results of `CND.type_of`
+  ### Given raw data events (RDEs), turn them into singleton datoms, using the results of `CND.type_of`
   for the keys, so `'xy'` turns into `{ key: 'text', value: 'xy', }`, and `42` turns into `{ key: 'number',
   value: 42, }`. ###
   return $ ( d, send ) =>
@@ -46,9 +46,9 @@ $as_type_datoms = ->
     return send d if CND.isa_pod d
     type = CND.type_of d
     if type is 'text' and d.startsWith '~'
-      send PD.new_event d, null
+      send PD.new_datom d, null
     else
-      send PD.new_event "^#{type}", d
+      send PD.new_datom "^#{type}", d
     return null
 
 #-----------------------------------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ wye_3 = ->
     mainline.push PD.$wye bystream
     # mainline.push $ { last: null, }, ( d, send ) ->
     #   debug CND.plum '10109', d
-    #   send PD.new_event '~end' unless d?
+    #   send PD.new_datom '~end' unless d?
     #   send d
     mainline.push $async { last: null, }, ( d, send, done ) ->
       echo '33450', xrpr d

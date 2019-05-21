@@ -46,7 +46,7 @@ sigil     := '.' # proper singleton
           := '(' # start-of-region (SOR)    # '<'
           := ')' # end-of-region   (EOR)    # '>'
 
-# `prefix` indicates the namespace; where missing on an event or is `null`, `undefined` or `'global'`,
+# `prefix` indicates the namespace; where missing on an datom or is `null`, `undefined` or `'global'`,
 # it indicates the global namespace:
 
 prefix    := null | undefined | 'global' | non-empty text
@@ -55,7 +55,7 @@ key       := non-empty text         # typename
 
 value     := any                    # payload
 
-$         := pod                    # system-level attributes, to be copied from old to new events
+$         := pod                    # system-level attributes, to be copied from old to new datoms
 
 ###
 
@@ -64,7 +64,7 @@ $         := pod                    # system-level attributes, to be copied from
 #
 #-----------------------------------------------------------------------------------------------------------
 @stamp = ( d ) ->
-  ### Set the `stamped` attribute on event to sigil it as processed. Stamped events will not be selected
+  ### Set the `stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
   by the `select` method, only by the `select_all` method. ###
   d.stamped = true
   return d
@@ -74,24 +74,24 @@ $         := pod                    # system-level attributes, to be copied from
 # RECYCLING
 #-----------------------------------------------------------------------------------------------------------
 @$unwrap_recycled = ->
-  ### If the event is a `~recycle` event, send its associated `~sync` event, if any, then its value;
-  otherwise, send the event itself. ###
-  q1        = [] ### priority queue for recycled events       ###
-  q2        = [] ### secondary queue for newly arrived events ###
+  ### If the datom is a `~recycle` datom, send its associated `~sync` datom, if any, then its value;
+  otherwise, send the datom itself. ###
+  q1        = [] ### priority queue for recycled datoms       ###
+  q2        = [] ### secondary queue for newly arrived datoms ###
   waiting   = false
   # sent_sync = false
-  my_sync   = @new_sync_event()
+  my_sync   = @new_sync_datom()
   return $ ( d, send ) =>
     # urge '77833-1', "#{d.sigil}#{d.key}:#{jr d.value ? null}"
     #.......................................................................................................
-    ### If event is this circle's sync, send next event from q2, followed by my sync, and set state to
+    ### If datom is this circle's sync, send next datom from q2, followed by my sync, and set state to
     waiting (for the sync to recycle back to here). If there's nothing left in the q2, that means we are
     done for the time being, and can stop waiting. ###
     if d is my_sync
       waiting = false
       # debug '77833-2', jr { waiting, q1, q2, }
       unless is_empty q1
-        ### send next recycled event from the priority queue: ###
+        ### send next recycled datom from the priority queue: ###
         waiting = true
         send q1.pop()
         # debug '77833-3', jr { waiting, q1, q2, }
@@ -103,7 +103,7 @@ $         := pod                    # system-level attributes, to be copied from
         # debug '77833-4', jr { waiting, q1, q2, }
         send my_sync
     #.......................................................................................................
-    ### If event is recycling, put it into the priority queue to send it right after sync has recycled: ###
+    ### If datom is recycling, put it into the priority queue to send it right after sync has recycled: ###
     else if @is_recycling d
       if waiting
         q1.unshift d.value
@@ -113,7 +113,7 @@ $         := pod                    # system-level attributes, to be copied from
         # debug '77833-6', jr { waiting, q1, q2, }
       # send d.value
     #.......................................................................................................
-    ### If we're in waiting state, q2 the event: ###
+    ### If we're in waiting state, q2 the datom: ###
     else if waiting
       q2.unshift d
       # debug '77833-7', jr { waiting, q1, q2, }
@@ -127,10 +127,10 @@ $         := pod                    # system-level attributes, to be copied from
 
 #-----------------------------------------------------------------------------------------------------------
 @$recycle = ( push ) ->
-  ### Stream transform to send events either down the pipeline (using `send`) or
+  ### Stream transform to send datoms either down the pipeline (using `send`) or
   to an alternate destination, using the `push` method ( the only argument to
   this function). Normally, this will be the `push` method of a push source, but
-  it could be any function that accepts a single event as argument. ###
+  it could be any function that accepts a single datom as argument. ###
   return $ ( d, send ) =>
     if      ( @is_sync      d ) then push d
     else if ( @is_recycling d ) then push d
@@ -139,21 +139,21 @@ $         := pod                    # system-level attributes, to be copied from
 
 #-----------------------------------------------------------------------------------------------------------
 @recycling = ( d, sync = null ) ->
-  @new_system_event 'recycle', d, if sync? then { sync, } else null
+  @new_system_datom 'recycle', d, if sync? then { sync, } else null
 
 #-----------------------------------------------------------------------------------------------------------
 @is_recycling = ( d ) ->
-  ### Return whether event is a recycling wrapper event. ###
+  ### Return whether datom is a recycling wrapper datom. ###
   return ( d.sigil is '~' ) and ( d.key is 'recycle' )
 
 #-----------------------------------------------------------------------------------------------------------
 @is_recycling_sync = ( d ) ->
-  ### Return whether event is a sync event that accompanies a recycling event. ###
+  ### Return whether datom is a sync datom that accompanies a recycling datom. ###
   return ( d.sigil is '~' ) and ( d.key is 'sync' ) and ( d.value > 0 )
 
 #-----------------------------------------------------------------------------------------------------------
 @is_sync = ( d ) ->
-  ### Return whether event is a recycling wrapper event. ###
+  ### Return whether datom is a recycling wrapper datom. ###
   return ( d.sigil is '~' ) and ( d.key is 'sync' )
 
 # #-----------------------------------------------------------------------------------------------------------
@@ -184,7 +184,7 @@ $         := pod                    # system-level attributes, to be copied from
 #
 #-----------------------------------------------------------------------------------------------------------
 @select = ( d, prefix, sigils, keys ) ->
-  ### Reject all stamped events: ###
+  ### Reject all stamped datoms: ###
   return false if @is_stamped d
   # return false if @is_recycling d
   ### TAINT avoid to test twice for arity ###
@@ -235,24 +235,24 @@ $         := pod                    # system-level attributes, to be copied from
 #
 #-----------------------------------------------------------------------------------------------------------
 @is_system = ( d ) ->
-  ### Return whether event is a system event (i.e. whether its `sigil` equals `'~'`). ###
+  ### Return whether datom is a system datom (i.e. whether its `sigil` equals `'~'`). ###
   return d.sigil is '~'
 
 #-----------------------------------------------------------------------------------------------------------
 @is_stamped = ( d ) ->
-  ### Return whether event is stamped (i.e. already processed). ###
+  ### Return whether datom is stamped (i.e. already processed). ###
   return d.stamped ? false
 
 
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@new_event = ( sigil, key, value, other... ) ->
+@new_datom = ( sigil, key, value, other... ) ->
   ### When `other` contains a key `$`, it is treated as a hint to copy
   system-level attributes; if the value of key `$` is a POD that has itself a
-  key `$`, then a copy of that value is used. This allows to write `new_event
+  key `$`, then a copy of that value is used. This allows to write `new_datom
   ..., $: d` to copy system-level attributes such as source locations to a new
-  event. ###
+  datom. ###
   if value? then  R = assign { sigil, key, value, }, other...
   else            R = assign { sigil, key,        }, other...
   ### TAINT consider to resolve recursively ###
@@ -260,18 +260,18 @@ $         := pod                    # system-level attributes, to be copied from
   return R
 
 #-----------------------------------------------------------------------------------------------------------
-@new_single_event   = ( key, value, other...  ) -> @new_event '!', key, value, other...
-@new_open_event     = ( key, value, other...  ) -> @new_event '<', key, value, other...
-@new_close_event    = ( key, value, other...  ) -> @new_event '>', key, value, other...
-@new_system_event   = ( key, value, other...  ) -> @new_event '~', key, value, other...
-@new_end_event      =                           -> @new_system_event 'end'
-@new_sync_event     =                           -> @new_system_event 'sync'
-@new_flush_event    =                           -> @new_system_event 'flush'
-@new_text_event     = (      value, other...  ) -> @new_single_event 'text',    value, other...
+@new_single_datom   = ( key, value, other...  ) -> @new_datom '!', key, value, other...
+@new_open_datom     = ( key, value, other...  ) -> @new_datom '<', key, value, other...
+@new_close_datom    = ( key, value, other...  ) -> @new_datom '>', key, value, other...
+@new_system_datom   = ( key, value, other...  ) -> @new_datom '~', key, value, other...
+@new_end_datom      =                           -> @new_system_datom 'end'
+@new_sync_datom     =                           -> @new_system_datom 'sync'
+@new_flush_datom    =                           -> @new_system_datom 'flush'
+@new_text_datom     = (      value, other...  ) -> @new_single_datom 'text',    value, other...
 
 #-----------------------------------------------------------------------------------------------------------
 @new_warning = ( ref, message, d, other...  ) ->
-  @new_system_event 'warning', d, { ref, message, }, other...
+  @new_system_datom 'warning', d, { ref, message, }, other...
 
 
 ############################################################################################################

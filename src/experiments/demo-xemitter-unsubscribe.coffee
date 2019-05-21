@@ -25,29 +25,29 @@ XE                        = PD.XE.new_scope()
 do =>
 
   #---------------------------------------------------------------------------------------------------------
-  add       = ( d ) -> XE.emit PD.new_event '^result', ( d.value.a + d.value.b )
-  multiply  = ( d ) -> XE.emit PD.new_event '^result', ( d.value.a * d.value.b )
+  add       = ( d ) -> XE.emit PD.new_datom '^result', ( d.a + d.b )
+  multiply  = ( d ) -> XE.emit PD.new_datom '^result', ( d.a * d.b )
 
   #---------------------------------------------------------------------------------------------------------
-  # XE.listen_to_all ( key, d ) -> info 'µ1', "#{key}: #{rpr d.value}"
-  XE.listen_to '^compute', ( d ) -> help 'µ1', "^compute: #{rpr d.value}"
-  XE.listen_to '^result',  ( d ) -> warn 'µ1', "^result: #{rpr d.value}"
+  # XE.listen_to_all ( key, d ) -> info 'µ1', "#{key}: #{rpr d}"
+  XE.listen_to '^compute', ( d ) -> help 'µ1', "^compute: #{rpr d}"
+  XE.listen_to '^result',  ( d ) -> warn 'µ1', "^result: #{rpr d}"
   #.........................................................................................................
   whisper "subscribe add()"
   unsubscribe_add = XE.listen_to '^compute', add
-  await XE.emit PD.new_event '^compute', { a: 42, b: 108, }
+  await XE.emit PD.new_datom '^compute', { a: 42, b: 108, }
   #.........................................................................................................
   whisper "unsubscribe add()"
   unsubscribe_add()
-  await XE.emit PD.new_event '^compute', { a: 42, b: 108, }
+  await XE.emit PD.new_datom '^compute', { a: 42, b: 108, }
   #.........................................................................................................
   whisper "subscribe multiply()"
   unsubscribe_multiply = XE.listen_to '^compute', multiply
-  await XE.emit PD.new_event '^compute', { a: 42, b: 108, }
+  await XE.emit PD.new_datom '^compute', { a: 42, b: 108, }
   #.........................................................................................................
   whisper "unsubscribe multiply()"
   unsubscribe_multiply()
-  await XE.emit PD.new_event '^compute', { a: 42, b: 108, }
+  await XE.emit PD.new_datom '^compute', { a: 42, b: 108, }
 
 
 
