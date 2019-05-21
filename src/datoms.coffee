@@ -4,7 +4,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPEDREAMS/EVENTS'
+badge                     = 'PIPEDREAMS/DATOMS'
 debug                     = CND.get_logger 'debug',     badge
 warn                      = CND.get_logger 'warn',      badge
 info                      = CND.get_logger 'info',      badge
