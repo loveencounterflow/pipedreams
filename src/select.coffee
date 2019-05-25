@@ -118,7 +118,7 @@ types                     = require './_types'
     else                    other_selectors.push [ clasz, selector, ]
   #.........................................................................................................
   settings = @_settings_from_tags tags
-  return false if d.stamped and not settings.stamped
+  return false if ( @is_stamped d ) and not settings.stamped
   #.........................................................................................................
   for [ clasz, selector, ] in other_selectors
     is_matching = switch clasz
