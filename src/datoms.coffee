@@ -29,14 +29,14 @@ ICE                       = require 'icepick'
 #-----------------------------------------------------------------------------------------------------------
 @set = ( d, k, v ) ->
   d = ICE.set d, k, v
-  d = ICE.set d, '$dirty', true
+  d = ICE.set d, '$dirty', true unless k is '$dirty'
   return d
 
 #-----------------------------------------------------------------------------------------------------------
 @unset = ( d, k ) ->
   return d unless Object.hasOwnProperty d, k
   d = ICE.unset d, k
-  d = ICE.set d, '$dirty', true
+  d = ICE.set d, '$dirty', true unless k is '$dirty'
   return d
 
 #-----------------------------------------------------------------------------------------------------------
