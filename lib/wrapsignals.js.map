@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "file": "wrapsignals.js",
+  "sourceRoot": "..",
+  "sources": [
+    "src/wrapsignals.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA;EAAA;EAEA,IAAC,CAAA,YAAD,GAAgB,QAAA,CAAA,CAAA,EAAA;;;;;;;;;;;;;;;;;;;;;AAqBd,QAAA,QAAA,EAAA,IAAA,EAAA;IAAA,QAAA,GAAY;IACZ,KAAA,GAAY;IACZ,IAAA,GAAY,MAAA,CAAO,MAAP;AACZ,WAAO,IAAC,CAAA,CAAD,CAAG,CAAE,IAAF,CAAH,EAAc,CAAE,CAAF,EAAK,IAAL,CAAA,GAAA;MACnB,IAAG,CAAA,KAAK,IAAR;QACE,IAAG,aAAH;UACE,IAAsB,QAAtB;YAAA,KAAK,CAAC,KAAN,GAAc,KAAd;;UACA,KAAK,CAAC,IAAN,GAAc;UACd,IAAA,CAAK,KAAL,EAHF;SADF;OAAA,MAAA;QAME,IAAG,aAAH;UACE,IAAA,CAAK,KAAL,EADF;;QAEA,KAAA,GAAc;UAAE,KAAA,EAAO;QAAT;QACd,IAAsB,QAAtB;UAAA,KAAK,CAAC,KAAN,GAAc,KAAd;;QACA,QAAA,GAAc,MAVhB;;AAWA,aAAO;IAZY,CAAd;EAxBO;AAFhB",
+  "sourcesContent": [
+    "\n#-----------------------------------------------------------------------------------------------------------\n@$wrapsignals = ->\n  ###\n\n  ```\n  {\"value\":1,\"first\":true,\"last\":true}\n  ```\n\n  ```\n  {\"value\":1,\"first\":true}\n  {\"value\":2,\"last\":true}\n  ```\n\n  ```\n  {\"value\":1,\"first\":true}\n  {\"value\":2}\n  {\"value\":3}\n  {\"value\":4}\n  {\"value\":5,\"last\":true}\n  ```\n\n  ###\n  is_first  = true\n  prv_d     = null\n  last      = Symbol 'last'\n  return @$ { last, }, ( d, send ) =>\n    if d is last\n      if prv_d?\n        prv_d.first = true if is_first\n        prv_d.last  = true\n        send prv_d\n    else\n      if prv_d?\n        send prv_d\n      prv_d       = { value: d, }\n      prv_d.first = true if is_first\n      is_first    = false\n    return null\n"
+  ]
+}
