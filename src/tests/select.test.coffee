@@ -101,18 +101,18 @@ PD                        = require '../..'
 #-----------------------------------------------------------------------------------------------------------
 @[ "select 2" ] = ( T, done ) ->
   probes_and_matchers = [
+    [[ {key:'^number',value:42,$stamped:true}, '^number'],false]
+    [[ {key:'<italic',$stamped:true}, '<italic'],false]
+    [[ {key:'<italic',$stamped:true}, '<>italic'],false]
     [[ {key:'^number',value:42}, '^number'],true]
-    [[ {key:'^number',value:42,stamped:true}, '^number'],false]
-    [[ {key:'^number',value:42,stamped:true}, '#stamped', '^number'],true]
-    [[ {key:'<italic',stamped:true}, '#stamped', '<italic'],true]
-    [[ {key:'<italic',stamped:true}, '#stamped', '>italic'],false]
-    [[ {key:'<italic',stamped:true}, '#stamped', '<>italic'],true]
+    [[ {key:'^number',value:42,$stamped:true}, '#stamped', '^number'],true]
+    [[ {key:'<italic',$stamped:true}, '#stamped', '<italic'],true]
+    [[ {key:'<italic',$stamped:true}, '#stamped', '>italic'],false]
+    [[ {key:'<italic',$stamped:true}, '#stamped', '<>italic'],true]
     [[ {key:'<italic'}, '#stamped', '<italic'],true]
     [[ {key:'<italic'}, '#stamped', '>italic'],false]
     [[ {key:'<italic'}, '#stamped', '<>italic'],true]
-    [[ {key:'<italic',stamped:true}, '<italic'],false]
-    [[ {key:'<italic',stamped:true}, '>italic'],false]
-    [[ {key:'<italic',stamped:true}, '<>italic'],false]
+    [[ {key:'<italic',$stamped:true}, '>italic'],false]
     [[ {key:"*data"},'*data'],null,'illegal key or selector']
     [[ {key:"data>"},'data>'],null,'illegal key or selector']
     [[ {key:"%data"},'%data'],null,'illegal key or selector']
@@ -131,18 +131,18 @@ PD                        = require '../..'
 #-----------------------------------------------------------------------------------------------------------
 @[ "select 2 using lists" ] = ( T, done ) ->
   probes_and_matchers = [
+    [[ {key:'<italic',$stamped:true},          ['#stamped', '<>italic',]  ],true]
+    [[ {key:'^number',value:42,$stamped:true}, ['#stamped', '^number', ]  ],true]
     [[ {key:'^number',value:42},              ['^number',             ]  ],true]
-    [[ {key:'^number',value:42,stamped:true}, ['^number',             ]  ],false]
-    [[ {key:'^number',value:42,stamped:true}, ['#stamped', '^number', ]  ],true]
-    [[ {key:'<italic',stamped:true},          ['#stamped', '<italic', ]  ],true]
-    [[ {key:'<italic',stamped:true},          ['#stamped', '>italic', ]  ],false]
-    [[ {key:'<italic',stamped:true},          ['#stamped', '<>italic',]  ],true]
+    [[ {key:'^number',value:42,$stamped:true}, ['^number',             ]  ],false]
+    [[ {key:'<italic',$stamped:true},          ['#stamped', '<italic', ]  ],true]
+    [[ {key:'<italic',$stamped:true},          ['#stamped', '>italic', ]  ],false]
     [[ {key:'<italic'},                       ['#stamped', '<italic', ]  ],true]
     [[ {key:'<italic'},                       ['#stamped', '>italic', ]  ],false]
     [[ {key:'<italic'},                       ['#stamped', '<>italic',]  ],true]
-    [[ {key:'<italic',stamped:true},          ['<italic',             ]  ],false]
-    [[ {key:'<italic',stamped:true},          ['>italic',             ]  ],false]
-    [[ {key:'<italic',stamped:true},          ['<>italic',            ]  ],false]
+    [[ {key:'<italic',$stamped:true},          ['<italic',             ]  ],false]
+    [[ {key:'<italic',$stamped:true},          ['>italic',             ]  ],false]
+    [[ {key:'<italic',$stamped:true},          ['<>italic',            ]  ],false]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
