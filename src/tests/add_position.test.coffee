@@ -6,7 +6,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPEDREAMS/TESTS/WRAPSIGNALS'
+badge                     = 'PIPEDREAMS/TESTS/ADD_POSITION'
 debug                     = CND.get_logger 'debug',     badge
 warn                      = CND.get_logger 'warn',      badge
 info                      = CND.get_logger 'info',      badge
@@ -24,7 +24,7 @@ PD                        = require '../..'
 
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "$wrapsignals() with values" ] = ( T, done ) ->
+@[ "$add_position() with values" ] = ( T, done ) ->
   probes_and_matchers = [
     [0,[{"$first":true,"value":1,"key":"^value","$dirty":true},{"$last":true,"value":0,"key":"^value","$dirty":true}],null]
     [1,[{"$dirty":true,"key":"^value","value":1,"$first":true,"$last":true}],null]
@@ -36,7 +36,7 @@ PD                        = require '../..'
     source    = PD.new_push_source()
     pipeline  = []
     pipeline.push source
-    pipeline.push PD.$wrapsignals()
+    pipeline.push PD.$add_position()
     # pipeline.push PD.$show()
     pipeline.push PD.$collect()
     pipeline.push PD.$watch ( collector ) -> resolve collector
@@ -55,7 +55,7 @@ PD                        = require '../..'
   return null
 
 #-----------------------------------------------------------------------------------------------------------
-@[ "$wrapsignals() with datoms" ] = ( T, done ) ->
+@[ "$add_position() with datoms" ] = ( T, done ) ->
   probes_and_matchers = [
     [0,[{"$first":true,"key":"^foo","idx":1,"$dirty":true},{"$last":true,"key":"^foo","idx":0,"$dirty":true}],null]
     [1,[{"$dirty":true,"idx":1,"key":"^foo","$first":true,"$last":true}],null]
@@ -67,7 +67,7 @@ PD                        = require '../..'
     source    = PD.new_push_source()
     pipeline  = []
     pipeline.push source
-    pipeline.push PD.$wrapsignals()
+    pipeline.push PD.$add_position()
     # pipeline.push PD.$show()
     pipeline.push PD.$collect()
     pipeline.push PD.$watch ( collector ) -> resolve collector
@@ -92,7 +92,7 @@ PD                        = require '../..'
 ############################################################################################################
 unless module.parent?
   test @
-  # test @[ "$wrapsignals() with values" ]
-  # test @[ "$wrapsignals() with datoms" ]
+  # test @[ "$add_position() with values" ]
+  # test @[ "$add_position() with datoms" ]
 
 

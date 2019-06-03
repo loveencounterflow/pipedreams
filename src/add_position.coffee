@@ -4,7 +4,7 @@
 ############################################################################################################
 CND                       = require 'cnd'
 rpr                       = CND.rpr
-badge                     = 'PIPEDREAMS/WRAPSIGNALS'
+badge                     = 'PIPEDREAMS/ADD_POSITION'
 debug                     = CND.get_logger 'debug',     badge
 warn                      = CND.get_logger 'warn',      badge
 info                      = CND.get_logger 'info',      badge
@@ -27,7 +27,7 @@ types                     = require './_types'
   type_of }               = types
 
 #-----------------------------------------------------------------------------------------------------------
-@$wrapsignals = ->
+@$add_position = ->
   ###
 
   ```
