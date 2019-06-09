@@ -27,23 +27,28 @@ ICE                       = require 'icepick'
 @thaw   = ( d ) -> ICE.thaw   d
 
 #-----------------------------------------------------------------------------------------------------------
-@set = ( d, k, v ) ->
-  d = ICE.set d, k, v
+@set = ( d, k, P... ) ->
+  if isa.text k
+    d = ICE.set d, k, P[ 0 ]
+  else
+    d = ICE.thaw d
+    d[ k ] = v for k, v of assign {}, k, P...
+    d = ICE.freeze d
   d = ICE.set d, '$dirty', true unless k is '$dirty'
   return d
 
 #-----------------------------------------------------------------------------------------------------------
 @unset = ( d, k ) ->
-  return d unless Object.hasOwnProperty d, k
   d = ICE.unset d, k
   d = ICE.set d, '$dirty', true unless k is '$dirty'
   return d
 
 #-----------------------------------------------------------------------------------------------------------
-@stamp = ( d ) ->
+@stamp = ( d, P... ) ->
   ### Set the `$stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
   by the `select` method unless tag '#stamped' is used. ###
   return d if d.$stamped
+  d = @set d, P... if P.length > 0
   return @set d, '$stamped', true
 
 #-----------------------------------------------------------------------------------------------------------
