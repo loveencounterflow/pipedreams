@@ -28,7 +28,7 @@
     "cnd": "^4.6.0",
     "emittery": "^0.4.1",
     "icepick": "^2.4.0",
-    "intertype": "^2.4.0",
+    "intertype": "^2.5.0",
     "pipestreams": "^7.7.2"
   },
   "devDependencies": {
