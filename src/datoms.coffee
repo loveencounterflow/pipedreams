@@ -48,8 +48,7 @@ ICE                       = require 'icepick'
   ### Set the `$stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
   by the `select` method unless tag '#stamped' is used. ###
   return d if d.$stamped
-  d = @set d, P... if P.length > 0
-  return @set d, '$stamped', true
+  return @set d, P..., { $stamped: true, }
 
 #-----------------------------------------------------------------------------------------------------------
 @unstamp = ( d ) ->
