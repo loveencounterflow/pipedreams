@@ -31,9 +31,9 @@ ICE                       = require 'icepick'
   if isa.text k
     d = ICE.set d, k, P[ 0 ]
   else
-    d = ICE.thaw d
-    d[ k ] = v for k, v of assign {}, k, P...
-    d = ICE.freeze d
+    d       = ICE.thaw d
+    d[ k ]  = v for k, v of assign {}, k, P...
+    d       = ICE.freeze d
   d = ICE.set d, '$dirty', true unless k is '$dirty'
   return d
 
@@ -47,7 +47,6 @@ ICE                       = require 'icepick'
 @stamp = ( d, P... ) ->
   ### Set the `$stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
   by the `select` method unless tag '#stamped' is used. ###
-  return d if d.$stamped
   return @set d, P..., { $stamped: true, }
 
 #-----------------------------------------------------------------------------------------------------------
