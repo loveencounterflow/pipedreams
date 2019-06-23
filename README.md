@@ -178,15 +178,15 @@ boxes:<sup>*note*</sup>
 > of your to-do list first, and vice versa. This can be mildly confusing.
 
 
-### `select = ( d, selectors... ) ->`
+### `select = ( d, selector ) ->`
 
 The `select` method can be used to determine whether a given event `d` matches a
-set of conditions; typically, one will want to use `select d, ...` to decide
+set of conditions; typically, one will want to use `select d, selector` to decide
 whether a given event is suitable for processing by the stream transform at
 hand, or whether it should be passed on unchanged.
 
-Given an event `d` and a number of `selectors`, return whether `d` matches all
-of the selectors.
+Given an event `d` and a `selector`, return whether `d` matches the selector
+according to the rules given below.
 
 Selectors can be of three kinds:
 
@@ -208,9 +208,8 @@ since sigils and names may be contracted into a single selector.
 
 Observe that
 
-* tags must appear on their own, so `select d, '^text#stamped'` is not OK,
-  although it may become legal in the future; FTTB, write `select d, '^text',
-  '#stamped'`.
+* tags must appear on the end of a selector, so `select d, '^text#stamped'` is OK,
+  but `select d, '#stamped^text'` is not.
 
 * `'#stamped'` means 'event *may* have property `{ stamped: true, }`, *not* that
   it *must* be `stamped`. In order to only select singleton `text` events that
