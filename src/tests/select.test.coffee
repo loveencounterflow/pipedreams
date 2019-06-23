@@ -20,7 +20,14 @@ jr                        = JSON.stringify
 #...........................................................................................................
 L                         = require '../select'
 PD                        = require '../..'
-# { $, $async, }            = PD
+{ $
+  $async
+  select }                = PD
+#...........................................................................................................
+types                     = require '../_types'
+{ isa
+  validate
+  type_of }               = types
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -80,9 +87,8 @@ PD                        = require '../..'
 #-----------------------------------------------------------------------------------------------------------
 @[ "classify_selector" ] = ( T, done ) ->
   probes_and_matchers = [
-    ["#justatag",["tag","justatag"],null]
+    ["#justatag",["tag","justatag"],'illegal']
     ["^bar",["keypattern",{"sigils":"^","name":"bar"}],null]
-    ["!!!(->)",["function",null],null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
@@ -105,13 +111,13 @@ PD                        = require '../..'
     [[ {key:'<italic',$stamped:true}, '<italic'],false]
     [[ {key:'<italic',$stamped:true}, '<>italic'],false]
     [[ {key:'^number',value:42}, '^number'],true]
-    [[ {key:'^number',value:42,$stamped:true}, '#stamped', '^number'],true]
-    [[ {key:'<italic',$stamped:true}, '#stamped', '<italic'],true]
-    [[ {key:'<italic',$stamped:true}, '#stamped', '>italic'],false]
-    [[ {key:'<italic',$stamped:true}, '#stamped', '<>italic'],true]
-    [[ {key:'<italic'}, '#stamped', '<italic'],true]
-    [[ {key:'<italic'}, '#stamped', '>italic'],false]
-    [[ {key:'<italic'}, '#stamped', '<>italic'],true]
+    [[ {key:'^number',value:42,$stamped:true}, '^number#stamped'],true]
+    [[ {key:'<italic',$stamped:true}, '<italic#stamped'],true]
+    [[ {key:'<italic',$stamped:true}, '>italic#stamped'],false]
+    [[ {key:'<italic',$stamped:true}, '<>italic#stamped'],true]
+    [[ {key:'<italic'}, '<italic#stamped'],true]
+    [[ {key:'<italic'}, '>italic#stamped'],false]
+    [[ {key:'<italic'}, '<>italic#stamped'],true]
     [[ {key:'<italic',$stamped:true}, '>italic'],false]
     [[ {key:"*data"},'*data'],null,'illegal key or selector']
     [[ {key:"data>"},'data>'],null,'illegal key or selector']
@@ -124,45 +130,6 @@ PD                        = require '../..'
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, ->
       [ d, selectors..., ] = probe
-      return PD.select d, selectors...
-  done()
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "select 2 using lists" ] = ( T, done ) ->
-  probes_and_matchers = [
-    [[ {key:'<italic',$stamped:true},          ['#stamped', '<>italic',]  ],true]
-    [[ {key:'^number',value:42,$stamped:true}, ['#stamped', '^number', ]  ],true]
-    [[ {key:'^number',value:42},              ['^number',             ]  ],true]
-    [[ {key:'^number',value:42,$stamped:true}, ['^number',             ]  ],false]
-    [[ {key:'<italic',$stamped:true},          ['#stamped', '<italic', ]  ],true]
-    [[ {key:'<italic',$stamped:true},          ['#stamped', '>italic', ]  ],false]
-    [[ {key:'<italic'},                       ['#stamped', '<italic', ]  ],true]
-    [[ {key:'<italic'},                       ['#stamped', '>italic', ]  ],false]
-    [[ {key:'<italic'},                       ['#stamped', '<>italic',]  ],true]
-    [[ {key:'<italic',$stamped:true},          ['<italic',             ]  ],false]
-    [[ {key:'<italic',$stamped:true},          ['>italic',             ]  ],false]
-    [[ {key:'<italic',$stamped:true},          ['<>italic',            ]  ],false]
-    ]
-  #.........................................................................................................
-  for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, ->
-      [ d, selectors..., ] = probe
-      return PD.select d, selectors...
-  done()
-  return null
-
-#-----------------------------------------------------------------------------------------------------------
-@[ "select 3" ] = ( T, done ) ->
-  probes_and_matchers = [
-    [[ {key:'^number',value:42}, '^number', "( d ) => d.value > 42"],false]
-    [[ {key:'^number',value:44}, '^number', "( d ) => d.value > 42"],true]
-    ]
-  #.........................................................................................................
-  for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, ->
-      [ d, selectors..., ] = probe
-      selectors[ selectors.length - 1 ] = eval selectors[ selectors.length - 1 ]
       return PD.select d, selectors...
   done()
   return null
@@ -185,6 +152,12 @@ PD                        = require '../..'
   done()
   return null
 
+#-----------------------------------------------------------------------------------------------------------
+@[ "_regex performance, runaway test" ] = ( T, done ) ->
+  ###
+  See https://github.com/loveencounterflow/runaway-regex-test
+  and select-benchmark in this project
+  ###
 
 
 
@@ -194,5 +167,4 @@ unless module.parent?
   test @
   # test @[ "selector keypatterns" ]
   # test @[ "select 2" ]
-
 

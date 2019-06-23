@@ -30,7 +30,7 @@ types                     = require './_types'
 
 #-----------------------------------------------------------------------------------------------------------
 @_selector_keypattern = ///^
-  (?<sigils>[<^>~\[\]]*)
+  (?<sigils>[<^>~\[\]]{0,6})
   (?:(?<prefix>[^:<^>~!$%&\/()=?+*'",.;|\#\s]+?):)?
   (?<name>[^:<^>~!$%&\/()=?+*'",.;|\#\s]*)
   $///
@@ -61,9 +61,7 @@ types                     = require './_types'
 #
 #-----------------------------------------------------------------------------------------------------------
 @_classify_selector = ( selector ) ->
-  return [ 'function',    selector,     ] if CND.isa_function selector
   throw new Error "µ85175 expected a text, got a #{type}" unless ( type = type_of selector ) is 'text'
-  return [ 'tag',         tag,          ] if ( tag = @_tag_from_selector selector )?
   return [ 'keypattern',  ( @_selector_as_facets selector ), ]
 
 #-----------------------------------------------------------------------------------------------------------
@@ -79,53 +77,41 @@ types                     = require './_types'
     delete R[ k ] if v in [ '', null, undefined, ]
   return R
 
-#-----------------------------------------------------------------------------------------------------------
-@_settings_defaults = { stamped: false, }
-
-#-----------------------------------------------------------------------------------------------------------
-@_settings_from_tags = ( tags ) ->
-  R = assign {}, @_settings_defaults
-  for tag from tags
-    switch tag
-      when 'stamped' then R.stamped = true
-      else throw new Error "µ20201 illegal tag #{rpr tag}"
-  return R
 
 
 #===========================================================================================================
 #
 #-----------------------------------------------------------------------------------------------------------
-@select = ( d, selectors... ) ->
-  throw new Error "µ86606 expected one or more selectors, got none" if selectors.length is 0
-  return false unless isa.object d
-  return false unless d.key?
+@select = ( d, selector ) ->
+  throw new Error "µ86606 expected a selector, got none" unless selector?
+  return false unless ( ( isa.object d ) and ( d.key? ) )
   #.........................................................................................................
   key_facets            = @_key_as_facets d.key
   tags                  = new Set()
   other_selectors       = []
-  selectors             = CND.flatten selectors
   classes_and_selectors = []
+  stamped               = false
   #.........................................................................................................
-  for selector in selectors
-    try
-      classes_and_selectors.push @_classify_selector selector
-    catch error
-      error.message += "\nµ22092 datom #{jr d},\nselector #{jr selector}"
-      throw error
+  if selector.endsWith '#stamped'
+    stamped   = true
+    selector  = selector[ ... selector.length - 8 ]
+    throw new Error "µ33982 selector cannot just contain tag '#stamped'" if selector is ''
+  #.........................................................................................................
+  try
+    classes_and_selectors.push @_classify_selector selector
+  catch error
+    error.message += "\nµ22092 datom #{jr d},\nselector #{jr selector}"
+    throw error
   #.........................................................................................................
   for [ clasz, selector, ] in classes_and_selectors
-    if clasz is 'tag' then  tags.add selector
-    else                    other_selectors.push [ clasz, selector, ]
+    other_selectors.push [ clasz, selector, ]
   #.........................................................................................................
-  settings = @_settings_from_tags tags
+  settings = { stamped, }
   return false if ( @is_stamped d ) and not settings.stamped
   #.........................................................................................................
   for [ clasz, selector, ] in other_selectors
-    is_matching = switch clasz
-      when 'function'   then  selector d
-      when 'keypattern' then  @_match_keypattern key_facets, selector, settings
-      else throw new Error "µ86129 illegal selector class #{rpr clasz}"
-    return false unless is_matching
+    throw new Error "µ86129 illegal selector class #{rpr clasz}" unless clasz is 'keypattern'
+    return false unless @_match_keypattern key_facets, selector, settings
   return true
 
 
