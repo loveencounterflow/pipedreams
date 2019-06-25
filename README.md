@@ -185,42 +185,11 @@ set of conditions; typically, one will want to use `select d, selector` to decid
 whether a given event is suitable for processing by the stream transform at
 hand, or whether it should be passed on unchanged.
 
-Given an event `d` and a `selector`, return whether `d` matches the selector
-according to the rules given below.
-
-Selectors can be of three kinds:
-
-* **key patterns**: e.g. `'^prfx:myname'` will match all singular events (`^`)
-  that have a namespace prefix `prfx` and a name `myname`.
-
-* **boolean functions**: e.g. `( ( d ) -> d.value > 42 )` will match all events
-  that have a `value` that is greater than `42`.
-
-* **tags** that configure matching details: e.g. `'#stamped'` will match
-  un-`stamped` events as well as `stamped` ones (which are otherwise excluded
-  from matching).
-
-A given event will be 'selected' (i.e. `select d, ...` will return `true`) only
-if all conditions are met; as a consequence, `select d, '^', 'text'` ('select
-singleton events whose name is `'text'`) is equivalent to `( select d, '^' ) and
-( select d, 'text' )`. Incidentally, this is also equivalent to `select '^text'`
-since sigils and names may be contracted into a single selector.
-
-Observe that
-
-* tags must appear on the end of a selector, so `select d, '^text#stamped'` is OK,
-  but `select d, '#stamped^text'` is not.
-
-* `'#stamped'` means 'event *may* have property `{ stamped: true, }`, *not* that
-  it *must* be `stamped`. In order to only select singleton `text` events that
-  are also `stamped`, use a boolean function like `select d, '^text', ( ( d ) ->
-  d.stamped ? false )` (in practice, you will probably want to use a named
-  function, e.g. `( select '^text', is_stamped )`).
-
-**NOTE** One could argue that a call `( select d )` without any selectors should
-be legal and always return `true`; while that is a perfectly logical extension,
-in practice it is probably a programmer's error, which is why `( select d )`
-throws an error.
+The current implementation of `select()` is much dumber and faster than its predecessors; where previously,
+it was possible to match datoms with multiple selectors that contained multiple sigils and so forth, the new
+version does little more than check wheter the single selector allowed equals the given datom's `key`
+value—that's about it, except that one can still `select d, '^somekey#stamped'` to match both unstamped and
+stamped datoms.
 
 
 ## Aggregate Transforms
