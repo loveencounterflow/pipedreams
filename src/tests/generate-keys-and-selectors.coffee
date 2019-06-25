@@ -34,7 +34,7 @@ randomize                 = require 'randomatic'
 #-----------------------------------------------------------------------------------------------------------
 generate_key_or_selector = ( type ) ->
   validate.true type in [ 'key', 'selector', ]
-  use_prefix    = Math.random() > 0.5
+  use_prefix    = false
   #.........................................................................................................
   if type is 'key'
     use_sigil     = true
@@ -42,19 +42,17 @@ generate_key_or_selector = ( type ) ->
     use_tag       = false
     sigil_length  = 1
   else
-    # use_sigil     = Math.random() > 0.5
     use_sigil     = true
-    sigil_length  = CND.random_integer 1, 3
-    use_suffix    = if ( not use_sigil and not use_prefix ) then true else Math.random() > 0.5
+    use_suffix    = true
     use_tag       = false
-    # use_tag       = Math.random() > 0.8
+    sigil_length  = 1
   #.........................................................................................................
   prefix_length = CND.random_integer 1, 15
-  suffix_length = CND.random_integer 1, 50
+  suffix_length = CND.random_integer 3, 10
   #.........................................................................................................
   sigil         = if use_sigil  then ( randomize '?', sigil_length, { chars: '^<>~[]', }  ) else ''
-  prefix        = if use_prefix then ( ( randomize 'aA0', prefix_length ) + ':'           ) else ''
-  suffix        = if use_suffix then ( randomize 'aA0', suffix_length                     ) else ''
+  prefix        = if use_prefix then ( ( randomize 'a', prefix_length ) + ':'             ) else ''
+  suffix        = if use_suffix then (   randomize 'a', suffix_length                     ) else ''
   tag           = if use_tag    then '#stamped'                                             else ''
   return sigil + prefix + suffix + tag
 
@@ -62,7 +60,7 @@ generate_key_or_selector = ( type ) ->
 generate_keys_and_selectors = ->
   path  = PATH.join __dirname, '../../src/tests/data-for-select-benchmark.coffee'
   lines = []
-  n   = 500
+  n     = 1500
   lines.push '@datoms = ['
   for _ in [ 1 .. n ]
     key = generate_key_or_selector 'key'
