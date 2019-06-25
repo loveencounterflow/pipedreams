@@ -57,6 +57,20 @@ PD                        = require '../..'
   done()
   return null
 
+###
+before:
+  00:03 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 6889 hits, 243111 misses
+  00:03 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 needed 1.9 s for 250000 operations
+  00:03 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 134336.4 operations per second
+  00:03 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 score 1.343 (bigger is better)
+
+after:
+  00:00 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 0 hits, 250000 misses
+  00:00 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 needed 0.2 s for 250000 operations
+  00:00 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 1096491.2 operations per second
+  00:00 PIPEDREAMS/TESTS/SELECT-BENCHMARK  ⚙  µ34422 score 10.965 (bigger is better)
+
+###
 
 
 ############################################################################################################

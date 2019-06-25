@@ -109,28 +109,27 @@ types                     = require '../_types'
   probes_and_matchers = [
     [[ {key:'^number',value:42,$stamped:true}, '^number'],false]
     [[ {key:'<italic',$stamped:true}, '<italic'],false]
-    [[ {key:'<italic',$stamped:true}, '<>italic'],false]
+    [[ {key:'<italic',$stamped:true}, '>italic'],false]
     [[ {key:'^number',value:42}, '^number'],true]
     [[ {key:'^number',value:42,$stamped:true}, '^number#stamped'],true]
     [[ {key:'<italic',$stamped:true}, '<italic#stamped'],true]
     [[ {key:'<italic',$stamped:true}, '>italic#stamped'],false]
-    [[ {key:'<italic',$stamped:true}, '<>italic#stamped'],true]
+    [[ {key:'<italic',$stamped:true}, '<italic#stamped'],true]
     [[ {key:'<italic'}, '<italic#stamped'],true]
     [[ {key:'<italic'}, '>italic#stamped'],false]
-    [[ {key:'<italic'}, '<>italic#stamped'],true]
     [[ {key:'<italic',$stamped:true}, '>italic'],false]
-    [[ {key:"*data"},'*data'],null,'illegal key or selector']
-    [[ {key:"data>"},'data>'],null,'illegal key or selector']
-    [[ {key:"%data"},'%data'],null,'illegal key or selector']
+    [[ {key:"*data"},'*data'],null,'illegal selector']
+    [[ {key:"data>"},'data>'],null,'illegal selector']
+    [[ {key:"%data"},'%data'],null,'illegal selector']
     [[ {key:"[data"},'[data'],true,null]
-    [[ {key:"data]"},'data]'],null,'illegal key or selector']
+    [[ {key:"data]"},'data]'],null,'illegal selector']
     [[ {key:"]data"},']data'],true,null]
     ]
   #.........................................................................................................
   for [ probe, matcher, error, ] in probes_and_matchers
     await T.perform probe, matcher, error, ->
-      [ d, selectors..., ] = probe
-      return PD.select d, selectors...
+      [ d, selector, ] = probe
+      return PD.select d, selector
   done()
   return null
 

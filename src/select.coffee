@@ -86,35 +86,18 @@ types                     = require './_types'
   throw new Error "µ86606 expected a selector, got none" unless selector?
   return false unless ( ( isa.object d ) and ( d.key? ) )
   #.........................................................................................................
-  key_facets            = @_key_as_facets d.key
-  tags                  = new Set()
-  other_selectors       = []
-  classes_and_selectors = []
-  stamped               = false
-  #.........................................................................................................
+  stamped = false
   if selector.endsWith '#stamped'
     stamped   = true
     selector  = selector[ ... selector.length - 8 ]
     throw new Error "µ33982 selector cannot just contain tag '#stamped'" if selector is ''
   #.........................................................................................................
-  try
-    classes_and_selectors.push @_classify_selector selector
-  catch error
-    error.message += "\nµ22092 datom #{jr d},\nselector #{jr selector}"
-    throw error
+  throw new Error "µ37783 illegal selector #{rpr selector}" unless selector_pattern.test selector
   #.........................................................................................................
-  for [ clasz, selector, ] in classes_and_selectors
-    other_selectors.push [ clasz, selector, ]
-  #.........................................................................................................
-  settings = { stamped, }
-  return false if ( @is_stamped d ) and not settings.stamped
-  #.........................................................................................................
-  for [ clasz, selector, ] in other_selectors
-    throw new Error "µ86129 illegal selector class #{rpr clasz}" unless clasz is 'keypattern'
-    return false unless @_match_keypattern key_facets, selector, settings
-  return true
+  return false if ( not stamped ) and ( d.$stamped ? false )
+  return d.key is selector
 
-
+selector_pattern = /^[<^>\[~\]][^<^>\[~\]]*$/
 
 
 
