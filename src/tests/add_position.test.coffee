@@ -92,7 +92,7 @@ PD                        = require '../..'
 ############################################################################################################
 unless module.parent?
   test @
-  # test @[ "$add_position() with values" ]
+  test @[ "$add_position() with values" ]
   # test @[ "$add_position() with datoms" ]
 
 
