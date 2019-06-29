@@ -27,8 +27,8 @@
   "dependencies": {
     "cnd": "^4.6.0",
     "emittery": "^0.4.1",
-    "icepick": "^2.4.0",
     "intertype": "^2.5.0",
+    "letsfreezethat": "^1.0.1",
     "pipestreams": "^7.13.1"
   },
   "devDependencies": {
