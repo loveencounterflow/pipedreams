@@ -56,16 +56,16 @@ types                     = require './_types'
     #.......................................................................................................
     if d is last
       if prv_d?
-        prv_d         = @set prv_d, '$first', true if is_first
-        prv_d         = @set prv_d, '$last',  true
+        if is_first then  prv_d = @lets prv_d, ( d ) -> d.$last = true; d.$first = true
+        else              prv_d = @lets prv_d, ( d ) -> d.$last = true
         send prv_d
     #.......................................................................................................
     else
       if prv_d?
         send prv_d
-      prv_d         = if ( isa.object d ) then d else @freeze { value: d, key: '^value', }
-      prv_d         = @set prv_d, '$first', true if is_first
-      is_first      = false
+      prv_d     = if ( isa.object d ) then d else @new_datom '^value', { value: d, }
+      prv_d     = ( @lets prv_d, ( d ) -> d.$first = true) if is_first
+      is_first  = false
     #.......................................................................................................
     return null
 

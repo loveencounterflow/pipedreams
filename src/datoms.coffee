@@ -47,12 +47,12 @@ LFT                       = require 'letsfreezethat'
 @stamp = ( d, P... ) ->
   ### Set the `$stamped` attribute on datom to sigil it as processed. Stamped datoms will not be selected
   by the `select` method unless tag '#stamped' is used. ###
-  return @set d, P..., { $stamped: true, }
+  return @lets d, ( d ) -> assign d, P..., { $stamped: true, }
 
 #-----------------------------------------------------------------------------------------------------------
 @unstamp = ( d ) ->
   return d unless d.$stamped
-  return @unset d, '$stamped'
+  return @lets d, ( d ) -> delete d.$stamped
 
 #-----------------------------------------------------------------------------------------------------------
 @is_system = ( d ) ->
