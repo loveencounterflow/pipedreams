@@ -21,11 +21,6 @@ types                     = require './_types'
   validate
   type_of }               = types
 #...........................................................................................................
-PD                        = require '..'
-{ $
-  $async
-  select
-  stamp }                 = PD
 first                     = Symbol 'first'
 last                      = Symbol 'last'
 
@@ -41,7 +36,7 @@ last                      = Symbol 'last'
     send @new_datom '^group', { name: prv_name, value: buffer[ .. ], }
     buffer = null
   #.........................................................................................................
-  return $ { last, }, ( d, send_ ) =>
+  return @$ { last, }, ( d, send_ ) =>
     send = send_
     return flush() if d is last
     #.......................................................................................................
