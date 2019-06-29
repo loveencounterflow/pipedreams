@@ -26,7 +26,7 @@ override_sym              = Symbol.for 'override'
 #-----------------------------------------------------------------------------------------------------------
 @$drain = ( P... ) ->
   pipeline = []
-  pipeline.push @$ ( d, send ) ->
+  pipeline.push @$ ( d, send ) =>
     if ( @select d, '~end' )
       send @symbols.end
     else
