@@ -1,13 +1,1 @@
-{
-  "version": 3,
-  "file": "transforms.js",
-  "sourceRoot": "..",
-  "sources": [
-    "src/transforms.coffee"
-  ],
-  "names": [],
-  "mappings": ";AAEA;EAAA;AAAA,MAAA,CAAA,EAAA,MAAA,EAAA,GAAA,EAAA,EAAA,EAAA,KAAA,EAAA,KAAA,EAAA,IAAA,EAAA,IAAA,EAAA,IAAA,EAAA,GAAA,EAAA,MAAA,EAAA,KAAA,EAAA,IAAA,EAAA,IAAA,EAAA,OAAA;;;EAGA,GAAA,GAA4B,OAAA,CAAQ,KAAR;;EAC5B,GAAA,GAA4B,GAAG,CAAC;;EAChC,KAAA,GAA4B;;EAC5B,KAAA,GAA4B,GAAG,CAAC,UAAJ,CAAe,OAAf,EAA4B,KAA5B;;EAC5B,IAAA,GAA4B,GAAG,CAAC,UAAJ,CAAe,MAAf,EAA4B,KAA5B;;EAC5B,IAAA,GAA4B,GAAG,CAAC,UAAJ,CAAe,MAAf,EAA4B,KAA5B;;EAC5B,IAAA,GAA4B,GAAG,CAAC,UAAJ,CAAe,MAAf,EAA4B,KAA5B;;EAC5B,IAAA,GAA4B,GAAG,CAAC,UAAJ,CAAe,MAAf,EAA4B,KAA5B;;EAC5B,OAAA,GAA4B,GAAG,CAAC,UAAJ,CAAe,SAAf,EAA4B,KAA5B;;EAC5B,IAAA,GAA4B,GAAG,CAAC,IAAI,CAAC,IAAT,CAAc,GAAd,EAZ5B;;;EAcA,EAAA,GAA4B,OAAA,CAAQ,IAAR;;EAC5B,CAAA,CAAE,CAAF,EACE,MADF,EAEE,MAFF,EAGE,KAHF,CAAA,GAG4B,EAH5B,EAfA;;;EAqBA,IAAC,CAAA,eAAD,GAAmB,QAAA,CAAA,CAAA,EAAA;;;;AAIjB,WAAO,CAAA,CAAE,CAAE,CAAF,EAAK,IAAL,CAAA,GAAA;AACP,UAAA;MAAA,IAAiB,GAAG,CAAC,OAAJ,CAAY,CAAZ,CAAjB;AAAA,eAAO,IAAA,CAAK,CAAL,EAAP;;MACA,IAAA,GAAO,GAAG,CAAC,OAAJ,CAAY,CAAZ;MACP,IAAA,CAAK,EAAE,CAAC,SAAH,CAAa,CAAA,CAAA,CAAA,CAAI,IAAJ,CAAA,CAAb,EAAyB,CAAzB,CAAL;AACA,aAAO;IAJA,CAAF;EAJU;AArBnB",
-  "sourcesContent": [
-    "\n\n'use strict'\n\n############################################################################################################\nCND                       = require 'cnd'\nrpr                       = CND.rpr\nbadge                     = 'PIPEDREAMS/TRANSFORMS'\ndebug                     = CND.get_logger 'debug',     badge\nwarn                      = CND.get_logger 'warn',      badge\ninfo                      = CND.get_logger 'info',      badge\nurge                      = CND.get_logger 'urge',      badge\nhelp                      = CND.get_logger 'help',      badge\nwhisper                   = CND.get_logger 'whisper',   badge\necho                      = CND.echo.bind CND\n#...........................................................................................................\nPD                        = require '..'\n{ $\n  $async\n  select\n  stamp }                 = PD\n\n#-----------------------------------------------------------------------------------------------------------\n@$as_type_datoms = ->\n  ### Given raw data events (RDEs), turn them into singleton datoms, using the results of `CND.type_of`\n  for the keys, so `'xy'` turns into `{ key: 'text', value: 'xy', }`, and `42` turns into `{ key: 'number',\n  value: 42, }`. ###\n  return $ ( d, send ) =>\n    return send d if CND.isa_pod d\n    type = CND.type_of d\n    send PD.new_event \"^#{type}\", d\n    return null\n\n\n\n\n\n\n\n"
-  ]
-}
+undefined
