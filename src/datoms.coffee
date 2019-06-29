@@ -20,28 +20,28 @@ types                     = require './_types'
 { isa
   validate
   type_of }               = types
-ICE                       = require 'icepick'
+LFT                       = require 'letsfreezethat'
+# lets                      = LFT.lets.bind   LFT
+@freeze                   = LFT.freeze.bind LFT
+@thaw                     = LFT.thaw.bind   LFT
 
 #-----------------------------------------------------------------------------------------------------------
-@freeze = ( d ) -> ICE.freeze d
-@thaw   = ( d ) -> ICE.thaw   d
+@lets = ( original, modifier ) ->
+  draft = @thaw original
+  if modifier?
+    modifier draft
+    draft.$dirty = true unless draft.$dirty isnt original.dirty
+  return @freeze draft
 
 #-----------------------------------------------------------------------------------------------------------
 @set = ( d, k, P... ) ->
   if isa.text k
-    d = ICE.set d, k, P[ 0 ]
-  else
-    d       = ICE.thaw d
-    d[ k ]  = v for k, v of assign {}, k, P...
-    d       = ICE.freeze d
-  d = ICE.set d, '$dirty', true unless k is '$dirty'
-  return d
+    throw new Error "µ67663 expected 1 value got #{count}" unless ( count = P.length ) is 1
+    return @lets d, ( d ) -> d[ k ] = P[ 0 ]
+  return @lets d, ( d ) -> d[ k ]  = v for k, v of assign {}, k, P...
 
 #-----------------------------------------------------------------------------------------------------------
-@unset = ( d, k ) ->
-  d = ICE.unset d, k
-  d = ICE.set d, '$dirty', true unless k is '$dirty'
-  return d
+@unset = ( d, k ) -> @lets d, ( d ) -> delete d[ k ]
 
 #-----------------------------------------------------------------------------------------------------------
 @stamp = ( d, P... ) ->
@@ -52,7 +52,7 @@ ICE                       = require 'icepick'
 #-----------------------------------------------------------------------------------------------------------
 @unstamp = ( d ) ->
   return d unless d.$stamped
-  return @unset  d, '$stamped', true
+  return @unset d, '$stamped'
 
 #-----------------------------------------------------------------------------------------------------------
 @is_system = ( d ) ->
