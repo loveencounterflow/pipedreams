@@ -16,11 +16,6 @@ echo                      = CND.echo.bind CND
   jr }                    = CND
 #...........................................................................................................
 PS                        = require 'pipestreams'
-PD                        = require '..'
-{ $
-  $async
-  select
-  stamp }                 = PD
 #...........................................................................................................
 { jr
   copy
@@ -28,17 +23,16 @@ PD                        = require '..'
 #...........................................................................................................
 override_sym              = Symbol.for 'override'
 
-
 #-----------------------------------------------------------------------------------------------------------
 @$drain = ( P... ) ->
   pipeline = []
-  pipeline.push $ ( d, send ) ->
-    if ( select d, '~end' )
-      send PD.symbols.end
+  pipeline.push @$ ( d, send ) ->
+    if ( @select d, '~end' )
+      send @symbols.end
     else
       send d
   pipeline.push PS.$drain P...
-  return PD.pull pipeline...
+  return @pull pipeline...
 
 
 
