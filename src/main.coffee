@@ -19,7 +19,6 @@ minimatch                 = require 'minimatch'
 { assign
   jr }                    = CND
 override_sym              = Symbol.for 'override'
-L                         = @
 #...........................................................................................................
 types                     = require './_types'
 { isa
@@ -51,21 +50,28 @@ acquire_path = ( target, path ) ->
 
 
 ############################################################################################################
-### Gather methods from submodules, bind all methods to respective submodule, reflect public names into
-main module. ###
-# L.R   = {}
-L.XE  = {}
-acquire_path      L,    'pipestreams'
-acquire_patterns  L,    '*.js', ( path ) ->
-  name = PATH.basename path
-  return false if name.startsWith '_'
-  return false if name is 'main.js'
-  # return false if name is 'recycle.js'
-  return false if name is 'overrides.js'
-  return false if name is 'xemitter.js'
-  return true
-# acquire_patterns  L.R,  'recycle.js'
-acquire_patterns  L.XE, 'xemitter.js'
-acquire_patterns  L,    'overrides.js'
+xport = ->
+  R     = { XE: {}, }
+  acquire_path      R,    'pipestreams'
+  acquire_patterns  R,    '*.js', ( path ) ->
+    name = PATH.basename path
+    return false if name.startsWith '_'
+    return false if name is 'main.js'
+    # return false if name is 'recycle.js'
+    return false if name is 'overrides.js'
+    return false if name is 'xemitter.js'
+    return true
+  # acquire_patterns  R.R,  'recycle.js'
+  acquire_patterns  R.XE, 'xemitter.js'
+  acquire_patterns  R,    'overrides.js'
+  return R
+
+module.exports = xport()
+module.exports.create_nofreeze = ->
+  R           = xport()
+  R._nofreeze = true
+  return R
+
+
 
 

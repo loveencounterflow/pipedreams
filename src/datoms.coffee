@@ -21,12 +21,23 @@ types                     = require './_types'
   validate
   type_of }               = types
 LFT                       = require 'letsfreezethat'
-# lets                      = LFT.lets.bind   LFT
-@freeze                   = LFT.freeze.bind LFT
-@thaw                     = LFT.thaw.bind   LFT
+LFT_nofreeze              = LFT.nofreeze
+@_copy                    = LFT_nofreeze._copy.bind LFT
+@_nofreeze                = false
+
+#-----------------------------------------------------------------------------------------------------------
+@freeze = ( d ) -> if @_nofreeze then LFT_nofreeze.freeze d else LFT.freeze d
+@thaw   = ( d ) -> if @_nofreeze then LFT_nofreeze.thaw   d else LFT.thaw   d
 
 #-----------------------------------------------------------------------------------------------------------
 @lets = ( original, modifier ) ->
+  if @_nofreeze
+    draft = @_copy original
+    if modifier?
+      modifier draft
+      draft.$dirty = true unless draft.$dirty isnt original.dirty
+    return draft
+  #.........................................................................................................
   draft = @thaw original
   if modifier?
     modifier draft
