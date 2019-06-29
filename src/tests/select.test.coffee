@@ -30,79 +30,79 @@ types                     = require '../_types'
   type_of }               = types
 
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "selector keypatterns" ] = ( T, done ) ->
-  probes_and_matchers = [
-    ["",{"sigils":"","name":""},null]
-    ["^foo",{"sigils":"^","name":"foo"},null]
-    ["<foo",{"sigils":"<","name":"foo"},null]
-    ["  ",null,null]
-    [">foo",{"sigils":">","name":"foo"},null]
-    ["<>foo",{"sigils":"<>","name":"foo"},null]
-    ["<>^foo",{"sigils":"<>^","name":"foo"},null]
-    ["^ foo",null,null]
-    ["^prfx:foo",{"sigils":"^","prefix":"prfx","name":"foo"},null]
-    ["<prfx:foo",{"sigils":"<","prefix":"prfx","name":"foo"},null]
-    [">prfx:foo",{"sigils":">","prefix":"prfx","name":"foo"},null]
-    ["<>prfx:foo",{"sigils":"<>","prefix":"prfx","name":"foo"},null]
-    ["<>^prfx:foo",{"sigils":"<>^","prefix":"prfx","name":"foo"},null]
-    ["^<>",{"sigils":"^<>","name":""},null]
-    ]
-  #.........................................................................................................
-  for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, ->
-      R = ( probe.match L._selector_keypattern )?.groups ? null
-      return null unless R?
-      for key, value of R
-        delete R[ key ] if value is undefined
-      return R
-  done()
-  return null
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "selector keypatterns" ] = ( T, done ) ->
+#   probes_and_matchers = [
+#     ["",{"sigils":"","name":""},null]
+#     ["^foo",{"sigils":"^","name":"foo"},null]
+#     ["<foo",{"sigils":"<","name":"foo"},null]
+#     ["  ",null,null]
+#     [">foo",{"sigils":">","name":"foo"},null]
+#     ["<>foo",{"sigils":"<>","name":"foo"},null]
+#     ["<>^foo",{"sigils":"<>^","name":"foo"},null]
+#     ["^ foo",null,null]
+#     ["^prfx:foo",{"sigils":"^","prefix":"prfx","name":"foo"},null]
+#     ["<prfx:foo",{"sigils":"<","prefix":"prfx","name":"foo"},null]
+#     [">prfx:foo",{"sigils":">","prefix":"prfx","name":"foo"},null]
+#     ["<>prfx:foo",{"sigils":"<>","prefix":"prfx","name":"foo"},null]
+#     ["<>^prfx:foo",{"sigils":"<>^","prefix":"prfx","name":"foo"},null]
+#     ["^<>",{"sigils":"^<>","name":""},null]
+#     ]
+#   #.........................................................................................................
+#   for [ probe, matcher, error, ] in probes_and_matchers
+#     await T.perform probe, matcher, error, ->
+#       R = ( probe.match L._selector_keypattern )?.groups ? null
+#       return null unless R?
+#       for key, value of R
+#         delete R[ key ] if value is undefined
+#       return R
+#   done()
+#   return null
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "datom keypatterns" ] = ( T, done ) ->
-  probes_and_matchers = [
-    ["text",null,null]
-    ["^text",{"sigil":"^","name":"text"},null]
-    ["<bold",{"sigil":"<","name":"bold"},null]
-    [">bold",{"sigil":">","name":"bold"},null]
-    ["~collect",{"sigil":"~","name":"collect"},null]
-    ["~kwic:collect",{"sigil":"~","prefix":"kwic","name":"collect"},null]
-    ["<kwic:bar",{"sigil":"<","prefix":"kwic","name":"bar"},null]
-    [">kwic:bar",{"sigil":">","prefix":"kwic","name":"bar"},null]
-    [">!kwic:bar",null,null]
-    ["<>kwic:bar",null,null]
-    ]
-  #.........................................................................................................
-  for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, ->
-      R = ( probe.match L._datom_keypattern )?.groups ? null
-      return null unless R?
-      for key, value of R
-        delete R[ key ] if value is undefined
-      return R
-  done()
-  return null
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "datom keypatterns" ] = ( T, done ) ->
+#   probes_and_matchers = [
+#     ["text",null,null]
+#     ["^text",{"sigil":"^","name":"text"},null]
+#     ["<bold",{"sigil":"<","name":"bold"},null]
+#     [">bold",{"sigil":">","name":"bold"},null]
+#     ["~collect",{"sigil":"~","name":"collect"},null]
+#     ["~kwic:collect",{"sigil":"~","prefix":"kwic","name":"collect"},null]
+#     ["<kwic:bar",{"sigil":"<","prefix":"kwic","name":"bar"},null]
+#     [">kwic:bar",{"sigil":">","prefix":"kwic","name":"bar"},null]
+#     [">!kwic:bar",null,null]
+#     ["<>kwic:bar",null,null]
+#     ]
+#   #.........................................................................................................
+#   for [ probe, matcher, error, ] in probes_and_matchers
+#     await T.perform probe, matcher, error, ->
+#       R = ( probe.match L._datom_keypattern )?.groups ? null
+#       return null unless R?
+#       for key, value of R
+#         delete R[ key ] if value is undefined
+#       return R
+#   done()
+#   return null
 
-#-----------------------------------------------------------------------------------------------------------
-@[ "classify_selector" ] = ( T, done ) ->
-  probes_and_matchers = [
-    ["#justatag",["tag","justatag"],'illegal']
-    ["^bar",["keypattern",{"sigils":"^","name":"bar"}],null]
-    ]
-  #.........................................................................................................
-  for [ probe, matcher, error, ] in probes_and_matchers
-    await T.perform probe, matcher, error, ->
-      probe = ( -> ) if probe.startsWith '!!!'
-      R     = L._classify_selector probe
-      if R[ 0 ] is 'keypattern'
-        for key, value of R[ 1 ]
-          delete R[ 1 ][ key ] if value is undefined
-      else if R[ 0 ] is 'function'
-        R[ 1 ] = null
-      return R
-  done()
-  return null
+# #-----------------------------------------------------------------------------------------------------------
+# @[ "classify_selector" ] = ( T, done ) ->
+#   probes_and_matchers = [
+#     ["#justatag",["tag","justatag"],'illegal']
+#     ["^bar",["keypattern",{"sigils":"^","name":"bar"}],null]
+#     ]
+#   #.........................................................................................................
+#   for [ probe, matcher, error, ] in probes_and_matchers
+#     await T.perform probe, matcher, error, ->
+#       probe = ( -> ) if probe.startsWith '!!!'
+#       R     = L._classify_selector probe
+#       if R[ 0 ] is 'keypattern'
+#         for key, value of R[ 1 ]
+#           delete R[ 1 ][ key ] if value is undefined
+#       else if R[ 0 ] is 'function'
+#         R[ 1 ] = null
+#       return R
+#   done()
+#   return null
 
 #-----------------------------------------------------------------------------------------------------------
 @[ "select 2" ] = ( T, done ) ->

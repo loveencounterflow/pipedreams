@@ -36,7 +36,7 @@ PD                        = require '../..'
   for d in datoms
     for selector in selectors
       count++
-      whisper 'µ34411', count if ( count %% 10000 ) is 0
+      whisper 'µ34411', count if ( count %% 100000 ) is 0
       if select d, selector
         hits++
       else
