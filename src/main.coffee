@@ -44,10 +44,7 @@ acquire_path = ( target, path ) ->
   module = require path
   for key, value of module
     throw new Error "duplicate key #{rpr key}" if target[ key ]? and not value[ override_sym ]
-    if isa.function value
-      is_sink                     = value[ Symbol.for 'sink' ] ? false
-      value                       = value.bind target
-      value[ Symbol.for 'sink' ]  = true if is_sink
+    value         = value.bind target if isa.function value
     target[ key ] = value
   return null
 
