@@ -29,7 +29,7 @@
     "emittery": "^0.4.1",
     "intertype": "^2.5.0",
     "letsfreezethat": "^1.1.1",
-    "pipestreams": "^7.13.3"
+    "pipestreams": "^7.14.0"
   },
   "devDependencies": {
     "guy-test": "^1.4.0",
