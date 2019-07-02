@@ -24,15 +24,16 @@ PS                        = require 'pipestreams'
 override_sym              = Symbol.for 'override'
 
 #-----------------------------------------------------------------------------------------------------------
-@$drain = ( P... ) ->
+@$drain = ( on_end = null ) ->
   pipeline = []
   pipeline.push @$ ( d, send ) =>
     if ( @select d, '~end' )
       send @symbols.end
     else
       send d
-  pipeline.push PS.$drain P...
-  return @mark_as_sink @pull pipeline...
+  pipeline.push PS.$drain on_end
+  R = @pull pipeline...
+  return @mark_as_sink R, { type: '$drain', on_end, }
 
 
 
