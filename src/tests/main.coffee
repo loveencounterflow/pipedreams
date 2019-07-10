@@ -16,22 +16,23 @@ echo                      = CND.echo.bind CND
 #...........................................................................................................
 PATH                      = require 'path'
 FS                        = require 'fs'
-OS                        = require 'os'
 test                      = require 'guy-test'
-glob                      = require 'globby'
 
 
 
 ############################################################################################################
 L = @
 do ->
-  paths = glob.sync PATH.join __dirname, '*.test.js'
+  paths = FS.readdirSync __dirname
   for path in paths
+    continue unless path.endsWith '.test.js'
+    path = PATH.join __dirname, path
     module = require path
     for key, value of module
-      debug '20922', "#{path}##{key}"
+      continue if key.startsWith '_'
+      # debug '39838', path, key
       throw new Error "duplicate key #{rpr key}" if L[ key ]?
       L[ key ] = value.bind L
-  test L
+  test L, { timeout: 5000, }
 
 
