@@ -14,12 +14,7 @@ whisper                   = CND.get_logger 'whisper',   badge
 echo                      = CND.echo.bind CND
 #...........................................................................................................
 PATH                      = require 'path'
-glob                      = require 'glob'
-minimatch                 = require 'minimatch'
-{ assign
-  jr }                    = CND
-override_sym              = Symbol.for 'override'
-L                         = @
+{ jr, }                   = CND
 #...........................................................................................................
 types                     = require './_types'
 { isa
