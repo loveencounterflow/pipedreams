@@ -26,6 +26,12 @@ LFT_nofreeze              = LFT.nofreeze
 @_nofreeze                = false
 
 #-----------------------------------------------------------------------------------------------------------
+@create_nofreeze = ->
+  R = new @Pipedreams()
+  R._nofreeze = true
+  return R
+
+#-----------------------------------------------------------------------------------------------------------
 @freeze = ( d ) -> if @_nofreeze then LFT_nofreeze.freeze d else LFT.freeze d
 @thaw   = ( d ) -> if @_nofreeze then LFT_nofreeze.thaw   d else LFT.thaw   d
 

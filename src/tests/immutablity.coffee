@@ -92,6 +92,7 @@ PD                        = require '../..'
 @[ "PD.set() accepts objects like assign() (nofreeze)" ] = ( T, done ) ->
   PDNF = PD.create_nofreeze()
   d = PDNF.new_datom '^foo', { x: 42, }
+  T.ok not Object.isFrozen d
   d = PDNF.set    d, { x: 556, vnr: [ 1, 2, 4, ], }
   T.ok d.x is 556
   T.eq d.vnr, [ 1, 2, 4, ]
