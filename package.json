@@ -25,15 +25,15 @@
   },
   "homepage": "https://github.com/loveencounterflow/pipedreams",
   "dependencies": {
-    "cnd": "^4.6.0",
-    "emittery": "^0.4.1",
-    "intertype": "^2.5.0",
-    "letsfreezethat": "^1.1.1",
-    "multimix": "^2.0.0",
-    "pipestreams": "^8.0.0"
+    "cnd": "^5.3.2",
+    "emittery": "^0.6.0",
+    "intertype": "^3.4.1",
+    "letsfreezethat": "^2.2.5",
+    "multimix": "^2.2.1",
+    "pipestreams": "^8.0.1"
   },
   "devDependencies": {
-    "guy-test": "^1.4.0",
+    "guy-test": "^2.0.1",
     "randomatic": "^3.1.1"
   }
 }
