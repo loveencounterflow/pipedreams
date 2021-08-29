@@ -1,0 +1,361 @@
+dependencies:
+  cnd: 9.2.1
+  emittery: 0.8.1
+  intertype: 7.6.3
+  letsfreezethat: 3.0.3
+  multimix: 5.0.0
+  pipestreams: 8.0.1
+devDependencies:
+  guy-test: 4.0.1
+  randomatic: 3.1.1
+lockfileVersion: 5.2
+packages:
+  /after-all-results/2.0.0:
+    dev: false
+    resolution:
+      integrity: sha1-asL8ICtQD4jaj09VMM+hAPTGotA=
+  /ansi-styles/1.1.0:
+    dev: false
+    engines:
+      node: '>=0.10.0'
+    optional: true
+    resolution:
+      integrity: sha1-6uy/Zs1waIJ2Cy9GkVgrj1XXp94=
+  /async-cache/1.1.0:
+    dependencies:
+      lru-cache: 4.1.5
+    dev: false
+    resolution:
+      integrity: sha1-SppaidBl7F2OUlS9nulrp2xTK1o=
+  /async/3.2.0:
+    dev: true
+    resolution:
+      integrity: sha512-TR2mEZFVOj2pLStYxLht7TyfuRzaydfpxr3k9RpHIzMgw7A64dzsdqCxH1WJyQdoe8T10nDXd9wnEigmiuHIZw==
+  /cnd/5.3.2:
+    dependencies:
+      mkdirp: 1.0.4
+      stackman: 4.0.1
+      trycatch: 1.5.21
+    dev: false
+    hasBin: true
+    resolution:
+      integrity: sha512-HZmL11eDy/oreoKTxes07DSPjd9Cjr4qZVEdRu8lK+dxIts2cqUkyde39Ve7PyMh8nWNtSzmvIZ4WHWng1PFow==
+  /cnd/9.2.1:
+    hasBin: true
+    resolution:
+      integrity: sha512-JszZtSlOCxkIvNPKpw1PmIcQUjYO+pBqVoKVH2STHLtG4JHHJ1NHowv39lhyxzlPxUTZk7pZ3qO7CfrfJ8ZSKw==
+  /data-uri-to-buffer/2.0.2:
+    dev: false
+    resolution:
+      integrity: sha512-ND9qDTLc6diwj+Xe5cdAgVTbLVdXbtxTJRXRhli8Mowuaan+0EJOtdqJ0QCHNSSPyoXGx9HX2/VMnKeC34AChA==
+  /debug/4.3.1:
+    dependencies:
+      ms: 2.1.2
+    dev: false
+    engines:
+      node: '>=6.0'
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+    resolution:
+      integrity: sha512-doEwdvm4PCeK4K3RQN2ZC2BYUBaxwLARCqZmMjtF8a51J2Rb0xpVloFRnCODwqjpwnAoao4pelN8l3RJdv3gRQ==
+  /emittery/0.8.1:
+    dev: false
+    engines:
+      node: '>=10'
+    resolution:
+      integrity: sha512-uDfvUjVrfGJJhymx/kz6prltenw1u7WrCg1oa94zYY8xxVpLLUu045LAT0dhDZdXG58/EpPL/5kA180fQ/qudg==
+  /error-callsites/2.0.3:
+    dev: false
+    resolution:
+      integrity: sha512-v036z4IEffZFE5kBkV5/F2MzhLnG0vuDyN+VXpzCf4yWXvX/1WJCI0A+TGTr8HWzBfCw5k8gr9rwAo09V+obTA==
+  /get-source/1.0.42:
+    dependencies:
+      data-uri-to-buffer: 2.0.2
+      source-map: 0.6.1
+    dev: false
+    resolution:
+      integrity: sha512-uM5xCIG5w2meVbiZaID4ajH6J8OfApqhlKXtZwsS/IIM9PLb0b2kc5sRdy78yEDfxsIYEWNk0OVxai6OpDCExA==
+  /guy-test/4.0.1:
+    dependencies:
+      async: 3.2.0
+      cnd: 9.2.1
+      intertype: 7.6.3
+    dev: true
+    resolution:
+      integrity: sha512-NH2ZCLVFCEGmTe2znmCuflSL8Uo1jTAXTSpYOkijstXFwonLtaScfmkVw5e2dL9GAcQ0GlPZRhdhySbhUCgVSg==
+  /hookit/1.1.3:
+    dev: false
+    resolution:
+      integrity: sha1-YnvRuQvE7sHTe2OiCCzv9Rgb+xk=
+  /in-publish/2.0.1:
+    dev: false
+    hasBin: true
+    resolution:
+      integrity: sha512-oDM0kUSNFC31ShNxHKUyfZKy8ZeXZBWMjMdZHKLOk13uvT27VTL/QzRGfRUcevJhpkZAvlhPYuXkF7eNWrtyxQ==
+  /intertype/3.4.1:
+    dependencies:
+      cnd: 5.3.2
+      multimix: 2.2.1
+    dev: false
+    resolution:
+      integrity: sha512-iygBhO6W8EoxMLu8u/oWdqS5fjppBRXjdhsI0z7UCSiBcwNW9SDQGxWlOlcUWCXGrACqtGBEVrUcDibMMxuC/A==
+  /intertype/7.6.3:
+    dependencies:
+      multimix: 5.0.0
+    resolution:
+      integrity: sha512-77FmgaqGydWBc5OIde+geMj4+dGZ1i5UIFXM4C9QHiEIBjh+Gojycsb7XtRYYLNhNJepa+jotHXfAGPngHatzw==
+  /is-number/4.0.0:
+    dev: true
+    engines:
+      node: '>=0.10.0'
+    resolution:
+      integrity: sha512-rSklcAIlf1OmFdyAqbnWTLVelsQ58uvZ66S/ZyawjWqIviTWCjg2PzVGw8WUA+nNuPTqb4wgA+NszrJ+08LlgQ==
+  /kind-of/6.0.3:
+    dev: true
+    engines:
+      node: '>=0.10.0'
+    resolution:
+      integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==
+  /letsfreezethat/3.0.3:
+    dev: false
+    resolution:
+      integrity: sha512-Ckrod5Pcp056zgpEZNEk8P+m7QqHWLOU7NwoCLdSpJutdDvE8MIUPVYIUZpewbHZKFS6hfOCcbk3E4AC7fu4hg==
+  /load-source-map/1.0.0:
+    dependencies:
+      in-publish: 2.0.1
+      semver: 5.7.1
+      source-map: 0.5.7
+    dev: false
+    resolution:
+      integrity: sha1-MY9JkFzopwnft8w/FvPv47zx3QU=
+  /lodash.flattendeep/4.4.0:
+    dev: false
+    resolution:
+      integrity: sha1-+wMJF/hqMTTlvJvsDWngAT3f7bI=
+  /looper/3.0.0:
+    dev: false
+    resolution:
+      integrity: sha1-LvpUw7HLq6m5Su4uWRSwvlf7t0k=
+  /looper/4.0.0:
+    dev: false
+    resolution:
+      integrity: sha1-dwat7VmpntygbmtUu4bI7BnJUVU=
+  /lru-cache/4.1.5:
+    dependencies:
+      pseudomap: 1.0.2
+      yallist: 2.1.2
+    dev: false
+    resolution:
+      integrity: sha512-sWZlbEP2OsHNkXrMl5GYk/jKk70MBng6UU4YI/qGDYbgf6YbP4EvmqISbXCoJiRKs+1bSpFHVgQxvJ17F2li5g==
+  /math-random/1.0.4:
+    dev: true
+    resolution:
+      integrity: sha512-rUxjysqif/BZQH2yhd5Aaq7vXMSx9NdEsQcyA07uEzIvxgI7zIr33gGsh+RU0/XjmQpCW7RsVof1vlkvQVCK5A==
+  /mkdirp/1.0.4:
+    dev: false
+    engines:
+      node: '>=10'
+    hasBin: true
+    resolution:
+      integrity: sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
+  /ms/2.1.2:
+    dev: false
+    resolution:
+      integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==
+  /multimix/2.2.1:
+    dependencies:
+      cnd: 5.3.2
+      intertype: 3.4.1
+    dev: false
+    resolution:
+      integrity: sha512-VYYI4UT9RZmhlFApQiay5JPto/VB4nXYb+LR1xGfwIiPIQEJFMDe84HBnes939N2BNxwY5mgszAzOOcLMYndEg==
+  /multimix/5.0.0:
+    resolution:
+      integrity: sha512-N9cdGSDDD7kxOV7R6e4iZqsHTZ4F4iiSDWqMcVqx4gEH6HBtRXav39Gj3fgT1YqvBcwPCQuf0Oa5R2cDaLWK8A==
+  /pipestreams/8.0.1:
+    dependencies:
+      cnd: 5.3.2
+      get-source: 1.0.42
+      intertype: 3.4.1
+      lodash.flattendeep: 4.4.0
+      multimix: 2.2.1
+      pull-cont: 0.1.1
+      pull-map-last: 1.0.0
+      pull-merge: 1.0.4
+      pull-mux: 0.1.3
+      pull-pair: 1.1.0
+      pull-paramap: 1.2.2
+      pull-pause: 0.0.2
+      pull-pushable: 2.2.0
+      pull-split: 0.2.1
+      pull-stream: 3.6.14
+      pull-stream-to-stream: 2.0.0
+      pull-tee: 2.0.1
+      pull-utf8-decoder: 1.0.2
+      stack-trace: 0.0.10
+      stream-to-pull-stream: 1.7.3
+      timsort: 0.3.0
+    dev: false
+    resolution:
+      integrity: sha512-YpjNwgF5VOhbtXeDarudvDGj1ydDO1h3A6W6Dfn2yJkW+IhNvC+H7zYArTh9Ja6pZLNnB2olDEQlzqxGKCCVGQ==
+  /pseudomap/1.0.2:
+    dev: false
+    resolution:
+      integrity: sha1-8FKijacOYYkX7wqKw0wa5aaChrM=
+  /pull-cont/0.1.1:
+    dev: false
+    resolution:
+      integrity: sha1-3x1YDicXV7qay666IN4kIdZg1hg=
+  /pull-many/1.0.9:
+    dependencies:
+      pull-stream: 3.6.14
+    dev: false
+    resolution:
+      integrity: sha512-+jUydDVlj/HsvtDqxWMSsiRq3B0HVo7RhBV4C0p2nZRS3mFTUEu9SPEBN+B5PMaW8KTnblYhTIaKg7oXgGnj4Q==
+  /pull-map-last/1.0.0:
+    dev: false
+    resolution:
+      integrity: sha1-CdPZ/gBP4tnhjWl+z/x6JyWZRq8=
+  /pull-merge/1.0.4:
+    dev: false
+    resolution:
+      integrity: sha512-pz72yzy7nK4YVKV8+njxC5GrnATJ4OwFEviiuXx/K/W2+G2mDddkomv2g0j4Zf4eT+LhsBuVpOAjZU1E9BPqCw==
+  /pull-mux/0.1.3:
+    dependencies:
+      pull-many: 1.0.9
+      pull-pair: 1.1.0
+      pull-stream: 3.6.14
+      pull-tee: '@github.com/pull-stream/pull-tee/tarball/master'
+    dev: false
+    resolution:
+      integrity: sha1-qlKIYmvxAZpuP5aJDqLVXLs7WiU=
+  /pull-pair/1.1.0:
+    dev: false
+    resolution:
+      integrity: sha1-fuQnJj/fTaglOXrAoF4atLdL120=
+  /pull-paramap/1.2.2:
+    dependencies:
+      looper: 4.0.0
+    dev: false
+    resolution:
+      integrity: sha1-UaQZPOnI1yFdla2tReK824STsjo=
+  /pull-pause/0.0.2:
+    dev: false
+    resolution:
+      integrity: sha1-GdRb6PqmFfpVbxSpb9czRiw3+6M=
+  /pull-pushable/2.2.0:
+    dev: false
+    resolution:
+      integrity: sha1-Xy867UethpGfAbEqLpnW8b13ZYE=
+  /pull-split/0.2.1:
+    dependencies:
+      pull-through: 1.0.18
+    dev: false
+    resolution:
+      integrity: sha512-lloBKx+ijuRNvxvhM/SMJQ0r9/0WBGcpCPv8I6MZuYl4D1heUF/eYQObnqVehhtTMYuMwboK7RdhMa4Wg3YB7w==
+  /pull-stream-to-stream/2.0.0:
+    dev: false
+    resolution:
+      integrity: sha512-lhgwUn2hQalava39zAzrRhjvVOpR99mfx5tCYRMD8Is85kBvXhQ39zIonVA+2TzdOFjmTQYbPWbEH0HAG+0t0Q==
+  /pull-stream/3.6.14:
+    dev: false
+    resolution:
+      integrity: sha512-KIqdvpqHHaTUA2mCYcLG1ibEbu/LCKoJZsBWyv9lSYtPkJPBq8m3Hxa103xHi6D2thj5YXa0TqK3L3GUkwgnew==
+  /pull-tee/2.0.1:
+    dev: false
+    resolution:
+      integrity: sha1-AVX56ZgwH0c2XiE99Vz+5McebZc=
+  /pull-through/1.0.18:
+    dependencies:
+      looper: 3.0.0
+    dev: false
+    resolution:
+      integrity: sha1-jdYjFCY+Wc9Qlur7sSeitu8xBzU=
+  /pull-utf8-decoder/1.0.2:
+    dev: false
+    resolution:
+      integrity: sha1-p6+iOE0eZBWl1gIFQSbMjeO8vOc=
+  /randomatic/3.1.1:
+    dependencies:
+      is-number: 4.0.0
+      kind-of: 6.0.3
+      math-random: 1.0.4
+    dev: true
+    engines:
+      node: '>= 0.10.0'
+    resolution:
+      integrity: sha512-TuDE5KxZ0J461RVjrJZCJc+J+zCkTb1MbH9AQUq68sMhOMcy9jLcb3BrZKgp9q9Ncltdg4QVqWrH02W2EFFVYw==
+  /semver/5.7.1:
+    dev: false
+    hasBin: true
+    resolution:
+      integrity: sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ==
+  /source-map/0.5.7:
+    dev: false
+    engines:
+      node: '>=0.10.0'
+    resolution:
+      integrity: sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w=
+  /source-map/0.6.1:
+    dev: false
+    engines:
+      node: '>=0.10.0'
+    resolution:
+      integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
+  /stack-trace/0.0.10:
+    dev: false
+    resolution:
+      integrity: sha1-VHxws0fo0ytOEI6hoqFZ5f3eGcA=
+  /stackman/4.0.1:
+    dependencies:
+      after-all-results: 2.0.0
+      async-cache: 1.1.0
+      debug: 4.3.1
+      error-callsites: 2.0.3
+      load-source-map: 1.0.0
+    dev: false
+    resolution:
+      integrity: sha512-lntIge3BFEElgvpZT2ld5f4U+mF84fRtJ8vA3ymUVx1euVx43ZMkd09+5RWW4FmvYDFhZwPh1gvtdsdnJyF4Fg==
+  /stream-to-pull-stream/1.7.3:
+    dependencies:
+      looper: 3.0.0
+      pull-stream: 3.6.14
+    dev: false
+    resolution:
+      integrity: sha512-6sNyqJpr5dIOQdgNy/xcDWwDuzAsAwVzhzrWlAPAQ7Lkjx/rv0wgvxEyKwTq6FmNd5rjTrELt/CLmaSw7crMGg==
+  /timsort/0.3.0:
+    dev: false
+    resolution:
+      integrity: sha1-QFQRqOfmM5/mTbmiNN4R3DHgK9Q=
+  /trycatch/1.5.21:
+    dependencies:
+      hookit: 1.1.3
+    dev: false
+    engines:
+      node: '>=0.8.14'
+    optionalDependencies:
+      ansi-styles: 1.1.0
+    resolution:
+      integrity: sha1-LLFdQ9T0X3Q2dweYoQvfvh1aVv4=
+  /yallist/2.1.2:
+    dev: false
+    resolution:
+      integrity: sha1-HBH5IY8HYImkfdUS+TxmmaaoHVI=
+  '@github.com/pull-stream/pull-tee/tarball/master':
+    dev: false
+    name: pull-tee
+    resolution:
+      tarball: https://github.com/pull-stream/pull-tee/tarball/master
+    version: 2.0.1
+specifiers:
+  cnd: 9.2.1
+  emittery: 0.8.1
+  guy-test: 4.0.1
+  intertype: 7.6.3
+  letsfreezethat: 3.0.3
+  multimix: 5.0.0
+  pipestreams: ^8.0.1
+  randomatic: ^3.1.1
